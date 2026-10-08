@@ -1,0 +1,33 @@
+{
+  // Modified for GrokOff: inherited template, unconfigured and undeployed.
+  "account_id": "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "grokoff-composio-example",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "vars": {
+    "COMPOSIO_API_BASE": "https://backend.composio.dev/api/v3.1",
+    "COMPOSIO_TOOLKIT_BASE": "https://backend.composio.dev/api/v3",
+    "REGISTRATION_MODE": "closed"
+  },
+  "secrets": { "required": ["COMPOSIO_API_KEY"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "grokoff-composio-example",
+      "database_id": "REPLACE_WITH_YOUR_CLOUDFLARE_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "ratelimits": [
+    { "name": "REGISTRATION_LIMITER", "namespace_id": "REPLACE_WITH_YOUR_RATE_LIMIT_NAMESPACE_ID", "simple": { "limit": 30, "period": 60 } },
+    { "name": "SESSION_LIMITER", "namespace_id": "REPLACE_WITH_YOUR_RATE_LIMIT_NAMESPACE_ID", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  }
+}

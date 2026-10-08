@@ -1,0 +1,19 @@
+#!/bin/sh
+# GrokOff modification (2026-10-08): describe the independent fork's local checks.
+# Runs before every push: lint, typecheck, and locale validation. Test suites
+# run separately through pnpm test or pnpm test:upstream; this hook does not
+# claim that every inherited test or platform has passed.
+#
+# Installed by `pnpm install` through scripts/install-git-hooks.mjs (sets
+# core.hooksPath). Skip once with `git push --no-verify`, or for a session
+# with OMB_SKIP_HOOKS=1.
+set -e
+if [ -n "$OMB_SKIP_HOOKS" ]; then
+  echo "pre-push: skipped (OMB_SKIP_HOOKS is set)"
+  exit 0
+fi
+cd "$(git rev-parse --show-toplevel)"
+echo "pre-push: lint, typecheck, locale check (git push --no-verify to skip)"
+pnpm lint
+pnpm typecheck
+pnpm i18n:check

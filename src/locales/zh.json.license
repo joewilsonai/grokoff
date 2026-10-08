@@ -1,0 +1,8 @@
+SPDX-FileCopyrightText: 2026 Milind Soni and OpenMausBot contributors
+SPDX-FileCopyrightText: 2026 Joe Wilson (GrokOff modifications)
+SPDX-License-Identifier: Apache-2.0
+
+Applies to: zh.json
+GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+Original source: https://github.com/milind-soni/OpenMausBot/tree/3e9e42b3a05e0b7c4edbaedba2e667b851296e27
+Retain the repository LICENSE, NOTICE, and applicable third-party attribution.

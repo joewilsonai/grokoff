@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible GrokOff Mac alpha defect.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For security vulnerabilities, use [private reporting](https://github.com/joewilsonai/grokoff/security/advisories/new).
+        GrokOff is a source Mac alpha. Do not include credentials, account details, private conversations, or unredacted logs.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the commit and whether this is source development or your own packaged app.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: macOS version, Apple Silicon or Intel, and Node/pnpm versions for source builds.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Prefer a disposable fake-provider fixture when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Relevant error messages or screenshots; remove private data before posting.

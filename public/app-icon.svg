@@ -1,0 +1,8 @@
+<!-- GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>GrokOff</title>
+  <desc>Original GrokOff GO mark, created 2026-10-08. No upstream mascot artwork.</desc>
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="#171a23"/>
+  <path d="M453 362a178 178 0 1 0 0 300V527H328" fill="none" stroke="#ff9d5c" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="563" y="334" width="222" height="356" rx="111" fill="none" stroke="#f5f2ea" stroke-width="70"/>
+</svg>

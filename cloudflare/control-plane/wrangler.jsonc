@@ -1,0 +1,57 @@
+{
+  // Modified for GrokOff: inherited template, unconfigured and undeployed.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "grokoff-control-plane-example",
+  "main": "src/index.ts",
+  "account_id": "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "compatibility_date": "2026-08-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [],
+  "vars": {
+    "BETTER_AUTH_URL": "https://accounts.example.invalid",
+    "EMAIL_FROM": "noreply@example.invalid",
+    "ALLOWED_ORIGINS": "",
+    "CLOUDFLARE_ACCOUNT_ID": "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_ZONE_ID": "REPLACE_WITH_YOUR_CLOUDFLARE_ZONE_ID",
+    "COMPANION_HOST_SUFFIX": "example.invalid",
+    // Managed endpoint capacity (see README "Tunnel capacity and idle
+    // reclaim"). The limits only drive the 90% usage alert and /healthz;
+    // they never block provisioning on their own.
+    "OMB_TUNNEL_LIMIT": "1000",
+    "OMB_DNS_RECORD_LIMIT": "1000",
+    // "on" marks idle tunnels for cleanup; "observe" only logs candidates.
+    "OMB_TUNNEL_RECLAIM": "observe",
+    // Days a tunnel must have been offline (and its installation quiet)
+    // before reclaim. Never-connected tunnels use a fixed seven days.
+    "OMB_TUNNEL_OFFLINE_RECLAIM_DAYS": "14",
+    // Cleanup rows per five-minute cron run. 20 needs Workers Paid; use 4 on
+    // Workers Free (50 subrequests per invocation).
+    "OMB_CLEANUP_SWEEP_LIMIT": "4"
+  },
+  "secrets": {
+    "required": ["BETTER_AUTH_SECRET", "CLOUDFLARE_API_TOKEN"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "grokoff-control-plane-example",
+      "database_id": "REPLACE_WITH_YOUR_CLOUDFLARE_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["noreply@example.invalid"]
+    }
+  ],
+  "triggers": {
+    "crons": []
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  }
+}

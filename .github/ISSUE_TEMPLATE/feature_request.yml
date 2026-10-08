@@ -1,0 +1,18 @@
+name: Feature request
+description: Propose a focused improvement to the local Mac app.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the task you want to complete and what blocks it today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include what a successful result would look like.
+    validations:
+      required: true

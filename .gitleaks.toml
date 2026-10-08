@@ -1,0 +1,178 @@
+# Keep every built-in detector enabled. Exceptions require both exact path and value.
+# Reviewed fixtures remain scanned for any other credential or token.
+title = "GrokOff publication scanning"
+minVersion = "v8.25.0"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "curl-auth-header"
+
+# Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM.
+[[rules.allowlists]]
+description = "Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM."
+condition = "AND"
+paths = [ '''^server/redact\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:abc\.def-ghi_jkl123456789|abcdefghijklmnop)$''' ]
+
+[[rules]]
+id = "generic-api-key"
+
+# Localization provenance is a map of SHA-256 content hashes, never account keys.
+[[rules.allowlists]]
+description = "Locale source-content SHA-256 hashes"
+condition = "AND"
+paths = [ '''^src/locales/source-hashes\.json$''' ]
+regexTarget = "secret"
+regexes = [ '''^[0-9a-f]{64}$''' ]
+
+# Gitleaks file chunking clips this reviewed SHA-256 value to a 54-character fragment.
+# Accept this exact fragment only; other shortened hashes or credentials still report.
+[[rules.allowlists]]
+description = "Exact reviewed locale content-hash chunk fragment"
+condition = "AND"
+paths = [ '''^src/locales/source-hashes\.json$''' ]
+regexTarget = "secret"
+regexes = [ '''^ef8460b5d3bd009cc62d73f1119b70e93d309bffc7b8cf58e22a08$''' ]
+
+# Fixed diagnostic redaction inputs, including a synthetic PEM body.
+[[rules.allowlists]]
+description = "Fixed diagnostic redaction inputs, including a synthetic PEM body."
+condition = "AND"
+paths = [ '''^electron/diagnostics\.test\.mjs$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:ak_live_abcdef123456789)$''' ]
+
+# Fixed dummy argument credential exercises audit redaction.
+[[rules.allowlists]]
+description = "Fixed dummy argument credential exercises audit redaction."
+condition = "AND"
+paths = [ '''^server/admin-activity\.e2e\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:acme_live_9f8e7d6c5b4a3f2e1d0c)$''' ]
+
+# Fixed dummy provider tokens exercise audit redaction.
+[[rules.allowlists]]
+description = "Fixed dummy provider tokens exercise audit redaction."
+condition = "AND"
+paths = [ '''^server/admin-activity\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:acme_live_9f8e7d6c5b4a3f2e1d0c|tok_live_123456)$''' ]
+
+# Fixed local test capability; no external account credential.
+[[rules.allowlists]]
+description = "Fixed local test capability; no external account credential."
+condition = "AND"
+paths = [ '''^server/comms\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:comms-test-capability-key-0123456789abcdef)$''' ]
+
+# Fixed synthetic keys verify decision-log redaction and migration.
+[[rules.allowlists]]
+description = "Fixed synthetic keys verify decision-log redaction and migration."
+condition = "AND"
+paths = [ '''^server/decision-log\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:sk-live-abcdefghijklmnop1234)$''' ]
+
+# Fixed synthetic resume key in the local API test.
+[[rules.allowlists]]
+description = "Fixed synthetic resume key in the local API test."
+condition = "AND"
+paths = [ '''^server/index\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:alias-fixture-123)$''' ]
+
+# Fixed dummy HTTP handshake header tested against a local fake MCP.
+[[rules.allowlists]]
+description = "Fixed dummy HTTP handshake header tested against a local fake MCP."
+condition = "AND"
+paths = [ '''^server/mcp-strict-handshake\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:rotated-api-key-0001)$''' ]
+
+# Fixed synthetic token strings exercise package export redaction.
+[[rules.allowlists]]
+description = "Fixed synthetic token strings exercise package export redaction."
+condition = "AND"
+paths = [ '''^server/package-export\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:abcdef12345678/|abcdef1234567890abcdef)$''' ]
+
+# Fixed Apple encryption interoperability vector, not a deployed identity.
+[[rules.allowlists]]
+description = "Fixed Apple encryption interoperability vector, not a deployed identity."
+condition = "AND"
+paths = [ '''^server/phone-secret\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:BDhy_5hMSvVIy3zGSmBwBECAedYBAwwFLvbWoXCGTJyLRH1cItoQXo9NBcEG0cTQV_VwaEf5judXcsJlh2jfW7Q)$''' ]
+
+# Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM.
+[[rules.allowlists]]
+description = "Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM."
+condition = "AND"
+paths = [ '''^server/redact\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:abc123def456|abcd1234efgh5678|abcdefgh12345678|c3VwZXItc2VjcmV0LXByaXZhdGUta2V5LWJ5dGVz)$''' ]
+
+# RFC 6455 example WebSocket nonce, not an authentication credential.
+[[rules.allowlists]]
+description = "RFC 6455 example WebSocket nonce, not an authentication credential."
+condition = "AND"
+paths = [ '''^server/routes/desktop-viewer\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:dGhlIHNhbXBsZSBub25jZQ==)$''' ]
+
+# Fixed synthetic package-import strings exercise secret redaction.
+[[rules.allowlists]]
+description = "Fixed synthetic package-import strings exercise secret redaction."
+condition = "AND"
+paths = [ '''^shared/package-format\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:abcdefgh12345678)$''' ]
+
+[[rules]]
+id = "jwt"
+
+# Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM.
+[[rules.allowlists]]
+description = "Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM."
+condition = "AND"
+paths = [ '''^server/redact\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c)$''' ]
+
+[[rules]]
+id = "private-key"
+
+# Fixed diagnostic redaction inputs, including a synthetic PEM body.
+[[rules.allowlists]]
+description = "Fixed diagnostic redaction inputs, including a synthetic PEM body."
+condition = "AND"
+paths = [ '''^electron/diagnostics\.test\.mjs$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:-----BEGIN PRIVATE KEY-----",
+        "super-secret-line-one",
+        "super-secret-line-two",
+        "-----END PRIVATE KEY-----)$''' ]
+
+# Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM.
+[[rules.allowlists]]
+description = "Fixed redaction vectors: dummy credentials, sample JWT and synthetic PEM."
+condition = "AND"
+paths = [ '''^server/redact\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:-----BEGIN OPENSSH PRIVATE KEY-----\\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\\n-----END OPENSSH PRIVATE KEY-----)$''' ]
+
+[[rules]]
+id = "stripe-access-token"
+
+# Fixed synthetic token strings exercise package export redaction.
+[[rules.allowlists]]
+description = "Fixed synthetic token strings exercise package export redaction."
+condition = "AND"
+paths = [ '''^server/package-export\.test\.ts$''' ]
+regexTarget = "secret"
+regexes = [ '''^(?:sk_live_abcdef1234567890abcdef)$''' ]

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/joewilsonai/grokoff/security/advisories/new
+    about: Do not disclose vulnerabilities or credentials in a public issue.
+  - name: Contributor setup and scope
+    url: https://github.com/joewilsonai/grokoff/blob/main/CONTRIBUTING.md
+    about: Read the local Mac alpha setup and verification boundaries before contributing.

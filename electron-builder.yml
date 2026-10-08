@@ -1,0 +1,3 @@
+# GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+# GrokOff is the default local Mac package; original upstream config is archived.
+extends: ./electron-builder.grokoff.yml
