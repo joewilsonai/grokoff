@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+// GrokOff modification (2026-10-09): retain fork changes and expose a recorded interrupted tool outcome.
 /** The client-visible wire model: the exact shapes the server serializes
  * for tasks, bots, messages, and rooms. One home so the server records, the
  * desktop client, and (later) the mobile trees cannot drift apart.
@@ -427,6 +427,8 @@ export interface WireMessage {
   goalRun?: GroupGoalRunCardData;
   /** activity messages: tool name + outcome. */
   tool?: {
+    /** Stopped before a provider result; does not establish failure or rollback. */
+    interrupted?: boolean;
     name: string; ok?: boolean; spoken?: string; setup?: boolean; terminal?: boolean; summary?: string; input?: string; output?: string;
     /** error rows: the installed Claude Code is too old for the model, and
      * the UI can offer to update it in place. */

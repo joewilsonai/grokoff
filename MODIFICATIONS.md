@@ -207,6 +207,9 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
 | [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
+| [src/components/ToolActivity.tsx](src/components/ToolActivity.tsx) | inline change notice |
+| [src/components/RunLog.tsx](src/components/RunLog.tsx) | inline change notice |
+| [src/lib/taskTimeline.ts](src/lib/taskTimeline.ts) | inline change notice |
 | [src/state/store.tsx](src/state/store.tsx) | inline change notice |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
@@ -214,3 +217,20 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+## Interrupted tool receipts (2026-10-09)
+
+`server/index.ts` settles only unfinished provider tool receipts of an explicitly
+interrupted turn. The optional `tool.interrupted` wire field preserves an unknown
+execution outcome: it does not fabricate success, failure, output or rollback.
+Provider completion checks the stored receipt's turn ownership before replacing
+its outcome or removing its pending item entry. Tool details and the run log show
+Interrupted with guidance to check what happened before repeating the action.
+Completed and failed receipts retain their recorded outcomes; old records remain
+readable without the new field.
+
+The maintained core adopts owned HTTP/fake-CLI Stop and server-restart coverage,
+real disposable Store ownership controls, actual React disclosure/run-log
+interaction, and the existing complete tool-detail/run-log/timeline test files.
+The recipe is [interrupted tools](docs/verification/interrupted-tools.md). No real
+browser action, provider account, user workspace or native app is exercised.
