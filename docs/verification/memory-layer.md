@@ -67,11 +67,12 @@ provider/model calls and does not use real accounts, bot folders or native UI.
 
 A held read for topic A cannot replace topic B or its newer draft. Document reads lose ownership after selection or typing; all reads lose
 ownership after deactivation, unmount or a completed memory mutation. A
-current metadata refresh can still finish while the preserved draft is typed. Current failures remain visible and a
+current metadata refresh can still finish while the preserved draft is typed
+or a rejected Save reports a conflict. Current failures remain visible and a
 current read can recover. New topic's template follow-through also requires
 its own successful current read. Dirty drafts survive a section reactivation;
 Save keeps its existing expected-hash payload, conflict Reload keeps the
-unsaved draft, and Undo retains its restored document. Discard and daily-log
+unsaved draft without cancelling current metadata, and Undo retains its restored document. Discard and daily-log
 read-only controls still work, including StrictMode lifetime cleanup.
 
 The separate existing isolated server files exercise containment, conflict,

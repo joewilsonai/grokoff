@@ -303,3 +303,36 @@ it("refreshes current metadata while typing into a draft preserved on reactivati
   expect(editor().value).toBe("Preserved draft with newer typing");
   expect(button("Save").disabled).toBe(false);
 });
+
+it("retains current reactivation metadata when conflict Reload changes only the local editor", async () => {
+  await render();
+  await type("Conflict draft to retain");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Conflict disk version", currentHash: "reload-hash" });
+  await click("Save");
+  await render(false);
+  const held = deferred<MemoryOverview>();
+  fixture.overview.mockReturnValueOnce(held.promise);
+  await render();
+  await click("Reload");
+  await act(async () => held.resolve(overview("/synthetic/reloaded-metadata")));
+  await tick();
+  expect(container.textContent).toContain("/synthetic/reloaded-metadata");
+  expect(editor().value).toBe("Conflict disk version");
+  expect(container.querySelector("pre")?.textContent).toBe("Conflict draft to retain");
+});
+
+it("keeps current metadata when a rejected Save reports a conflict during reactivation", async () => {
+  await render();
+  await type("Draft before held reactivation");
+  await render(false);
+  const held = deferred<MemoryOverview>();
+  fixture.overview.mockReturnValueOnce(held.promise);
+  await render();
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Concurrent disk edit", currentHash: "concurrent-hash" });
+  await click("Save");
+  await act(async () => held.resolve(overview("/synthetic/conflict-metadata")));
+  await tick();
+  expect(container.textContent).toContain("/synthetic/conflict-metadata");
+  expect(editor().value).toBe("Draft before held reactivation");
+  expect(button("Reload").disabled).toBe(false);
+});

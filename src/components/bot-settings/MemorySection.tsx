@@ -195,11 +195,12 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       const result = await saveMemoryDoc(bot.id, editing.path, editing.text, expectedHash);
-      invalidateReads();
       if (!result.ok) {
+        invalidateEditorReads();
         setConflict({ path: editing.path, current: result.current, currentHash: result.currentHash });
         return;
       }
+      invalidateReads();
       setConflict(null);
       setSavedDraft(null);
       setEditing({ ...editing, text: result.doc.text, hash: result.doc.hash, dirty: false });
@@ -217,7 +218,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
    * bot's version. */
   const reloadFromConflict = () => {
     if (!conflict || !editing) return;
-    invalidateReads();
+    invalidateEditorReads();
     setSavedDraft(editing.text);
     setEditing({ ...editing, text: conflict.current, hash: conflict.currentHash, dirty: false });
     setConflict(null);
