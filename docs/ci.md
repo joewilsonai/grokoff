@@ -43,6 +43,9 @@ independent application identity, and lazy phone-secret/cancellation behavior.
 It also covers explicit provider connection checks, retained inventory on
 failure, bounded inventory/model-discovery timeout and retry, concurrent startup
 and onboarding checks, save/discovery overlap and confirmed sign-out state.
+Claude's pasted-code completion also checks a consumed owner flow, discovery
+failure/retry surviving focus in its actual Settings card and onboarding row,
+shared recovery after leaving that gate, and late-response isolation.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

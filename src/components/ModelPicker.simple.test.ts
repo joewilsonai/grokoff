@@ -47,6 +47,8 @@ vi.mock("@/state/store", async (importOriginal) => ({
     dispatch: fixture.dispatch,
     refreshInstances: fixture.refreshInstances,
     refreshModels: fixture.refreshModels,
+    refreshSignInModels: async () => {},
+    signInModelDiscovery: {},
   }),
 }));
 
