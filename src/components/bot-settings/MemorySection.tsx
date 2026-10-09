@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-09): scope memory reads to the current active editor intent; preserve draft and mutation contracts.
+// GrokOff modification (2026-10-09): scope memory reads and Save receipts to the current editor; preserve newer drafts, hashes and mutation contracts.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -121,11 +121,24 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   // needs the same lifetime/intent guard as a failure: a later selection,
   // edit or completed mutation owns the editor even if an older read finishes.
   const readGeneration = useRef(0);
+  // Pending navigation and the loaded document have separate ownership:
+  // typing can cancel navigation while keeping the current draft and hash.
+  const selectionGeneration = useRef(0);
+  const documentGeneration = useRef(0);
+  const pendingRead = useRef<number | null>(null);
+  const draftRevision = useRef(0);
+  const currentEditing = useRef(editing);
+  currentEditing.current = editing;
   // Typing/selection replace document intent, but metadata stays current
   // until another refresh, deactivation or completed mutation supersedes it.
   const metadataGeneration = useRef(0);
   const activeReads = useRef(active);
-  const invalidateEditorReads = () => { readGeneration.current += 1; };
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const invalidateEditorReads = () => { readGeneration.current += 1; pendingRead.current = null; };
   const invalidateReads = () => {
     invalidateEditorReads();
     metadataGeneration.current += 1;
@@ -135,7 +148,9 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
 
   const refresh = async (openPath?: string) => {
     if (!activeReads.current) return;
+    if (openPath) selectionGeneration.current += 1;
     const generation = openPath ? ++readGeneration.current : readGeneration.current;
+    if (openPath) pendingRead.current = generation;
     const metadata = ++metadataGeneration.current;
     let metadataLoaded = false;
     try {
@@ -153,10 +168,15 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       if (openPath && ownsRead(generation)) {
         const doc = await fetchMemoryDoc(bot.id, openPath);
         if (!ownsRead(generation)) return;
+        pendingRead.current = null;
+        documentGeneration.current += 1;
         setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
       }
     } catch (e) {
-      if (metadataLoaded ? ownsRead(generation) : ownsMetadata(metadata)) setError(errorText(e));
+      if (metadataLoaded ? ownsRead(generation) : ownsMetadata(metadata)) {
+        if (pendingRead.current === generation) pendingRead.current = null;
+        setError(errorText(e));
+      }
     }
   };
 
@@ -176,38 +196,74 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
 
   const open = async (path: string): Promise<number | undefined> => {
     if (!activeReads.current) return;
+    selectionGeneration.current += 1;
     const generation = ++readGeneration.current;
+    pendingRead.current = generation;
     setError(null);
     setConflict(null);
     try {
       const doc = await fetchMemoryDoc(bot.id, path);
       if (!ownsRead(generation)) return;
+      pendingRead.current = null;
+      documentGeneration.current += 1;
       setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: path.startsWith("memory/log/") });
       return generation;
     } catch (e) {
-      if (ownsRead(generation)) setError(errorText(e));
+      if (ownsRead(generation)) {
+        pendingRead.current = null;
+        setError(errorText(e));
+      }
     }
   };
 
   const save = async (expectedHash: string | undefined) => {
     if (!editing) return;
+    const submitted = editing;
+    const selection = selectionGeneration.current;
+    const revision = draftRevision.current;
+    const document = documentGeneration.current;
+    const metadata = metadataGeneration.current;
+    const ownsSave = () => mounted.current
+      && documentGeneration.current === document
+      && currentEditing.current?.path === submitted.path
+      && currentEditing.current.hash === submitted.hash;
+    const ownsSaveControls = () => ownsSave()
+      && (pendingRead.current === null || selectionGeneration.current === selection);
+    let journalGeneration: number | undefined;
     setSaving(true);
     setError(null);
     try {
-      const result = await saveMemoryDoc(bot.id, editing.path, editing.text, expectedHash);
+      const result = await saveMemoryDoc(bot.id, submitted.path, submitted.text, expectedHash);
       if (!result.ok) {
-        invalidateEditorReads();
-        setConflict({ path: editing.path, current: result.current, currentHash: result.currentHash });
+        if (ownsSaveControls()) {
+          invalidateEditorReads();
+          setConflict({ path: submitted.path, current: result.current, currentHash: result.currentHash });
+        }
         return;
       }
-      invalidateReads();
-      setConflict(null);
-      setSavedDraft(null);
-      setEditing({ ...editing, text: result.doc.text, hash: result.doc.hash, dirty: false });
-      setOverview(result.overview);
-      setJournal(await fetchMemoryJournal(bot.id));
+      // The write happened even if the person navigated away. Only its
+      // still-current editor may be reconciled; later reads must keep running.
+      if (ownsSave()) {
+        if (ownsSaveControls()) {
+          invalidateEditorReads();
+          setConflict(null);
+          setSavedDraft(null);
+        }
+        setEditing(current => {
+          if (documentGeneration.current !== document || !current || current.path !== submitted.path || current.hash !== submitted.hash) return current;
+          return draftRevision.current !== revision
+            ? { ...current, hash: result.doc.hash }
+            : { ...current, text: result.doc.text, hash: result.doc.hash, dirty: false };
+        });
+      }
+      if (ownsMetadata(metadata)) {
+        journalGeneration = ++metadataGeneration.current;
+        setOverview(result.overview);
+        const nextJournal = await fetchMemoryJournal(bot.id);
+        if (ownsMetadata(journalGeneration)) setJournal(nextJournal);
+      }
     } catch (e) {
-      setError(errorText(e));
+      if (journalGeneration === undefined ? ownsSaveControls() : ownsMetadata(journalGeneration)) setError(errorText(e));
     } finally {
       setSaving(false);
     }
@@ -257,6 +313,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       const result = await revertMemoryChange(bot.id, row.id);
+      // Undo changed this file on disk even when its draft stays dirty.
+      if (currentEditing.current?.path === row.path) documentGeneration.current += 1;
       invalidateReads();
       setOverview(result.overview);
       setJournal(await fetchMemoryJournal(bot.id));
@@ -402,7 +460,9 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
             aria-label={editing.path === MEMORY_INDEX ? "Bot memory" : `Memory file ${editing.path}`}
             onChange={(e) => {
               invalidateEditorReads();
-              setEditing({ ...editing, text: e.target.value, dirty: true });
+              draftRevision.current += 1;
+              const text = e.target.value;
+              setEditing(current => current ? { ...current, text, dirty: true } : current);
             }}
           />
           {editing.readOnly ? (

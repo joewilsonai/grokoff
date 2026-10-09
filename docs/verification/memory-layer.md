@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): verify bounded Save reconciliation without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 # Memory: recall, upkeep and the tidy-up
 
@@ -66,7 +67,8 @@ and desktop capabilities, then disposes the DOM between cases. It sends no
 provider/model calls and does not use real accounts, bot folders or native UI.
 
 A held read for topic A cannot replace topic B or its newer draft. Document reads lose ownership after selection or typing; all reads lose
-ownership after deactivation, unmount or a completed memory mutation. A
+ownership after deactivation or unmount. A completed mutation supersedes its
+still-current editor reads; navigation begun after Save retains its own read. A
 current metadata refresh can still finish while the preserved draft is typed
 or a rejected Save reports a conflict. Current failures remain visible and a
 current read can recover. New topic's template follow-through also requires
@@ -80,3 +82,20 @@ mutation/journal and HTTP behavior. The component fixture uses synthetic hash
 values; it does not establish real filesystem persistence or capture quality,
 and it does not test model-driven Tidy up. This unit changes read projection
 ownership without changing server mutation, hash, journal or memory APIs.
+
+## Save response ownership
+
+The same complete interaction fixture holds Save responses while the person
+continues typing or selects another file. A still-current submitted document
+keeps newer text and its dirty intent, while its next Save uses the successful
+receipt's hash, including a draft preserved while its section is hidden or
+reopened. Unmount ends Save editor ownership. A later selected file, pending navigation, same-path reread or
+completed Undo revision keeps its own text/hash. Same-file Undo also ends an
+older Save receipt's ownership when its draft remains dirty; the existing
+optimistic-hash conflict contract remains in use. Old Save conflicts/errors do
+not appear on that later selection; a current conflict still supports Reload
+and keeps the newer unsaved draft. Typing that cancels pending navigation keeps
+ownership of its still-loaded document. Save metadata and delayed journal reads
+cannot supersede newer activation metadata or its document hydration. Server mutation, expected-hash and journal APIs remain
+unchanged. These are isolated source-DOM checks, not native acceptance or a
+claim that every asynchronous editor mutation has been reconciled.

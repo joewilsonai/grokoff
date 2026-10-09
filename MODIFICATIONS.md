@@ -115,7 +115,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [shared/pairing-link.ts](shared/pairing-link.ts) | inline change notice |
 | [shared/wire.ts](shared/wire.ts) | inline change notice |
 | [src/App.tsx](src/App.tsx) | inline change notice |
-| [src/components/bot-settings/MemorySection.tsx](src/components/bot-settings/MemorySection.tsx) | inline change notice (current memory-read ownership and draft preservation) |
+| [src/components/bot-settings/MemorySection.tsx](src/components/bot-settings/MemorySection.tsx) | inline change notice (current memory-read/Save ownership and draft/hash preservation) |
 | [src/components/AboutDialog.tsx](src/components/AboutDialog.tsx) | inline change notice |
 | [src/components/Avatar.tsx](src/components/Avatar.tsx) | inline change notice |
 | [src/components/AvatarImageGenerator.tsx](src/components/AvatarImageGenerator.tsx) | inline change notice |
