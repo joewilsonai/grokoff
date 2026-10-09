@@ -46,7 +46,7 @@ inherited CI retry runner can retry only listed known flakes; the workflow
 reports any retries in its job summary.
 
 <!-- GrokOff modification (2026-10-09): preserve bounded JavaScript notice rejection checks in the maintained gate. -->
-The Node checks also validate the five observed JavaScript notice records using
+The Node checks also validate the seven observed JavaScript notice records using
 disposable package/install trees, including missing and same-size altered
 licenses and installed-version drift. They do not enumerate every emitted
 module or establish complete binary licensing; see

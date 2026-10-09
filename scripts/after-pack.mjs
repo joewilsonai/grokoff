@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-09): verify retained Electron and five observed JavaScript runtime notices.
+// GrokOff modification (2026-10-09): verify retained Electron and seven observed JavaScript runtime notices.
 import { chmod, lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { LICENSE_FILES } from "./cua-linux-release.mjs";
