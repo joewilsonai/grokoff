@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): align the sign-out fixture with shared sign-in recovery.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
@@ -17,6 +18,8 @@ vi.mock("@/state/store", async (importOriginal) => ({
     state: { instances: fixture.instances, bots: [] },
     dispatch: fixture.dispatch,
     refreshInstances: fixture.refreshInstances,
+    refreshSignInModels: async () => {},
+    signInModelDiscovery: {},
   }),
 }));
 // Capture the handler without a browser or any live provider credentials.

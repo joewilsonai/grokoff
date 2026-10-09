@@ -55,3 +55,21 @@ fresh inventory collected after discovery completes; both completion orders
 are covered using the actual save control and store. Timed-out model responses
 cannot undo confirmed login state. This fixture verifies inventory checks and recovery;
 it does not prove live provider authentication, subscription access or inference.
+
+Device-code and ChatGPT browser sign-in recovery runs through real Settings,
+StoreProvider and owner-scoped in-memory auth sessions with synthetic HTTP:
+
+```sh
+pnpm exec vitest run src/components/DeviceSignIn.recovery.test.ts src/components/DeviceSignIn.test.ts src/components/GrokSignIn.interaction.test.ts src/components/ChatGptPlanSignIn.interaction.test.ts
+```
+
+The lifecycle cases cover Codex, Grok Build and the ChatGPT plan: confirmed
+sign-in stays connected when model discovery fails, Check again retries only
+discovery, and focus or closing/reopening Settings cannot replay login. The
+real 30-second discovery deadline is advanced with fake timers; it is not a
+native wall-clock measurement. Cancel or closing Settings aborts held status
+transport and ignores late success. Codex/ChatGPT account-panel sign-out uses
+the actual confirmation control and synthetic mutation response; stale model
+success or failure cannot restore the account. These tests open no provider
+page, run no CLI and access no credentials. Static URL tests and the older
+hook-shim route tests establish narrower rendering/route behavior.

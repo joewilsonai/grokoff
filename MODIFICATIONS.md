@@ -148,11 +148,15 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/CloudAccountSettings.test.ts](src/components/CloudAccountSettings.test.ts) | inline change notice |
 | [src/components/CloudAccountSettings.tsx](src/components/CloudAccountSettings.tsx) | inline change notice |
 | [src/components/CompanionSection.test.ts](src/components/CompanionSection.test.ts) | inline change notice |
+| [src/components/CodexAccountSettings.test.ts](src/components/CodexAccountSettings.test.ts) | inline change notice |
 | [src/components/CodexAccountSettings.tsx](src/components/CodexAccountSettings.tsx) | inline change notice |
 | [src/components/ConnectedWorkspacesSettings.tsx](src/components/ConnectedWorkspacesSettings.tsx) | inline change notice |
+| [src/components/GrokSignIn.interaction.test.ts](src/components/GrokSignIn.interaction.test.ts) | inline change notice |
+| [src/components/ChatGptPlanSignIn.interaction.test.ts](src/components/ChatGptPlanSignIn.interaction.test.ts) | inline change notice |
 | [src/components/DeviceSignIn.tsx](src/components/DeviceSignIn.tsx) | inline change notice |
 | [src/components/EngineLibrary.test.ts](src/components/EngineLibrary.test.ts) | inline change notice |
 | [src/components/EngineLibrary.tsx](src/components/EngineLibrary.tsx) | inline change notice |
+| [src/components/EngineSetup.grok.test.ts](src/components/EngineSetup.grok.test.ts) | inline change notice |
 | [src/components/EngineSetup.test.ts](src/components/EngineSetup.test.ts) | inline change notice |
 | [src/components/EngineSetup.tsx](src/components/EngineSetup.tsx) | inline change notice |
 | [src/components/EnginesSettings.test.ts](src/components/EnginesSettings.test.ts) | inline change notice |
