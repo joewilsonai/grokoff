@@ -39,7 +39,10 @@ Do not aim those checks at your running personal workspace.
 authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
-independent application identity, and lazy phone-secret/cancellation behavior.
+independent application identity, lazy phone-secret/cancellation behavior, and
+[optional config/webhook snapshot recovery](verification/optional-snapshots.md).
+These snapshot cases mount the real StoreProvider with sealed in-memory HTTP/SSE
+and virtual clocks; they do not run a native app, live provider or real server.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
