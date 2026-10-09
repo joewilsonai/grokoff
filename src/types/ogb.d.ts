@@ -2,6 +2,16 @@
 // The narrow bridge the Electron preload exposes. Absent in the browser.
 
 declare global {
+  /** GrokOff (2026-10-09): inert report DOM snapshot; main independently
+   * allowlists tags/attributes and bounds depth, node count and output bytes. */
+  interface ReportPdfNode {
+    tag: string;
+    children: Array<ReportPdfNode | string>;
+    href?: string;
+    dir?: "auto" | "ltr" | "rtl";
+    start?: number;
+    checked?: boolean;
+  }
   type CompanyBackupEntry = Omit<import("../../electron/company-backups.mjs").CompanyBackupMetadata, "status"> & { status: "creating" | "uploading" | "completing" | "ready" | "cleanup" };
   interface CompanyBackupScheduleState {
     enabled: boolean;
@@ -301,6 +311,10 @@ const __APP_VERSION__: string;
        * it there and reveals it. Resolves the chosen path, or null if the
        * user cancelled the dialog. */
       saveFile?(filePath: string): Promise<string | null>;
+      /** GrokOff modification (2026-10-09): local Mac report-only PDF export;
+       * no source or destination filesystem path crosses from the renderer. */
+      exportReportPdf?(request: { id: string; name: string; content: ReportPdfNode }): Promise<"saved" | "cancelled">;
+      cancelReportPdf?(id: string): Promise<boolean>;
       /** Points this computer's file manager at a file a bot linked outside
        * its workspace, without opening or reading it. Local app only. */
       revealInFolder?(filePath: string): Promise<"shown" | "missing" | "invalid">;

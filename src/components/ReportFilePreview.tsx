@@ -1,12 +1,14 @@
 // GrokOff: read a shared Markdown report without granting its contents access
 // to other files. Only the original stored message authorizes the initial read.
 // GrokOff modification (2026-10-09): bound preview attempts with manual recovery.
+// GrokOff modification (2026-10-09): export only the loaded report to an inert Mac PDF surface.
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, Download, LoaderCircle, X } from "lucide-react";
 import { t } from "@/lib/i18n";
+import { useReportPdf } from "@/lib/report-pdf";
 import { requestMessageFile, useLocalFileSave, type MessageAttachmentContext } from "./AttachmentPreview";
 
 export const REPORT_PREVIEW_MAX_BYTES = 1024 * 1024;
@@ -118,6 +120,9 @@ function ReportDialog({ path, name, message, returnFocus, onClose }: {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const save = useLocalFileSave(path, name, message);
+  const content = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
+  const pdf = useReportPdf(JSON.stringify([message.threadId, message.messageId, path, name]));
   useEffect(() => {
     const element = dialog.current!;
     element.showModal();
@@ -129,15 +134,18 @@ function ReportDialog({ path, name, message, returnFocus, onClose }: {
     <header className="flex shrink-0 items-center gap-2 border-b border-hairline/40 px-4 py-3">
       <BookOpen size={17} className="shrink-0 text-accent" aria-hidden="true" />
       <h2 id={titleId} className="min-w-0 flex-1 truncate text-sm font-medium">{name}</h2>
+      {pdf.available && <button type="button" className="shrink-0 rounded-lg border border-hairline px-2 py-1 text-xs hover:bg-raised disabled:opacity-50"
+        disabled={!ready || pdf.state === "saving"} onClick={() => void pdf.save(content.current?.querySelector<HTMLElement>('article[data-testid="report-content"]') ?? null, name)}>{t("report.savePdf")}</button>}
       <button type="button" className="table-action" disabled={save.state === "saving"} onClick={() => void save.save()} aria-label={t("report.download")} title={t("report.download")}><Download size={16} /></button>
       <button type="button" autoFocus className="table-action" onClick={onClose} aria-label={t("report.close")}><X size={16} /></button>
     </header>
     {save.state !== "idle" && <p role={save.state === "failed" ? "alert" : "status"} className="shrink-0 px-5 pt-3 text-xs text-ink-secondary">{save.state === "failed" ? save.reason : t(save.state === "saving" ? "attach.downloading" : "attach.downloaded")}</p>}
-    <div className="min-h-0 overflow-auto p-5 sm:p-8"><ReportContent path={path} message={message} /></div>
+    {pdf.state !== "idle" && <p role={pdf.state === "failed" ? "alert" : "status"} className="shrink-0 px-5 pt-3 text-xs text-ink-secondary">{t(pdf.state === "saving" ? "report.pdfSaving" : pdf.state === "saved" ? "report.pdfSaved" : pdf.reason === "pdf-size" ? "report.pdfTooLarge" : pdf.reason === "pdf-timeout" ? "report.pdfTimedOut" : pdf.reason === "pdf-destination" ? "report.pdfDestination" : pdf.reason === "pdf-filesystem" ? "report.pdfFilesystem" : pdf.reason === "pdf-busy" ? "report.pdfBusy" : "report.pdfFailed")}</p>}
+    <div ref={content} className="min-h-0 overflow-auto p-5 sm:p-8"><ReportContent path={path} message={message} onReady={setReady} /></div>
   </dialog>, document.body);
 }
 
-function ReportContent({ path, message }: { path: string; message: MessageAttachmentContext }) {
+function ReportContent({ path, message, onReady }: { path: string; message: MessageAttachmentContext; onReady: (ready: boolean) => void }) {
   const [attempt, setAttempt] = useState(0);
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +153,7 @@ function ReportContent({ path, message }: { path: string; message: MessageAttach
     const controller = new AbortController();
     setText(null);
     setError(null);
+    onReady(false);
     // One deadline covers both response headers and the complete UTF-8 body.
     // Report the timeout here: the catch deliberately keeps aborted reads
     // quiet, including dialog close and replacement by a newer attempt.
@@ -156,7 +165,7 @@ function ReportContent({ path, message }: { path: string; message: MessageAttach
       try {
         const response = await requestMessageFile(path, message, controller.signal);
         const content = await readReportResponse(response, controller.signal);
-        if (!controller.signal.aborted) setText(content);
+        if (!controller.signal.aborted) { setText(content); onReady(Boolean(content.trim())); }
       } catch (reason) {
         if (!controller.signal.aborted) setError(reason instanceof Error && ["size", "format"].includes(reason.message) ? reason.message : "load");
       } finally {
@@ -164,7 +173,7 @@ function ReportContent({ path, message }: { path: string; message: MessageAttach
       }
     })();
     return () => { clearTimeout(deadline); controller.abort(); };
-  }, [path, message.threadId, message.messageId, attempt]);
+  }, [path, message.threadId, message.messageId, attempt, onReady]);
   if (error) return <div className="py-8 text-center text-sm"><p role="alert" className="mb-3 text-ink-secondary">{t(error === "timeout" ? "report.timedOut" : error === "size" ? "report.tooLarge" : error === "format" ? "report.invalid" : "report.loadFailed")}</p><button type="button" className="rounded-lg border border-hairline px-3 py-2 hover:bg-raised" onClick={() => setAttempt(attempt + 1)}>{t("chat.retry")}</button></div>;
   if (text === null) return <div role="status" className="flex items-center justify-center gap-2 p-10 text-sm text-ink-secondary"><LoaderCircle size={16} className="animate-spin" />{t("report.loading")}</div>;
   return text.trim() ? <ReportMarkdown text={text} /> : <p className="py-8 text-center text-sm text-ink-secondary">{t("report.empty")}</p>;
