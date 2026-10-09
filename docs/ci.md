@@ -62,6 +62,8 @@ topic recall after an owned server restart. Memory model steps use scripted
 fake replies; these checks do not establish model judgment or packaged UI behavior.
 First-run local and remote fallback checks preserve setup inventory, report
 explicit failures, unlock retries and keep completed focus failures quiet.
+Offline disposable fixtures validate Mac CUA notice copying and packaged
+source records.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

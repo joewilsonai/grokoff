@@ -8,6 +8,7 @@ This inventory describes source changes; it does not claim that every inherited 
 
 | Modified imported file | Change notice |
 | --- | --- |
+| [.gitattributes](.gitattributes) | inline change notice (Mac CUA pinned source/license bytes) |
 | [.gitignore](.gitignore) | inline change notice |
 | [apps/docs/package.json](apps/docs/package.json) | [apps/docs/package.json.license](apps/docs/package.json.license) |
 | [AGENTS.md](AGENTS.md) | inline change notice |
@@ -70,8 +71,10 @@ This inventory describes source changes; it does not claim that every inherited 
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
 | [scripts/bundle-updater.mjs](scripts/bundle-updater.mjs) | inline change notice (vendored updater security rebuild) |
+| [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (Mac CUA notice gate) |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
+| [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
 | [server/brand.ts](server/brand.ts) | inline change notice |
