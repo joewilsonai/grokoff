@@ -25,3 +25,7 @@ onlyBuiltDependencies:
 # mermaid 12.1 still allows dompurify 3.4.13. Force the patched release.
 overrides:
   dompurify: 3.4.16
+  # Patch the inherited Next peer as well as the docs app's direct pin.
+  next@16.3.2: 16.3.8
+  # Next and Miniflare use this same release line; retain other sharp minors.
+  sharp@>=0.35.0 <0.36.0: 0.35.5

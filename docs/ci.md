@@ -1,17 +1,22 @@
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
 # GrokOff source checks
 
-GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
-job on pull requests, pushes to `main`, and manual dispatch. It uses Node 24,
+GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
+jobs on pull requests, pushes to `main`, and manual dispatch. It uses Node 24,
 pnpm 10.33.0 and the committed lockfile. It does not build or publish a Mac
 release, deploy hosted services, or authenticate to model providers.
 
-The job runs lint, translation validation, syntax checks using Electron's Node
+The source job runs lint, translation validation, syntax checks using Electron's Node
 runtime, the UI build (which also typechecks frontend and server sources),
 `pnpm test:core`, and `pnpm test:packaged-server`. Any failed command fails the
 job. The packaged-server smoke stages the bundled server outside the checkout,
 uses temporary data and home directories, and checks startup, bundled workers,
 MCP, backup export, and shutdown without provider inference.
+
+The docs job separately generates route types, typechecks the docs app, and
+builds its pages, search index and Open Graph images with Next.js. This keeps
+docs dependency patches covered by their actual build. The inherited docs
+content still describes OpenMausBot; this check does not publish that site.
 
 ## Run the same checks locally
 
@@ -25,6 +30,8 @@ pnpm i18n:check
 pnpm check:electron
 pnpm build
 pnpm test
+pnpm --filter @openmausbot/docs types:check
+pnpm docs:build
 ```
 
 `pnpm test` runs the maintained core suite and the bundled-server smoke. You
