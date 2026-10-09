@@ -58,6 +58,10 @@ Open **Settings → Model providers** to detect the official Claude Code and Cod
 
 Provider services and models are not made open source by GrokOff. Your provider's limits, eligibility, terms, and any enabled extra-usage charges still apply. Signing out of a shared CLI account affects other local uses of that CLI. Read [subscription connections](docs/subscription-connections.md) before connecting accounts.
 
+## Export and restore your workspace
+
+Open **Settings → Advanced mode → Backups** to download a password-encrypted full workspace archive. Restore validates the archive, requires typing **REPLACE**, and applies after an app/server restart. Read [data export](docs/data-export.md) for included files, credential exclusions, destination preservation, and paused routines.
+
 ## Local edition boundaries
 
 This edition supplies no hosted cloud subscription, vendor organization enrollment, billing service, or GrokOff mobile app. Upstream hosted defaults, product analytics, and automatic updates are disabled. Routines require the app and Mac to stay running.

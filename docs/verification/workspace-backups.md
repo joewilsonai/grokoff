@@ -1,8 +1,10 @@
 # Full workspace backups
 
+<!-- GrokOff modification (2026-10-09): clarify Advanced mode, maintained coverage, and owned restart cleanup. -->
+
 ## User path
 
-Settings → Backups → **Export full backup** → password and confirmation →
+Settings → Advanced mode → Backups → **Export full backup** → password and confirmation →
 encrypted `.ombbackup` download. Import uses a native file input, password,
 validated preview and an explicit **REPLACE** confirmation. It is replacement,
 not an additive team import. Click **Restart and restore** on the local desktop
@@ -39,7 +41,9 @@ through the restored conversation. Wrong passwords, wrong confirmation,
 non-admin access and post-confirmation writes are rejected.
 
 Keep its JSON output and the reported persistent log/evidence paths. The
-permanent version is:
+three full archive, policy and two-server workflow files are maintained by
+`pnpm test:core` and public PR CI. The workflow also checks cleanup when its
+evidence reporter fails after either fixture launch. Run it separately with:
 
 ```sh
 pnpm exec vitest run server/workspace-backup-workflow.test.ts --silent=false
@@ -88,8 +92,12 @@ If a configured provider login home is inside ordinary workspace files rather
 than the excluded `providers/` directory, export and restore refuse to proceed
 until that login storage is moved outside the backed-up files.
 
-Both recipes stop only their owned processes and remove only their temporary
-workspaces. Evidence logs remain. These tests do not prove real cloud accounts,
+The two-server recipe checks the replacement server's PID before using it,
+stops every exact child it created, and requires confirmed exit before deleting
+its temporary workspace. It attempts both independent owners' cleanup even on
+failure and checks that their temporary directories were removed. Evidence logs
+remain. The renderer recipe likewise uses only its owned fixtures. These tests
+do not prove real cloud accounts,
 external providers, phone recovery or OS-specific file-picker appearance. Saved
 credentials are deliberately not transferred. No live mutation is part of this
 recipe.

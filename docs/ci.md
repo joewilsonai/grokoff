@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
@@ -88,6 +88,9 @@ Roster-order and activity-visibility helpers are included. The restart fixture
 uses the shared isolated environment, seals provider discovery to the fake CLI,
 and verifies the replacement server PID. See the
 [test map and evidence limits](verification/room-ci.md).
+Encrypted workspace archive, policy and restore checks use a backup workflow that
+uses two owned real servers and a fake CLI, including a replacement server
+restart and continued conversation; it does not exercise the native backup UI.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
