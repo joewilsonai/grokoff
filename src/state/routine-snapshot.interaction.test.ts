@@ -88,7 +88,7 @@ beforeEach(() => {
     }
     if (path === "/api/instances") return Promise.resolve(json({ instances: [] }));
     if (path === "/api/config") return Promise.resolve(json({}));
-    if (path === "/api/webhooks") return Promise.resolve(json({ webhooks: [], attempts: [], ingress: [] }));
+    if (path === "/api/webhooks") return Promise.resolve(json({ webhooks: [], attempts: [], ingress: { available: false, baseUrl: "" } }));
     if (path === "/api/live/call") return Promise.resolve(json({ call: null }));
     throw new Error(`Unapproved fixture transport: ${path}`);
   }));

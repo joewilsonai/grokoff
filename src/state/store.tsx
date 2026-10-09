@@ -1,6 +1,7 @@
 // GrokOff modification (2026-10-09): retain fork changes and expose a recorded interrupted tool outcome.
 // GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
 // GrokOff modification (2026-10-09): bound optional routine snapshot headers/body without changing command or scheduler deadlines.
+// GrokOff modification (2026-10-09): bound only optional config/webhook snapshot reads and cancel them on unmount.
 // Server-backed store. The React app holds no transports of its own:
 // it dispatches typed commands over HTTP and folds the one SSE event
 // stream from the harness server into local state. The reducer stays
@@ -54,6 +55,7 @@ import { createInstanceRefresh, MODEL_REFRESH_TIMEOUT_MS, type InstanceRefreshOp
 import type { OnboardingStatus } from "@/lib/onboarding";
 import { openLiveEvents, publishLiveFrame, publishMissedFrames } from "@/lib/live-events";
 import { readRoutineSnapshot } from "./routine-snapshot";
+import { readConfigSnapshot, readWebhookSnapshot } from "./optional-snapshots";
 
 const MAX_ROUTINE_RUNS = 2_000;
 const ACTIVE_ROUTINE_RUN_STATUSES = new Set<RoutineRun["status"]>(["queued", "running", "waiting"]);
@@ -3728,6 +3730,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
     const routineSnapshotLifetime = new AbortController();
+    const optionalSnapshotLifetime = new AbortController();
     type PeripheralKey = "instances" | "config" | "routines" | "webhooks";
     type PeripheralPart = {
       key: PeripheralKey;
@@ -3762,7 +3765,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       {
         key: "config",
         request: async () => {
-          const config = await api("/api/config");
+          const config = await readConfigSnapshot(optionalSnapshotLifetime.signal);
           return () => rawDispatch({ type: "configStatus", config });
         },
       },
@@ -3776,7 +3779,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...(window.ogb?.remoteClient?.active ? [] : [{
         key: "webhooks",
         request: async () => {
-          const { webhooks, attempts, ingress } = await api("/api/webhooks");
+          const { webhooks, attempts, ingress } = await readWebhookSnapshot(optionalSnapshotLifetime.signal);
           return () =>
             rawDispatch({ type: "webhooksHydrated", webhooks, attempts: attempts ?? [], ingress });
         },
@@ -4101,6 +4104,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       routineSnapshotLifetime.abort();
+      optionalSnapshotLifetime.abort();
       clearTimeout(hydrationFallback);
       for (const refresh of peripheralRefresh.values()) {
         if (refresh.timer) clearTimeout(refresh.timer);

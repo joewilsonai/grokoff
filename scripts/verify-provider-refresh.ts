@@ -126,7 +126,7 @@ ui = await createServer({
           if (path === "/api/bots") return json({ bots: [], groups: [], sections: [] });
           if (path === "/api/config") return json({});
           if (path === "/api/routines") return json({ routines: [], runs: [] });
-          if (path === "/api/webhooks") return json({ webhooks: [] });
+          if (path === "/api/webhooks") return json({ webhooks: [], ingress: { available: false, baseUrl: "" } });
           if (path === "/api/live/call") return json({});
           return json({ error: "Fixture route not available" }, 404);
         }

@@ -135,7 +135,7 @@ beforeEach(async () => {
     if (path === "/api/instances" && method === "GET") return Response.json({ instances: inventory() });
     const bodies: Record<string, unknown> = {
       "/api/bots?messages=200": { bots: [], groups: [], sections: [] }, "/api/config": {},
-      "/api/routines": { routines: [], runs: [] }, "/api/webhooks": { webhooks: [] }, "/api/live/call": {},
+      "/api/routines": { routines: [], runs: [] }, "/api/webhooks": { webhooks: [], ingress: { available: false, baseUrl: "" } }, "/api/live/call": {},
     };
     if (method === "GET" && Object.hasOwn(bodies, path)) return Response.json(bodies[path]);
     unexpected.push(`${method} ${path}`);

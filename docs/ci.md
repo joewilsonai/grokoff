@@ -216,3 +216,13 @@ fixtures use owned temporary homes/servers and scripted Claude/ACP CLI events;
 React and Store controls have no live provider or browser transport. These
 checks prove saved status and ownership, not whether a real website action
 completed or was rolled back.
+
+
+<!-- GrokOff modification (2026-10-09): document optional config/webhook snapshot recovery coverage without dropping existing source or job boundaries. -->
+The [optional config/webhook snapshot recovery](verification/optional-snapshots.md)
+cases mount the real StoreProvider with sealed in-memory HTTP/SSE and virtual
+clocks. They cover one 30-second deadline across response headers and JSON body,
+quiet unmount cancellation, retained history, queued normal/routine updates,
+current-live protection, retry, and valid/invalid response envelope handling.
+These source tests run no native app, real server, scheduler or live provider;
+they preserve omitted-attempts compatibility and do not impose command deadlines.

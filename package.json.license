@@ -11,3 +11,5 @@ Original source: https://github.com/milind-soni/OpenMausBot/tree/3e9e42b3a05e0b7
 Retain the repository LICENSE, NOTICE, and applicable third-party attribution.
 
 GrokOff modification (2026-10-09): maintain actual StoreProvider routine snapshot deadline/recovery regressions in test:core.
+
+GrokOff modification (2026-10-09): maintain actual StoreProvider optional config/webhook snapshot deadline and recovery tests in test:core.

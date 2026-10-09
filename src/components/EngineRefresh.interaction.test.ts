@@ -113,7 +113,7 @@ beforeEach(async () => {
     const bodies: Record<string, unknown> = {
       "/api/bots?messages=200": { bots: [], groups: [], sections: [] },
       "/api/config": {}, "/api/routines": { routines: [], runs: [] },
-      "/api/webhooks": { webhooks: [] }, "/api/live/call": {},
+      "/api/webhooks": { webhooks: [], ingress: { available: false, baseUrl: "" } }, "/api/live/call": {},
     };
     if (!Object.hasOwn(bodies, path)) throw new Error(`Unexpected fixture request: ${path}`);
     return new Response(JSON.stringify(bodies[path]));
