@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): canonical private browser paths, explicit owned onboarding seed, and fail-closed fixture teardown.
 // `control-omb ui`: drive the real React renderer headlessly against the
 // isolated fake-engine fixture, through the agent-browser binary the harness
 // already pins (server/browser-engine-release.ts). One launch owns a fixture
@@ -8,8 +9,8 @@
 // Imported by scripts/control-omb.ts, which owns HELP and the MUTATING set;
 // this file touches that module's bindings only inside functions so the
 // import cycle is harmless whichever file is loaded first.
-import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +28,8 @@ import {
   installAgentBrowserBinary,
   resolveAgentBrowserBinary,
 } from "../../server/browser-engine.ts";
+import { browserRuntimeEnv, defaultBrowserSocketDirectory } from "../../server/browser-runtime.ts";
+import { waitForExit } from "../../server/testing/cleanup.ts";
 import { fixtureApi, mountPreview, type MountedPreview } from "./preview-fixture.ts";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -76,6 +79,13 @@ export function sessionEnv(handle: SessionEnv, parentEnv: NodeJS.ProcessEnv = pr
   const env: NodeJS.ProcessEnv = {
     HOME: handle.home,
     USERPROFILE: handle.home,
+    APPDATA: join(handle.home, "AppData", "Roaming"),
+    LOCALAPPDATA: join(handle.home, "AppData", "Local"),
+    XDG_CONFIG_HOME: join(handle.home, ".config"),
+    XDG_CACHE_HOME: join(handle.home, ".cache"),
+    XDG_DATA_HOME: join(handle.home, ".local", "share"),
+    XDG_RUNTIME_DIR: temp,
+    AGENT_BROWSER_NAMESPACE: "grokoff",
     TMPDIR: temp,
     TEMP: temp,
     TMP: temp,
@@ -88,7 +98,10 @@ export function sessionEnv(handle: SessionEnv, parentEnv: NodeJS.ProcessEnv = pr
     if (value && PLATFORM_ENV.includes(key.toUpperCase())) env[key.toUpperCase()] = value;
   }
   if (handle.chrome) env.AGENT_BROWSER_EXECUTABLE_PATH = handle.chrome;
-  return env;
+  // A personal shell's namespace/socket override must never address a live
+  // browser. Opening, every verb and close all use this owned-home identity.
+  env.AGENT_BROWSER_SOCKET_DIR = defaultBrowserSocketDirectory(env);
+  return browserRuntimeEnv(env);
 }
 
 /** Run one agent-browser verb with --json and return its `data`. The binary's
@@ -472,7 +485,9 @@ export async function launchUi(
       { binaryPath: binary, executablePath: chrome ?? "" }, undefined, undefined, [], fixtureOptions.boatFixtureApi);
     checkpoint();
     const api = fixtureApi(fixture.info.url);
-    await api("PATCH", "/api/config", { language: "en" });
+    // Standard chat/Settings fixtures must not be covered by first-run UI.
+    // Seed only this owned server; the onboarding recipe explicitly resets it.
+    await api("PATCH", "/api/config", { language: "en", onboarding: { completedAt: new Date().toISOString(), version: 1 } });
     const created = await runControlOmb(["new-bot", "--name", SEEDED_BOT, "--url", fixture.info.url]) as { bot: { id: string } };
     checkpoint();
     // stdout carries the handle and nothing else; Vite's port and dependency
@@ -509,14 +524,164 @@ export async function launchUi(
   } finally {
     process.off("SIGINT", requestStop);
     process.off("SIGTERM", requestStop);
-    if (opened) {
-      // closeBrowserSession waits until the daemon is really gone; a plain
-      // `close` only acknowledges. Both are scoped to this fixture's HOME.
-      if (!await closeBrowserSession(opened.binary, opened.env)) {
-        await agentBrowser(opened.binary, opened.env, ["close"], 15_000).catch(() => {});
-      }
-    }
-    await preview?.close();
-    await fixture?.close();
+    const browser = opened;
+    await cleanupUiFixture({
+      fixture, preview,
+      prepareBrowserClose: browser ? () => prepareUiBrowserClose(browser.binary, browser.env) : undefined,
+    });
   }
+}
+
+
+/** End each owned process before removing its HOME. A failed native close
+ * retains that HOME and its evidence rather than orphaning an active browser. */
+export async function cleanupUiFixture({ fixture, preview, closeBrowser, prepareBrowserClose }: {
+  fixture?: VerificationServer;
+  preview?: MountedPreview;
+  closeBrowser?: () => Promise<boolean>;
+  prepareBrowserClose?: () => () => Promise<boolean>;
+}): Promise<void> {
+  let browserClosed = true;
+  let browserError: unknown;
+  // Capture exact owners while their PID metadata still exists, before server
+  // shutdown can acknowledge/delete a session whose Chrome is still exiting.
+  try { if (prepareBrowserClose) closeBrowser = prepareBrowserClose(); }
+  catch (error) { browserClosed = false; browserError = error; }
+  // Stop browser callers before inventory/close so the server cannot create a
+  // new bot browser while its existing sessions are being shut down.
+  const stopped = await Promise.allSettled([
+    preview?.close(),
+    waitForExit(fixture?.child, { signal: "SIGTERM" }),
+  ]);
+  const failures = stopped.filter((result) => result.status === "rejected").map((result) => result.reason);
+  const serverExited = !fixture?.child.pid || fixture.child.exitCode !== null || fixture.child.signalCode !== null;
+  try { if (browserClosed) browserClosed = closeBrowser ? await closeBrowser() : true; }
+  catch (error) { browserClosed = false; browserError = error; }
+  if (!browserClosed || !serverExited || failures.length) {
+    throw new AggregateError([...failures, ...(browserError ? [browserError] : [])],
+      `UI fixture cleanup could not confirm all exits; retained ${fixture?.info.dataDir ?? "its owned HOME"}.`);
+  }
+  await fixture?.close();
+  if (fixture && existsSync(fixture.info.dataDir)) throw new Error(`UI fixture temporary HOME was not removed: ${fixture.info.dataDir}`);
+}
+
+type OwnedBrowserProcess = { pid: number; ppid: number; args: string };
+function browserProcesses(): OwnedBrowserProcess[] {
+  // Native acceptance currently requires a POSIX process inventory. If that
+  // cannot be read, cleanup fails closed and keeps the fixture HOME.
+  return execFileSync("ps", ["-ax", "-o", "pid=,ppid=,args="], { encoding: "utf8", timeout: 5_000, maxBuffer: 4 * 1024 * 1024 })
+    .trim().split("\n").flatMap((line) => {
+      const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
+      return match ? [{ pid: Number(match[1]), ppid: Number(match[2]), args: match[3] }] : [];
+    });
+}
+
+/** Close every native session in this exclusively owned HOME, including bot
+ * browsers opened by the full App. Never signal a process from its name. */
+export function prepareUiBrowserClose(binary: string, env: NodeJS.ProcessEnv, {
+  close = closeBrowserSession, timeoutMs = 20_000,
+}: { close?: typeof closeBrowserSession; timeoutMs?: number } = {}): () => Promise<boolean> {
+  const runtime = browserRuntimeEnv(env);
+  if (!runtime.HOME || runtime.AGENT_BROWSER_NAMESPACE !== "grokoff" ||
+      runtime.AGENT_BROWSER_SOCKET_DIR !== defaultBrowserSocketDirectory(runtime)) throw new Error("UI browser cleanup requires its canonical private HOME.");
+  const sockets = runtime.AGENT_BROWSER_SOCKET_DIR;
+  const run = join(sockets, "namespaces", runtime.AGENT_BROWSER_NAMESPACE, "run");
+  const profilePrefix = `--user-data-dir=${join(runtime.HOME, "tmp")}/`;
+  const owned = new Map<number, OwnedBrowserProcess>();
+  const sessions = new Map<string, OwnedBrowserProcess>();
+  const recordTree = (root: OwnedBrowserProcess, inventory: OwnedBrowserProcess[]) => {
+    const tree = [root];
+    for (let i = 0; i < tree.length; i++) tree.push(...inventory.filter((process) => process.ppid === tree[i].pid));
+    for (const process of tree) {
+      const previous = owned.get(process.pid);
+      if (previous && previous.args !== process.args) throw new Error("UI browser PID identity changed during cleanup.");
+      owned.set(process.pid, process);
+    }
+    return tree;
+  };
+  const captureChrome = (inventory: OwnedBrowserProcess[]) => {
+    // ps renders argv without preserving token boundaries inside paths. Match
+    // the full owned HOME prefix so a space cannot hide an orphaned browser.
+    const profiles = inventory.filter((process) => process.args.startsWith(profilePrefix) || process.args.includes(` ${profilePrefix}`));
+    const profilePids = new Set(profiles.map((process) => process.pid));
+    const byPid = new Map(inventory.map((process) => [process.pid, process]));
+    const hasProfileAncestor = (process: OwnedBrowserProcess) => {
+      const seen = new Set<number>();
+      let parent = process.ppid;
+      while (parent && !seen.has(parent)) {
+        if (profilePids.has(parent)) return true;
+        seen.add(parent);
+        parent = byPid.get(parent)?.ppid ?? 0;
+      }
+      return false;
+    };
+    for (const process of profiles.filter((process) => !hasProfileAncestor(process))) {
+      // Validate the browser root, then retain its exact descendants. macOS
+      // Chrome helpers can carry the same profile with distinct executables.
+      // An already-captured helper can become orphaned while Chrome exits.
+      const executable = process.args.split(" -", 1)[0];
+      const expectedExecutable = runtime.AGENT_BROWSER_EXECUTABLE_PATH;
+      const rootMatches = expectedExecutable ? process.args === expectedExecutable || process.args.startsWith(`${expectedExecutable} `) : executable.startsWith("/");
+      if (!owned.has(process.pid) && !rootMatches) {
+        throw new Error("UI browser executable does not match its private Chrome profile.");
+      }
+      // Auto-discovery records actual process identity without changing the
+      // launch envelope used by later verbs, which would reset the page.
+      recordTree(process, inventory);
+    }
+    return profiles;
+  };
+  const capture = (inventory: OwnedBrowserProcess[]) => {
+    const chrome = captureChrome(inventory);
+    for (const file of existsSync(run) ? readdirSync(run).filter((file) => file.endsWith(".pid")) : []) {
+      const session = file.slice(0, -4);
+      if (!/^[A-Za-z0-9_.-]{1,96}$/.test(session)) throw new Error("Invalid owned UI browser session.");
+      const text = readFileSync(join(run, file), "utf8").trim();
+      if (!/^[1-9][0-9]*$/.test(text)) throw new Error("Invalid owned UI browser PID.");
+      const daemon = inventory.find((process) => process.pid === Number(text));
+      if (!daemon) continue; // Orphaned private Chrome remains tracked above.
+      if (daemon.args !== binary && !daemon.args.startsWith(`${binary} `)) throw new Error("UI browser PID does not match its owned helper.");
+      const tree = recordTree(daemon, inventory);
+      if (tree.length > 1 && !chrome.some((process) => process.ppid === daemon.pid)) throw new Error("UI browser descendants do not match its private Chrome profile.");
+      sessions.set(session, daemon);
+    }
+  };
+  capture(browserProcesses());
+  return async () => {
+    const deadline = Date.now() + timeoutMs;
+    // Reconcile after the preview/server stop: capture late sessions as well.
+    capture(browserProcesses());
+    let closed = true;
+    for (const [session, daemon] of sessions) {
+      const current = browserProcesses().find((process) => process.pid === daemon.pid);
+      if (!current) continue;
+      if (current.args !== daemon.args) throw new Error("UI browser PID identity changed before close.");
+      if (Date.now() >= deadline || !await close(binary, { ...runtime, AGENT_BROWSER_SESSION: session }, Math.max(1, deadline - Date.now()))) closed = false;
+    }
+    // Acknowledgement/PID-file removal cannot supersede exact process exits.
+    let alive: OwnedBrowserProcess[];
+    do {
+      const current = browserProcesses();
+      captureChrome(current); // Include newly orphaned/late private browsers.
+      alive = current.filter((process) => owned.has(process.pid));
+      if (alive.some((process) => process.args !== owned.get(process.pid)!.args)) throw new Error("UI browser PID identity changed during cleanup.");
+      if (!alive.length) break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    } while (Date.now() < deadline);
+    const current = browserProcesses();
+    captureChrome(current);
+    alive = current.filter((process) => owned.has(process.pid));
+    if (existsSync(run) && readdirSync(run).filter((file) => file.endsWith(".pid")).some((file) => {
+      const text = readFileSync(join(run, file), "utf8").trim();
+      if (!/^[1-9][0-9]*$/.test(text)) throw new Error("Invalid late UI browser PID.");
+      return current.some((process) => process.pid === Number(text));
+    })) closed = false;
+    if (!closed || alive.length) return false;
+    if (existsSync(sockets)) {
+      const stat = lstatSync(sockets);
+      if (!stat.isDirectory() || stat.isSymbolicLink() || (process.getuid && stat.uid !== process.getuid())) throw new Error("UI browser socket scratch ownership changed.");
+      rmSync(sockets, { recursive: true });
+    }
+    return true;
+  };
 }
