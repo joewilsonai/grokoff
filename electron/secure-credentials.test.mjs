@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): maintain synthetic credential-read regressions in core CI.
 // The rule this module exists to enforce: "I could not read the store" and
 // "the store is empty" are DIFFERENT ANSWERS. Collapsing them is what made a
 // keychain hiccup look like the user had never connected anything.
