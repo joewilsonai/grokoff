@@ -41,7 +41,10 @@ Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, lazy phone-secret/cancellation behavior,
 Markdown report previews and message-scoped file access, browser turn
-cancellation, and an isolated HTTP browser Stop integration.
+cancellation, an isolated HTTP browser Stop integration, and real Markdown
+math rendering with resource/trust regressions for the direct and transitive
+KaTeX entry points. Mermaid math output and font/layout checks use the separate
+disposable [math renderer fixture](verification/math-renderer.md).
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

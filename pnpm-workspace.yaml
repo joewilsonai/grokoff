@@ -27,3 +27,5 @@ overrides:
   dompurify: 3.4.16
   # AJV accepts 3.x; keep URI normalization fixes in the bundled MCP validator.
   fast-uri: 3.1.8
+  # rehype-katex, Mermaid and remark math must share the patched renderer.
+  katex: 0.18.2

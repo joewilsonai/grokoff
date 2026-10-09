@@ -13,6 +13,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | inline change notice |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | inline change notice |
 | [LICENSING.md](LICENSING.md) | inline change notice |
+| [NOTICE](NOTICE) | explicit GrokOff change notice |
 | [README.md](README.md) | inline change notice |
 | [SECURITY.md](SECURITY.md) | inline change notice |
 | [build/icon-1024.png](build/icon-1024.png) | [build/icon-1024.png.license](build/icon-1024.png.license) |
@@ -208,6 +209,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
 | [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
+| [src/styles.css](src/styles.css) | inline change notice |
 | [src/state/store.tsx](src/state/store.tsx) | inline change notice |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |

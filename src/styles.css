@@ -655,6 +655,13 @@
   vertical-align: middle;
 }
 
+/* GrokOff modification (2026-10-09): Mermaid sizes native MathML labels
+   inside its SVG. Message formula scrolling clips those labels and adds a
+   vertical scrollbar, so let the diagram manage their layout. */
+.chat-md svg :not(.katex-display) > .katex {
+  overflow: visible;
+}
+
 /* Plain-text message bodies (user turns, webhook tasks, error fallbacks) are
    written in whatever language the person used, which is independent of the
    UI language. `plaintext` resolves direction per line from its own first
