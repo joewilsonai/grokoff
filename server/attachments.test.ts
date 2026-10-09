@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): remove the owned attachment fixture after checks.
 // attachments.ts: save + read-back, the mime allowlist, size ceiling, and
 // the name-lock that keeps the serving route inside the attachments dir.
 import {
@@ -16,7 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { link, unlink } from "node:fs/promises";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const fs = await importOriginal<typeof import("node:fs/promises")>();
@@ -41,6 +42,7 @@ afterEach(() => {
 // before the import is evaluated.
 const DATA_ROOT = mkdtempSync(join(tmpdir(), "omb-attachments-"));
 process.env.OMB_DATA_DIR = join(DATA_ROOT, "data");
+afterAll(() => rmSync(DATA_ROOT, { recursive: true, force: true }));
 
 const {
   ATTACHMENTS_DIR,

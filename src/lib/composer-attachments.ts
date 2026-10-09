@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): bound attachment transport and response reads.
 import { isCitationAttachment, serializeCitation, type CitationAttachment } from "./citations.ts";
 
 // What is attached to the next message: text too long for the input or a
@@ -242,6 +243,9 @@ const IMAGE_EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
 };
 
 const UPLOAD_ATTEMPTS = 2;
+// Allow a 25 MiB document on a slower remote connection; two attempts still
+// settle within three minutes. The deadline includes decoding the response.
+export const UPLOAD_ATTEMPT_TIMEOUT_MS = 90_000;
 
 function retryableUploadStatus(status: number): boolean {
   return status === 408 || status === 425 || status === 429 || status >= 500;
@@ -252,28 +256,44 @@ function retryableUploadStatus(status: number): boolean {
  * transient response gets one replay with the same upload id. */
 async function uploadWithRetry<T>(url: string, init: RequestInit): Promise<T> {
   for (let attempt = 0; attempt < UPLOAD_ATTEMPTS; attempt += 1) {
-    let response: Response;
+    const controller = new AbortController();
+    let responseStatus: number | undefined;
+    let responseOk: boolean | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        reject(Object.assign(new Error("Upload timed out. Check your connection and attach the file again."), {
+          name: "UploadTimeoutError",
+          ...(responseOk === false ? { status: responseStatus } : {}),
+        }));
+        controller.abort();
+      }, UPLOAD_ATTEMPT_TIMEOUT_MS);
+    });
     try {
-      response = await fetch(url, init);
+      return await Promise.race([deadline, (async () => {
+        const response = await fetch(url, { ...init, signal: controller.signal });
+        responseStatus = response.status;
+        responseOk = response.ok;
+        if (!response.ok) {
+          if (retryableUploadStatus(response.status) && attempt < UPLOAD_ATTEMPTS - 1) {
+            await response.body?.cancel().catch(() => undefined);
+            throw Object.assign(new Error("upload failed"), { status: response.status });
+          }
+          const detail = (await response.json().catch(() => ({ error: response.statusText }))) as { error?: string };
+          throw Object.assign(new Error(detail.error ?? "upload failed"), { status: response.status });
+        }
+        try {
+          return await response.json() as T;
+        } catch (error) {
+          throw new Error("upload returned an invalid response", { cause: error });
+        }
+      })()]);
     } catch (error) {
       const aborted = typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
-      if (aborted || attempt === UPLOAD_ATTEMPTS - 1) throw error;
-      continue;
-    }
-    if (!response.ok) {
-      if (retryableUploadStatus(response.status) && attempt < UPLOAD_ATTEMPTS - 1) {
-        await response.body?.cancel().catch(() => undefined);
-        continue;
-      }
-      const detail = (await response.json().catch(() => ({ error: response.statusText }))) as { error?: string };
-      throw Object.assign(new Error(detail.error ?? "upload failed"), { status: response.status });
-    }
-    try {
-      return await response.json() as T;
-    } catch (error) {
-      if (attempt === UPLOAD_ATTEMPTS - 1) {
-        throw new Error("upload returned an invalid response", { cause: error });
-      }
+      const finalStatus = responseOk === false && responseStatus !== undefined && !retryableUploadStatus(responseStatus);
+      if (aborted || finalStatus || attempt === UPLOAD_ATTEMPTS - 1) throw error;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw new Error("upload failed");

@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): clear stale warnings when a fresh file drop starts.
 // Chips for what is attached to the next message, plus the window-wide
 // file drop that creates them. A long paste collapses into a card of its
 // first lines instead of flooding the composer; a file dropped anywhere
@@ -79,6 +80,8 @@ export function ComposerAttachments({
       depth.current = 0;
       setDragging(false);
       const files = Array.from(e.dataTransfer?.files ?? []);
+      if (!files.length) return;
+      callbacks.current.onNotice(null);
       // Same intake the attach button uses: a dropped file and a picked one
       // must not appear in a different order.
       const operation = Symbol("attachment-drop");
