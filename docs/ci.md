@@ -13,6 +13,24 @@ job. The packaged-server smoke stages the bundled server outside the checkout,
 uses temporary data and home directories, and checks startup, bundled workers,
 MCP, backup export, and shutdown without provider inference.
 
+<!-- GrokOff modification (2026-10-09): document sealed packaged-smoke provider discovery. -->
+The packaged-server fixture clears its children's `PATH` and sets
+`OMB_TEST_SEALED_PATH=1`; its Node entry points use the running Node binary's
+absolute path. This prevents inherited shell paths, shared Node installation
+directories, Homebrew locations and login-shell discovery from supplying real
+provider CLIs during startup and shutdown checks. The optional `--browser-bundle`
+check retains its explicit platform system path so an ambient browser engine
+cannot substitute for the staged bundle; provider discovery stays sealed there
+too. Disposable homes and sealed discovery are test isolation controls, not an
+OS sandbox or proof that every system service and network path is blocked.
+
+On POSIX, `test:packaged-server` first reruns the same six smoke groups with a
+copied Node binary beside executable provider traps and a contaminated parent
+`PATH`. The control proves the trap is executable; the real smoke must pass
+without invoking it. This additional regression is skipped on Windows; the
+normal smoke still runs there. The final normal smoke command continues to
+accept `--browser-bundle` arguments.
+
 ## Run the same checks locally
 
 Use the Node version in [.nvmrc](../.nvmrc) and the pnpm version in
