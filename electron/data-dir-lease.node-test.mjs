@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use the fork name in native interface copy and preserve compatibility identifiers.
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -130,7 +131,7 @@ test("an invalid child capability fails closed without acquisition or secret log
     assert.equal(result.code, 0);
     assert.equal(result.stderr, "");
     assert.deepEqual(JSON.parse(result.stdout), {
-      error: "The OpenMausBot desktop lease delegation is invalid; refusing to start to protect its state.",
+      error: "The GrokOff desktop lease delegation is invalid; refusing to start to protect its state.",
       consumed: true,
     });
     assert.equal(result.stdout.includes(invalidCapability), false);
