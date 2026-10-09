@@ -6,6 +6,8 @@
 <!-- GrokOff modification (2026-10-09): retain fork CI guidance and adopt isolated interrupted-tool coverage. -->
 # GrokOff source checks
 
+<!-- GrokOff modification (2026-10-09): maintain report PDF export authority and lifecycle coverage. -->
+
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
 jobs on pull requests, pushes to `main`, and manual dispatch. It uses Node 24,
 pnpm 10.33.0 and the committed lockfile. It does not build or publish a Mac
@@ -57,7 +59,8 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, lazy phone-secret/cancellation behavior,
-Markdown report previews and message-scoped file access, real report-dialog
+Markdown report previews and message-scoped file access, isolated report PDF
+serialization/authority/destination/cleanup and renderer recovery, real report-dialog
 state with synthetic held response headers/bodies and explicit deadline recovery,
 browser turn
 cancellation, an isolated HTTP browser Stop integration, bounded browser

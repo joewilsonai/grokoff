@@ -35,6 +35,8 @@ import { createLendingIndicator } from "./lending-indicator.mjs";
 let startupScreen = null;
 let desktopTray = null;
 import { collisionFreeDownloadPath, defaultSaveName, revealDownloadWhenDone, revealInFolder, withSavableFile } from "./save-file.mjs";
+// GrokOff modification (2026-10-09): inert, local report-only PDF export.
+import { createReportPdfService } from "./report-pdf.mjs";
 import { desktopViewerPermissionAllowed } from "./desktop-viewer-permissions.mjs";
 import { appPermissionHandlers, externalWebUrl } from "./app-permissions.mjs";
 import { writeClipboardText } from "./clipboard-write.mjs";
@@ -2572,6 +2574,13 @@ ipcMain.handle("desktop:export-diagnostics", localOnly("desktop:export-diagnosti
 // where, which a silent copy into ~/Downloads does not. The path is
 // renderer-controlled, so it must resolve inside the configured data dir and be a
 // regular file — never a symlink escape or directory.
+const reportPdf = createReportPdfService({ BrowserWindow, dialog, getOwner: () => mainWindow,
+  getLocalOrigin: localOriginModule.getLocalOrigin, getDownloads: () => app.getPath("downloads"),
+  isRemoteClient: () => Boolean(desktopRemoteAccess) });
+ipcMain.handle("desktop:export-report-pdf", localOnly("desktop:export-report-pdf", reportPdf.exportReportPdf));
+ipcMain.handle("desktop:cancel-report-pdf", localOnly("desktop:cancel-report-pdf", reportPdf.cancelReportPdf));
+app.on("before-quit", () => reportPdf.dispose());
+
 ipcMain.handle("desktop:save-file", localOnly("desktop:save-file", async (event, rawPath) => {
   return withSavableFile(rawPath, { dataDir: path.resolve(desktopDataDir()) }, async ({ defaultName, copyTo }) => {
     const parent = BrowserWindow.fromWebContents(event.sender);

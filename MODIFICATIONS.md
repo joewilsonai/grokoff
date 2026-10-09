@@ -55,6 +55,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [electron/cua.mjs](electron/cua.mjs) | inline change notice |
 | [electron/main.mjs](electron/main.mjs) | inline change notice |
 | [electron/menu.mjs](electron/menu.mjs) | inline change notice |
+| [electron/preload.cjs](electron/preload.cjs) | inline change notice |
 | [electron/organization-entry.mjs](electron/organization-entry.mjs) | inline change notice |
 | [electron/organization-entry.node-test.mjs](electron/organization-entry.node-test.mjs) | inline change notice |
 | [electron/package-link.mjs](electron/package-link.mjs) | inline change notice |
