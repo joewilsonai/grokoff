@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// GrokOff: exercise actual key controls/API transport with disposable in-memory responses.
+// GrokOff: exercise actual key controls/API transport with disposable responses and compatible unused sign-in recovery fields.
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -59,9 +59,19 @@ beforeEach(async () => {
       render();
     }
   });
+  // A structural spread supports this main-based Store and the newer combined
+  // Store contract without asserting away either shape or changing the cases.
+  const signInRecovery: {
+    refreshSignInModels: (instanceId: string) => Promise<void>;
+    signInModelDiscovery: Record<string, "checking" | "failed">;
+  } = {
+    refreshSignInModels: vi.fn(async (_instanceId: string) => {}),
+    signInModelDiscovery: {},
+  };
   fixture = {
     state: { ...store.initialState, config: { openai: { configured: false } } as store.ConfigStatus },
     dispatch, flushBotPatches: vi.fn(), refreshInstances: vi.fn(), refreshModels: vi.fn(),
+    ...signInRecovery,
   };
   vi.spyOn(store, "useStore").mockReturnValue(fixture);
   vi.stubGlobal("fetch", vi.fn(async (path: string, init: RequestInit) => {
