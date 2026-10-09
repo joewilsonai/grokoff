@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): recognize the fork's canonical thread links.
+// GrokOff modification (2026-10-08): canonical thread links and scoped report previews.
 // Real markdown for bot bubbles: react-markdown + GFM (tables, task lists,
 // strikethrough, autolinks) with a chromed code block — language label, copy
 // button, lazy Shiki highlighting. Model output never reaches the DOM as raw
@@ -40,6 +40,7 @@ import { MarkdownImagePreview, MessageFolderFiles, OutsideWorkspaceFile, useLoca
 import { ThreadLink, ThreadRefsContext, threadLinkFromProps, type ThreadRefsValue } from "./ThreadRefs";
 import { MarkdownTable } from "./MarkdownTable";
 import { TableFileButton } from "./TableFilePreview";
+import { ReportFileButton } from "./ReportFilePreview";
 
 // highlighted code, so revisiting a thread doesn't re-tokenize settled
 // blocks; keys are content hashes. The two-theme HTML is about 20 to 28 times
@@ -682,6 +683,7 @@ function LocalFileLink({ filePath, children, message }: { filePath: string; chil
 
   return (
     <span dir="ltr" className="inline-flex flex-wrap items-center gap-x-1.5 [unicode-bidi:isolate]">
+      <ReportFileButton path={filePath} name={filePath.split(/[\\/]/).at(-1) ?? filePath} message={message} />
       <TableFileButton path={filePath} name={filePath.split(/[\\/]/).at(-1) ?? filePath} message={message} />
       <button
         type="button"
