@@ -52,6 +52,80 @@
       "archiveIntegrity": "sha512-br7giBJRr/j00rdMXhOZGMGuDWMAVUcxC9O3lco0KRqzEAxUz00+gegPW5tKamvKbrnj7NB682XUCYrcagtxFA==",
       "archiveSha256": "fc26ac2ac4d3a7010b988d5b8621a33a26881be0413d9c73088f2231ca086640",
       "cuaTransform": "source/build-node-runtime.mjs"
+    },
+    {
+      "name": "libffi",
+      "version": "5.2.0",
+      "license": "MIT OR Apache-2.0",
+      "scope": "observed-native-runtime-source-marker",
+      "sourceCommit": "8309adab3629990d06da20f3da656faf95b23100",
+      "sourcePathInVcs": "libffi-rs",
+      "sourceUrl": "https://github.com/libffi-rs/libffi-rs/tree/8309adab3629990d06da20f3da656faf95b23100/libffi-rs",
+      "archiveUrl": "https://static.crates.io/crates/libffi/libffi-5.2.0.crate",
+      "archiveSha256": "7a8d526bc07aa02e6826944ec446ecd8d228bd97b1cbd21e5bc5e3407a09a585",
+      "licenseTexts": [
+        {
+          "path": "licenses/libffi-5.2.0/LICENSE-MIT",
+          "sourceUrl": "https://raw.githubusercontent.com/libffi-rs/libffi-rs/8309adab3629990d06da20f3da656faf95b23100/LICENSE-MIT",
+          "sha256": "7dafbced615981b7969f8d74f89cb6ecfca513aa4df68c2dc8812807a79b2594"
+        },
+        {
+          "path": "licenses/libffi-5.2.0/LICENSE-APACHE",
+          "sourceUrl": "https://raw.githubusercontent.com/libffi-rs/libffi-rs/8309adab3629990d06da20f3da656faf95b23100/LICENSE-APACHE",
+          "sha256": "1ecdd00496589b97dd112b132a1224c55f53b8394970ef2a7162b0f3d33b03cb"
+        }
+      ],
+      "observedIn": {
+        "artifact": "cua_driver_node_runtime.node",
+        "sha256": "ce442b971f7f47ee796c4a47ceea89fd3999839e8018466c5ac33a683370f810",
+        "sourcePathMarker": "libffi-5.2.0/src/middle/mod.rs"
+      }
+    },
+    {
+      "name": "napi",
+      "version": "2.16.17",
+      "license": "MIT",
+      "scope": "observed-native-runtime-source-marker",
+      "sourceCommit": "f2178312d0e3e07beecc19836b91716a229107d3",
+      "sourcePathInVcs": "crates/napi",
+      "sourceUrl": "https://github.com/napi-rs/napi-rs/tree/f2178312d0e3e07beecc19836b91716a229107d3/crates/napi",
+      "archiveUrl": "https://static.crates.io/crates/napi/napi-2.16.17.crate",
+      "archiveSha256": "55740c4ae1d8696773c78fdafd5d0e5fe9bc9f1b071c7ba493ba5c413a9184f3",
+      "licenseTexts": [
+        {
+          "path": "licenses/napi-2.16.17/LICENSE",
+          "sourceUrl": "https://raw.githubusercontent.com/napi-rs/napi-rs/f2178312d0e3e07beecc19836b91716a229107d3/LICENSE",
+          "sha256": "3f1ce66533302df3a32edbfdfc0b78f0dd34659e4c1f5817162e5ea3c2297215"
+        }
+      ],
+      "observedIn": {
+        "artifact": "cua_driver_node_runtime.node",
+        "sha256": "ce442b971f7f47ee796c4a47ceea89fd3999839e8018466c5ac33a683370f810",
+        "sourcePathMarker": "napi-2.16.17/src/bindgen_runtime/mod.rs"
+      }
+    },
+    {
+      "name": "dlopen2",
+      "version": "0.7.0",
+      "license": "MIT",
+      "scope": "observed-native-runtime-source-marker",
+      "sourceCommit": "617ed96425729a5a10f8e55ece8d1570acd6353a",
+      "sourcePathInVcs": "dlopen2",
+      "sourceUrl": "https://github.com/OpenByteDev/dlopen2/tree/617ed96425729a5a10f8e55ece8d1570acd6353a/dlopen2",
+      "archiveUrl": "https://static.crates.io/crates/dlopen2/dlopen2-0.7.0.crate",
+      "archiveSha256": "9e1297103d2bbaea85724fcee6294c2d50b1081f9ad47d0f6f6f61eda65315a6",
+      "licenseTexts": [
+        {
+          "path": "licenses/dlopen2-0.7.0/LICENSE",
+          "sourceUrl": "https://raw.githubusercontent.com/OpenByteDev/dlopen2/617ed96425729a5a10f8e55ece8d1570acd6353a/LICENSE",
+          "sha256": "39fa265207450e77c62e90c5594a06c085b655d8374c7ced4bf7894b6bd95dd2"
+        }
+      ],
+      "observedIn": {
+        "artifact": "cua_driver_node_runtime.node",
+        "sha256": "ce442b971f7f47ee796c4a47ceea89fd3999839e8018466c5ac33a683370f810",
+        "sourcePathMarker": "dlopen2-0.7.0/src/raw/unix.rs"
+      }
     }
   ],
   "licenseTextSource": {
@@ -91,6 +165,27 @@
     {
       "path": "source/ubjs-node-resolve-lib.ts",
       "sha256": "e97bb04c7c903bb3efca73ef16b6eaf2f799e54bb33991d15529ba8e3c6cadfe"
+    },
+    {
+      "path": "licenses/libffi-5.2.0/LICENSE-MIT",
+      "sha256": "7dafbced615981b7969f8d74f89cb6ecfca513aa4df68c2dc8812807a79b2594"
+    },
+    {
+      "path": "licenses/libffi-5.2.0/LICENSE-APACHE",
+      "sha256": "1ecdd00496589b97dd112b132a1224c55f53b8394970ef2a7162b0f3d33b03cb"
+    },
+    {
+      "path": "licenses/napi-2.16.17/LICENSE",
+      "sha256": "3f1ce66533302df3a32edbfdfc0b78f0dd34659e4c1f5817162e5ea3c2297215"
+    },
+    {
+      "path": "licenses/dlopen2-0.7.0/LICENSE",
+      "sha256": "39fa265207450e77c62e90c5594a06c085b655d8374c7ced4bf7894b6bd95dd2"
+    },
+    {
+      "path": "observed-native-crates.md",
+      "sha256": "5ec5433e51dfb3f2040187d3f41fbaed62235def292735cd6a360de6c5f3ad2b"
     }
-  ]
+  ],
+  "observedNativeCratesNotice": "observed-native-crates.md"
 }

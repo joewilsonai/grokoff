@@ -90,6 +90,35 @@ test("rejects changed source records before copying any notice", t => {
   assert.equal(existsSync(fixture.nativeDir), false);
 });
 
+for (const name of [
+  "observed-native-crates.md",
+  "licenses/libffi-5.2.0/LICENSE-MIT",
+  "licenses/libffi-5.2.0/LICENSE-APACHE",
+  "licenses/napi-2.16.17/LICENSE",
+  "licenses/dlopen2-0.7.0/LICENSE",
+]) for (const mutation of ["missing", "same-size altered"]) {
+  test(`rejects ${mutation} observed-crate record ${name} before staging and in the package`, t => {
+    const mutate = path => {
+      if (mutation === "missing") rmSync(path);
+      else {
+        const bytes = readFileSync(path); bytes[0] ^= 1; writeFileSync(path, bytes);
+      }
+    };
+    const fixture = dependencies(t);
+    const recordDirectory = join(fixture.root, "record");
+    cpSync(MAC_CUA_SOURCE_DIRECTORY, recordDirectory, { recursive: true });
+    mutate(join(recordDirectory, name));
+    const staging = { ...fixture, recordDirectory };
+    assert.throws(() => validateMacCuaDependencies(staging));
+    assert.throws(() => copyMacCuaNativeNotice(staging));
+    assert.equal(existsSync(fixture.nativeDir), false);
+
+    const packaged = appFixture(t);
+    mutate(join(packaged.sourceRecord, name));
+    assert.throws(() => verifyMacCuaApp(packaged.app));
+  });
+}
+
 test("verifies actual .app resources read-only from a separate working directory", t => {
   const fixture = appFixture(t);
   // A different staging tree must not satisfy or influence packaged checks.
