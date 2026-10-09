@@ -5,24 +5,35 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserRuntime, TransportError, browserCommandEnv, browserRuntimeEnv, defaultBrowserSocketDirectory, type BrowserSpawnSpec } from "./browser-runtime.ts";
 
-const defaultTestSockets = defaultBrowserSocketDirectory(browserRuntimeEnv({}));
-afterAll(() => rmSync(defaultTestSockets, { recursive: true, force: true }));
+// Own these paths locally as well as using the suite-wide setup isolation.
+// An alternate Vitest config must never make cleanup follow a developer's HOME
+// or inherited native-browser socket override.
+const suiteHome = mkdtempSync(join(tmpdir(), "grokoff-runtime-suite-"));
+const fixtureEnv = (home = suiteHome): BrowserSpawnSpec["env"] => ({
+  HOME: home, USERPROFILE: home, PATH: process.env.PATH,
+  AGENT_BROWSER_NAMESPACE: "grokoff", AGENT_BROWSER_SOCKET_DIR: "",
+});
+const defaultTestSockets = defaultBrowserSocketDirectory(fixtureEnv());
+afterAll(() => {
+  rmSync(defaultTestSockets, { recursive: true, force: true });
+  rmSync(suiteHome, { recursive: true, force: true });
+});
 
 describe("private browser runtime sockets", () => {
   const scratch: string[] = [];
   afterEach(() => { vi.restoreAllMocks(); for (const path of scratch.splice(0)) rmSync(path, { recursive: true, force: true }); });
   function fixture() {
     const home = mkdtempSync(join(tmpdir(), "grokoff-browser-sockets-"));
-    const env = browserRuntimeEnv({ HOME: home, USERPROFILE: home });
+    const env = browserRuntimeEnv(fixtureEnv(home));
     scratch.push(home, env.AGENT_BROWSER_SOCKET_DIR!);
     return { home, env };
   }
 
   it("uses stable sockets per home and namespace and keeps ordinary UUID profiles below the native Mac limit", () => {
     const { home, env } = fixture();
-    expect(browserRuntimeEnv({ HOME: home, USERPROFILE: home }).AGENT_BROWSER_SOCKET_DIR).toBe(env.AGENT_BROWSER_SOCKET_DIR);
-    expect(browserRuntimeEnv({ HOME: `${home}-other`, USERPROFILE: `${home}-other` }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
-    expect(browserRuntimeEnv({ HOME: home, USERPROFILE: home, AGENT_BROWSER_NAMESPACE: "other-app" }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv(fixtureEnv(home)).AGENT_BROWSER_SOCKET_DIR).toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv(fixtureEnv(`${home}-other`)).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv({ ...fixtureEnv(home), AGENT_BROWSER_NAMESPACE: "other-app" }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
     if (process.platform !== "win32") {
       for (const session of ["bot-7dfc2147-e601-4a19-8b5c-4e718cd99733", "guest-7dfc2147-e601-4a19-8b5c-4e718cd99733"]) {
         expect(Buffer.byteLength(join(env.AGENT_BROWSER_SOCKET_DIR!, "namespaces", "grokoff", "run", `${session}.sock`))).toBeLessThanOrEqual(103);
@@ -33,7 +44,7 @@ describe("private browser runtime sockets", () => {
   it("preserves explicit fixture sockets", () => {
     const { home } = fixture();
     const sockets = join(home, "s");
-    expect(browserRuntimeEnv({ HOME: home, AGENT_BROWSER_SOCKET_DIR: sockets }).AGENT_BROWSER_SOCKET_DIR).toBe(sockets);
+    expect(browserRuntimeEnv({ ...fixtureEnv(home), AGENT_BROWSER_SOCKET_DIR: sockets }).AGENT_BROWSER_SOCKET_DIR).toBe(sockets);
   });
 
   it.skipIf(process.platform === "win32")("creates an owner-only runtime directory and tightens its permissions", () => {
@@ -260,7 +271,7 @@ lines.on('line', line => {
   process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result})+'\\n');
 });
 `;
-const spec = (): BrowserSpawnSpec => ({ command: process.execPath, args: ["-e", FAKE_MCP], env: { PATH: process.env.PATH } });
+const spec = (): BrowserSpawnSpec => ({ command: process.execPath, args: ["-e", FAKE_MCP], env: fixtureEnv() });
 
 describe("server-owned browser MCP runtime", () => {
   it("closes native work before waiting for a slow transport to retire", async () => {
@@ -710,7 +721,7 @@ describe("server-owned browser MCP runtime", () => {
 
     `;
     const value = runtime({ idleMs: 40 });
-    const launch = { command: process.execPath, args: ["-e", fake], env: {} };
+    const launch = { command: process.execPath, args: ["-e", fake], env: fixtureEnv() };
     const first = await value.agentRpc("idle", launch, "tools/list", {}) as { browserPid: number; transportPid: number };
     try {
       expect(() => process.kill(first.browserPid, 0)).not.toThrow();
