@@ -207,7 +207,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
 | [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
-| [src/state/store.tsx](src/state/store.tsx) | inline change notice |
+| [src/state/store.tsx](src/state/store.tsx) | inline change notice; bounded optional config/webhook snapshots |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
 
