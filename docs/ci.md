@@ -1,6 +1,8 @@
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks and maintained first-run/isolation coverage. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks, first-run isolation and Settings/tour interaction coverage. -->
+<!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-09): document isolated engine-install and browser cleanup coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
@@ -116,6 +118,10 @@ app/provider or bot Settings, resuming without a progress write, and a pending
 Next that saves progress without reopening a panel over Settings. React hooks
 run in a disposable DOM with synthetic Store and API seams; this is not a
 native desktop interaction or provider authentication claim.
+engine-install errors and process cancellation, and durable browser-cleanup
+acknowledgements. Engine-install tests use a disposable fake npm executable;
+browser-cleanup tests use disposable journals and synthetic acknowledgements.
+They do not install provider packages or erase real browser profiles.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
