@@ -135,6 +135,8 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/LocalVmWorkspace.tsx](src/components/LocalVmWorkspace.tsx) | inline change notice |
 | [src/components/ModelPicker.simple.test.ts](src/components/ModelPicker.simple.test.ts) | inline change notice |
 | [src/components/ModelPicker.test.ts](src/components/ModelPicker.test.ts) | inline change notice |
+| [src/components/BrowserPanel.tsx](src/components/BrowserPanel.tsx) | inline change notice; bounded access checks and explicit failure retry |
+| [docs/verification/browser-live.md](docs/verification/browser-live.md) | inline change notice; sealed access-check interaction recipe |
 | [src/components/ModelPicker.tsx](src/components/ModelPicker.tsx) | inline change notice |
 | [src/components/NoEngines.tsx](src/components/NoEngines.tsx) | inline change notice |
 | [src/components/PhoneAppDialog.tsx](src/components/PhoneAppDialog.tsx) | inline change notice |

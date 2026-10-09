@@ -75,3 +75,16 @@ write scopes, secret access, persistent checkout credentials, unreviewed
 actions, and publishing commands. Repository branch protection and private
 vulnerability reporting are separate GitHub settings; these files do not
 enable them.
+
+## Browser access recovery regression
+
+<!-- GrokOff modification (2026-10-09): document maintained isolated access-check coverage. -->
+
+`test:core` also runs the complete `BrowserPanel.access.test.ts` file. Actual
+React interaction checks distinguish failed access discovery from a confirmed
+non-admin session, exercise explicit Retry, and cover a 30-second deadline,
+late replies and unmount cancellation. In-memory transports include the real
+`api` helper with held response headers and bodies. Synthetic EventSource
+instances record viewer creation and closure; no browser engine, account,
+installation or live provider is used. This is source-renderer coverage, not
+packaged Mac or real browser-control acceptance. See the [recipe](verification/browser-live.md#browser-access-check-recovery).
