@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { act, createElement } from "react";
+// GrokOff modification (2026-10-09): prove custom CLI drafts own edits across delayed discovery.
+import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { StoreProvider, useStore, type InstanceInfo } from "@/state/store";
@@ -48,7 +49,7 @@ function Harness() {
   if (onboarding) return createElement("div", null,
     createElement(EnginesBeat, { onNext: () => {}, onSkip: () => {}, setMascot: () => {}, bump: () => {} }),
     showAccountControls ? accounts : null);
-  if (fullSettings) return createElement(EnginesSettings);
+  if (fullSettings) return strictSettings ? createElement(StrictMode, null, createElement(EnginesSettings)) : createElement(EnginesSettings);
   return createElement("div", null, createElement(RefreshEngines), accounts);
 }
 
@@ -60,11 +61,14 @@ let finishPending: ((value: Response) => void) | undefined;
 let requests: Array<{ path: string; method: string }>;
 let expectedMutation: "account" | "cli" | null;
 let fullSettings: boolean;
+let strictSettings: boolean;
 let onboarding: boolean;
 let holdModels: boolean;
 let finishModels: ((response: Response) => void) | undefined;
 let showAccountControls: boolean;
 let expectedSignOut: "claude" | "codex" | null;
+let holdCandidates: boolean;
+let pendingCandidates: Array<{ resolve: (response: Response) => void; signal: AbortSignal | null | undefined }>;
 const errorCopy = "Couldn't check your connections. Showing the last known status. Try again.";
 const button = (scope: ParentNode, text: string) => [...scope.querySelectorAll("button")].find((el) => el.textContent?.trim() === text)!;
 const card = (id: string) => container.querySelector(`[data-engine-card="${id}"]`)!;
@@ -81,11 +85,14 @@ beforeEach(async () => {
   finishPending = undefined;
   expectedMutation = null;
   fullSettings = false;
+  strictSettings = false;
   onboarding = false;
   holdModels = false;
   finishModels = undefined;
   showAccountControls = false;
   expectedSignOut = null;
+  holdCandidates = false;
+  pendingCandidates = [];
   live.automatic = true;
   vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
     requests.push({ path, method: init?.method ?? "GET" });
@@ -104,7 +111,10 @@ beforeEach(async () => {
       return new Response(JSON.stringify({ ok: true }));
     }
     if (expectedMutation === "cli" && path === "/api/cli-test" && init?.method === "POST") return new Response(JSON.stringify({ ok: true, version: "fixture" }));
-    if (path.startsWith("/api/cli-candidates?")) return new Response(JSON.stringify({ candidates: [] }));
+    if (path.startsWith("/api/cli-candidates?")) {
+      if (holdCandidates) return new Promise<Response>((resolve) => pendingCandidates.push({ resolve, signal: init?.signal }));
+      return new Response(JSON.stringify({ candidates: [] }));
+    }
     if (path === "/api/instances") {
       if (mode === "failed") return new Response(JSON.stringify({ error: "Private server detail" }), { status: 503 });
       if (mode === "pending") return new Promise<Response>((resolve) => { finishPending = resolve; });
@@ -565,3 +575,142 @@ for (const target of ["global", "onboarding"] as const) {
     });
   }
 }
+
+
+const openHeldCliPicker = async (candidates: string[] = []) => {
+  holdCandidates = true;
+  fullSettings = true;
+  instances[0] = { ...instances[0]!, cli: "/fixture/old-claude", cliCandidates: candidates };
+  await act(async () => { store.dispatch({ type: "instances", instances }); });
+  await act(async () => root.render(createElement(StoreProvider, null, createElement(Harness))));
+  act(() => button(card("claude"), "Set CLI…").click());
+  await tick();
+  expect(pendingCandidates).toHaveLength(strictSettings ? 2 : 1);
+  return card("claude").querySelector<HTMLInputElement>('input[aria-label="Claude custom CLI path"]')!;
+};
+const changeCli = async (input: HTMLInputElement, value: string) => {
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await tick();
+};
+const finishCandidates = async (index: number, candidates: string[], status = 200) => {
+  pendingCandidates[index]!.resolve(new Response(JSON.stringify(status === 200 ? { candidates } : { error: "Synthetic discovery failure" }), { status }));
+  await tick();
+};
+
+it("retains a typed replacement CLI when delayed candidate discovery completes", async () => {
+  const input = await openHeldCliPicker();
+  expect(input).not.toBeNull();
+  await changeCli(input, "/fixture/new-claude");
+  await finishCandidates(0, []);
+  expect(input.value).toBe("/fixture/new-claude");
+  expect(button(input.parentElement!, "Save").disabled).toBe(false);
+  expectedMutation = "cli";
+  act(() => button(input.parentElement!, "Save").click());
+  await tick();
+  const mutations = vi.mocked(fetch).mock.calls.filter(([path]) => path === "/api/cli-test" || path === "/api/instances/claude");
+  expect(mutations.map(([, init]) => JSON.parse(String(init!.body)).cli)).toEqual(["/fixture/new-claude", "/fixture/new-claude"]);
+  expect(store.state.instances[0]!.cli).toBe("/fixture/new-claude");
+});
+
+it("retains a selected detected CLI when delayed discovery returns the old override", async () => {
+  const input = await openHeldCliPicker(["/fixture/old-claude", "/fixture/new-claude"]);
+  const select = card("claude").querySelector("select")!;
+  act(() => { select.value = "/fixture/new-claude"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  await tick();
+  await finishCandidates(0, ["/fixture/old-claude", "/fixture/new-claude"]);
+  expect(select.value).toBe("/fixture/new-claude");
+  expect(input.value).toBe("");
+  expect(button(input.parentElement!, "Save").disabled).toBe(false);
+});
+
+for (const detected of [true, false]) it(`initializes an untouched ${detected ? "detected" : "manual"} CLI override after discovery`, async () => {
+  const input = await openHeldCliPicker(detected ? ["/fixture/old-claude"] : []);
+  await finishCandidates(0, detected ? ["/fixture/old-claude"] : []);
+  expect(input.value).toBe(detected ? "" : "/fixture/old-claude");
+  if (detected) expect(card("claude").querySelector("select")!.value).toBe("/fixture/old-claude");
+  expect(button(input.parentElement!, "Save").disabled).toBe(true);
+  expect(requests.some(({ method }) => method === "POST" || method === "PATCH")).toBe(false);
+});
+
+it("keeps the edited path usable when candidate discovery fails", async () => {
+  const input = await openHeldCliPicker();
+  await changeCli(input, "/fixture/new-claude");
+  await finishCandidates(0, [], 503);
+  expect(input.value).toBe("/fixture/new-claude");
+  expect(button(input.parentElement!, "Save").disabled).toBe(false);
+  expect(requests.some(({ method }) => method === "POST" || method === "PATCH")).toBe(false);
+});
+
+it("cancels closed picker discovery and ignores its late response after reopening", async () => {
+  await openHeldCliPicker();
+  act(() => button(card("claude"), "Cancel").click());
+  await act(async () => { await vi.advanceTimersByTimeAsync(201); });
+  expect(pendingCandidates[0]!.signal?.aborted).toBe(true);
+  act(() => button(card("claude"), "Set CLI…").click());
+  await tick();
+  expect(pendingCandidates).toHaveLength(2);
+  const input = card("claude").querySelector<HTMLInputElement>('input[aria-label="Claude custom CLI path"]')!;
+  await changeCli(input, "/fixture/reopened-claude");
+  await finishCandidates(0, ["/fixture/old-claude"]);
+  expect(input.value).toBe("/fixture/reopened-claude");
+  await finishCandidates(1, []);
+  expect(input.value).toBe("/fixture/reopened-claude");
+  expect(pendingCandidates[1]!.signal?.aborted).toBe(false);
+  expect(requests.some(({ method }) => method === "POST" || method === "PATCH")).toBe(false);
+});
+
+
+it("does not restore a cleared manual CLI draft when discovery finishes", async () => {
+  const input = await openHeldCliPicker();
+  await changeCli(input, "");
+  await finishCandidates(0, []);
+  expect(input.value).toBe("");
+  expect(button(input.parentElement!, "Save").disabled).toBe(true);
+  expect(requests.some(({ method }) => method === "POST" || method === "PATCH")).toBe(false);
+});
+
+it("does not restore the saved detected CLI after an explicit empty selection", async () => {
+  const input = await openHeldCliPicker(["/fixture/old-claude"]);
+  const select = card("claude").querySelector("select")!;
+  act(() => { select.value = ""; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  await tick();
+  await finishCandidates(0, ["/fixture/old-claude"]);
+  expect(select.value).toBe("");
+  expect(input.value).toBe("");
+  expect(button(input.parentElement!, "Save").disabled).toBe(true);
+});
+
+it("restarts canceled candidate discovery during StrictMode setup replay", async () => {
+  strictSettings = true;
+  const input = await openHeldCliPicker(["/fixture/old-claude"]);
+  expect(pendingCandidates[0]!.signal?.aborted).toBe(true);
+  expect(pendingCandidates[1]!.signal?.aborted).toBe(false);
+  await finishCandidates(0, ["/fixture/stale-claude"]);
+  await finishCandidates(1, ["/fixture/old-claude"]);
+  expect(card("claude").querySelector("select")!.value).toBe("/fixture/old-claude");
+  expect(input.value).toBe("");
+  expect(container.textContent).not.toContain("/fixture/stale-claude");
+  expect(button(input.parentElement!, "Save").disabled).toBe(true);
+});
+
+
+for (const found of [[], ["/fixture/old-claude"]]) it(`keeps a selected CLI visible when discovery omits it (${found.length} candidates)`, async () => {
+  const input = await openHeldCliPicker(["/fixture/old-claude", "/fixture/new-claude"]);
+  const select = card("claude").querySelector("select")!;
+  act(() => { select.value = "/fixture/new-claude"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  await tick();
+  await finishCandidates(0, found);
+  expect(card("claude").querySelector("select")).toBe(select);
+  expect(select.value).toBe("/fixture/new-claude");
+  expect(select.selectedOptions[0]?.textContent).toBe("/fixture/new-claude");
+  expect(input.value).toBe("");
+  expect(button(input.parentElement!, "Save").disabled).toBe(false);
+  expectedMutation = "cli";
+  act(() => button(input.parentElement!, "Save").click());
+  await tick();
+  const mutations = vi.mocked(fetch).mock.calls.filter(([path]) => path === "/api/cli-test" || path === "/api/instances/claude");
+  expect(mutations.map(([, init]) => JSON.parse(String(init!.body)).cli)).toEqual(["/fixture/new-claude", "/fixture/new-claude"]);
+});

@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+// GrokOff modification (2026-10-09): preserve edited CLI drafts across discovery and cancel closed picker requests.
 // Engines settings — per-instance CLI path override. One "Set CLI…" button
 // per engine reveals a picker: a "detected" dropdown of every binary the
 // server found on PATH, plus a manual path input. Saving first probes the
@@ -46,28 +46,35 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const draftEditedRef = useRef(false);
 
   // The describe() snapshot can be stale (CLI installed since last refresh);
   // re-fetch candidates once when the picker mounts so the dropdown is current.
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    api(`/api/cli-candidates?name=${encodeURIComponent(cliDefault ?? "")}`)
+    let active = true;
+    const controller = new AbortController();
+    api(`/api/cli-candidates?name=${encodeURIComponent(cliDefault ?? "")}`, { signal: controller.signal })
       .then(({ candidates: found }: { candidates: string[] }) => {
+        if (!active) return;
         setCandidates(found);
-        if (!instance.cli) return;
+        // Discovery can update options, but only an untouched draft can
+        // still be initialized from the saved override. Empty edits count.
+        if (draftEditedRef.current || !instance.cli) return;
         // preselect a detected override in the dropdown; a non-detected one
         // (wrapper string, moved binary) rides the manual input instead
         if (found.includes(instance.cli)) setSelected(instance.cli);
         else setManual(instance.cli);
       })
-      .catch(() => setCandidates((prev) => prev ?? []));
+      .catch(() => { if (active) setCandidates((prev) => prev ?? []); });
+    return () => { active = false; controller.abort(); };
   }, [cliDefault, instance.cli]);
 
   const value = manual.trim() || selected;
   const dirty = value !== (instance.cli ?? "");
   const busy = probing || saving;
+  // A chosen path stays visible even if the refreshed discovery omits it.
+  // Saving still probes that exact path before it can become an override.
+  const choices = selected && !candidates?.includes(selected) ? [selected, ...(candidates ?? [])] : candidates;
 
   // Editing the path invalidates a previous probe result.
   useEffect(() => {
@@ -112,11 +119,12 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
 
   return (
     <div className="mt-2.5 flex flex-col gap-2">
-      {candidates !== null && candidates.length > 0 && (
+      {choices !== null && choices.length > 0 && (
         <div className="relative">
           <select
             value={manual.trim() ? "" : selected}
             onChange={(e) => {
+              draftEditedRef.current = true;
               setSelected(e.target.value);
               setManual("");
             }}
@@ -125,7 +133,7 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
             className="w-full appearance-none rounded-lg border border-hairline/40 bg-inset px-3 py-2 pr-8 font-mono text-[12px] text-ink focus:outline-none disabled:opacity-50"
           >
             <option value="">{t("engines.selectBinary")}</option>
-            {candidates.map((p) => (
+            {choices.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -135,7 +143,7 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
       <input
         type="text"
         value={manual}
-        onChange={(e) => setManual(e.target.value)}
+        onChange={(e) => { draftEditedRef.current = true; setManual(e.target.value); }}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();

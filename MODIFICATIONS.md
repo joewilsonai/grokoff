@@ -221,3 +221,14 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+
+## Custom CLI draft ownership (2026-10-09)
+
+The inherited [EnginesSettings](src/components/EnginesSettings.tsx) now keeps
+manual and detected-path edits when asynchronous CLI discovery completes, and
+cancels lookup requests when the picker unmounts. Its inline modification notice
+identifies this change. The fork-created
+[provider interaction fixture](src/components/EngineRefresh.interaction.test.ts)
+and [verification notes](docs/verification/provider-refresh.md) cover delayed
+responses, untouched initialization, failure, close/reopen and StrictMode.
