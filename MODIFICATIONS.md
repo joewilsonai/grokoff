@@ -214,3 +214,19 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+## Native interface copy
+
+The 2026-10-09 native branding follow-up changes visible window titles,
+startup lease error messages and the diagnostics report header/default filename.
+Protocol, data, lease and session identifiers remain compatible. These imported
+files and corresponding existing tests carry inline GrokOff change notices:
+
+| Modified imported file | Change notice |
+| --- | --- |
+| [electron/environments.cjs](electron/environments.cjs) | inline change notice |
+| [electron/environments.node-test.mjs](electron/environments.node-test.mjs) | inline change notice |
+| [electron/data-dir-lease.mjs](electron/data-dir-lease.mjs) | inline change notice |
+| [electron/data-dir-lease.node-test.mjs](electron/data-dir-lease.node-test.mjs) | inline change notice |
+| [electron/diagnostics.mjs](electron/diagnostics.mjs) | inline change notice |
+| [electron/diagnostics.test.mjs](electron/diagnostics.test.mjs) | inline change notice |

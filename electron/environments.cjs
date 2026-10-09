@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use the fork name in native interface copy and preserve compatibility identifiers.
 // Saved servers ("environments") for the desktop app, pure and testable.
 //
 // Local is the server this app spawns; a remote environment is a server the
@@ -74,9 +75,9 @@ function workspaceSummary(state) {
 
 /** Native identity must not depend on a hosted renderer's version/title. */
 function workspaceWindowTitle(state, companion) {
-  if (companion) return `OpenMausBot — Connected to: ${companion.serverName} (${new URL(companion.endpoint).host})`;
+  if (companion) return `GrokOff — Connected to: ${companion.serverName} (${new URL(companion.endpoint).host})`;
   const active = activeEnvironment(state);
-  return active ? `OpenMausBot — Hosted: ${active.name} (${new URL(active.origin).host})` : "OpenMausBot";
+  return active ? `GrokOff — Hosted: ${active.name} (${new URL(active.origin).host})` : "GrokOff";
 }
 
 /** Renderer navigation stays in the selected workspace. Switching is a main

@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use the fork name in native interface copy and preserve compatibility identifiers.
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
 import { EventEmitter } from "node:events";
@@ -412,9 +413,9 @@ describe("readSafeLogTail", () => {
 });
 
 describe("diagnosticsFileName", () => {
-  it("uses openmausbot-diagnostics-YYYYMMDD-HHmmss.txt", () => {
+  it("uses grokoff-diagnostics-YYYYMMDD-HHmmss.txt", () => {
     expect(diagnosticsFileName(new Date(2026, 7, 22, 16, 5, 9))).toBe(
-      "openmausbot-diagnostics-20260822-160509.txt",
+      "grokoff-diagnostics-20260822-160509.txt",
     );
   });
 });
