@@ -67,6 +67,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [pnpm-workspace.yaml](pnpm-workspace.yaml) | inline change notice |
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
+| [scripts/bundle-updater.mjs](scripts/bundle-updater.mjs) | inline change notice (vendored updater security rebuild) |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
