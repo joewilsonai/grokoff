@@ -36,6 +36,31 @@ control; Windows retains the normal smoke. Earlier local Mac smoke failures
 remain historical failures; a passing sealed fixture does not relabel them or
 establish an OS sandbox.
 
+## Later setup and memory metadata corrections
+
+[PR #46](https://github.com/joewilsonai/grokoff/pull/46), reviewed at `e02c611`,
+keeps a custom CLI path typed or selected while candidate discovery is pending.
+A late result retains that choice as a visible selectable option, including
+when the newly detected list omits it. Closing and reopening the dialog starts
+a separate request. The branch passed 41 actual React/store interaction cases,
+955 maintained tests plus one skip and 11 Node tests; exact-head GitHub CI
+[38004440239](https://github.com/joewilsonai/grokoff/actions/runs/38004440239)
+passed. These offline controls do not establish a real provider installation
+or authentication.
+
+[PR #47](https://github.com/joewilsonai/grokoff/pull/47), reviewed at `eee7fee`,
+refreshes memory overview and journal data after every successful current
+Save or Undo. A later successful mutation owns the latest metadata; switching
+or deactivating the editor prevents obsolete refreshes. Metadata refreshes
+preserve the editor's draft, selection, expected hash and conflict policy.
+The branch passed 61 actual interaction cases (including the earlier 51),
+169 focused tests, 948 maintained tests plus one skip and 11 Node tests;
+exact-head GitHub CI
+[38004774685](https://github.com/joewilsonai/grokoff/actions/runs/38004774685)
+passed. Review also reproduced and corrected a superseded metadata error that
+could otherwise remain after a later successful Undo. These results describe
+the separate source unit, before new aggregate and native acceptance.
+
 ## Packaged completed-report PDF acceptance on the earlier candidate
 
 A later disposable acceptance run passed on the existing unsigned Apple
@@ -81,4 +106,4 @@ DOM and request-denial observations are separate evidence.
 The [public PDF recipe at PR #36](https://github.com/joewilsonai/grokoff/blob/0b46d3e779d95b531d0a79b649d61a7aa5822eb9/docs/verification/report-pdf.md)
 remains a source-Electron fixture. The packaged observation above used a
 separate maintainer fixture. Repeat acceptance against any later candidate;
-this result does not transfer to a new artifact containing PRs #42–45.
+this result does not transfer to a new artifact containing PRs #42–47.
