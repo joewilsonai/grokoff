@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// GrokOff: actual memory editor lifecycle and Save reconciliation with deferred in-memory responses.
+// GrokOff: actual memory editor lifecycle, Save and Undo reconciliation with deferred in-memory responses.
 // Transport, Store dispatch and desktop capabilities are sealed synthetic seams;
 // no provider, server, filesystem, account, native UI or background model calls.
 import { act, createElement, StrictMode } from "react";
@@ -595,4 +595,204 @@ it("keeps a dirty draft unconfirmed when same-file Undo succeeds before its held
   // Undo deliberately leaves dirty drafts on their original optimistic hash;
   // the server's existing conflict contract decides the next write.
   expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Submitted draft before Undo", "hash:MEMORY.md");
+});
+
+it.each(["revert", "journal"] as const)("keeps newer typing dirty while Undo's %s response is pending", async phase => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  const journal = deferred<MemoryJournalRow[]>();
+  if (phase === "revert") fixture.revert.mockReturnValueOnce(reverted.promise);
+  else fixture.journal.mockReturnValueOnce(journal.promise);
+  await click("Undo");
+  await type("Words typed during Undo");
+  await act(async () => {
+    if (phase === "revert") reverted.resolve({ ...doc("MEMORY.md", "Restored on disk", "undo-hash"), overview: overview() });
+    else journal.resolve([row]);
+  });
+  await tick();
+  expect(editor().value).toBe("Words typed during Undo");
+  expect(button("Save").disabled).toBe(false);
+  await click("Save");
+  // Typing before Undo completes keeps its optimistic conflict hash. Once
+  // the clean document was restored, later typing starts from that revision.
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Words typed during Undo", phase === "revert" ? "hash:MEMORY.md" : "revert-hash");
+});
+
+it.each(["revert", "journal"] as const)("does not reopen the undone file after navigation during its %s response", async phase => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  const journal = deferred<MemoryJournalRow[]>();
+  if (phase === "revert") fixture.revert.mockReturnValueOnce(reverted.promise);
+  else fixture.journal.mockReturnValueOnce(journal.promise);
+  await click("Undo");
+  await click("b.md");
+  await type("Keep the selected B draft");
+  await act(async () => {
+    if (phase === "revert") reverted.resolve({ ...doc("MEMORY.md", "Old Undo response", "undo-hash"), overview: overview() });
+    else journal.resolve([row]);
+  });
+  await tick();
+  expect(editor().getAttribute("aria-label")).toBe("Memory file memory/b.md");
+  expect(editor().value).toBe("Keep the selected B draft");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/b.md", "Keep the selected B draft", "hash:memory/b.md");
+});
+
+it("does not rewind a later same-path read after navigating away while Undo is held", async () => {
+  fixture.journal.mockResolvedValue([{ ...row, path: "memory/a.md" }]);
+  await render();
+  await click("a.md");
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  await click("b.md");
+  fixture.doc.mockResolvedValueOnce(doc("memory/a.md", "Later loaded A", "later-a-hash"));
+  await click("a.md");
+  await act(async () => reverted.resolve({ ...doc("memory/a.md", "Old Undo A", "old-undo-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Later loaded A");
+  await type("Draft on later loaded A");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Draft on later loaded A", "later-a-hash");
+});
+
+it("does not rewind a newer saved revision when an older Undo receipt arrives", async () => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  await type("Newly saved after Undo started");
+  await click("Save");
+  await act(async () => reverted.resolve({ ...doc("MEMORY.md", "Older Undo receipt", "older-undo-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Newly saved after Undo started");
+  await type("Next draft on saved revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Next draft on saved revision", "saved-hash");
+});
+
+it("lets navigation begun after Undo finish without cancelling its held read", async () => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  const selected = deferred<MemoryDoc>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  fixture.doc.mockReturnValueOnce(selected.promise);
+  await click("b.md");
+  await act(async () => reverted.resolve({ ...doc("MEMORY.md", "Undo index", "undo-hash"), overview: overview() }));
+  await tick();
+  await act(async () => selected.resolve(doc("memory/b.md", "Later selected B", "later-b-hash")));
+  await tick();
+  expect(editor().getAttribute("aria-label")).toBe("Memory file memory/b.md");
+  expect(editor().value).toBe("Later selected B");
+});
+
+it("retains newer activation metadata and journal when an older Undo journal settles", async () => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const journal = deferred<MemoryJournalRow[]>();
+  fixture.journal.mockReturnValueOnce(journal.promise);
+  await click("Undo");
+  await render(false);
+  fixture.overview.mockResolvedValueOnce(overview("/synthetic/new-activation"));
+  fixture.journal.mockResolvedValueOnce([{ ...row, id: "new-current", path: "memory/b.md" }]);
+  await render();
+  await act(async () => journal.resolve([]));
+  await tick();
+  expect(container.textContent).toContain("/synthetic/new-activation");
+  expect(container.textContent).toContain("the b topic");
+  expect(button("Undo").disabled).toBe(false);
+});
+
+it.each(["current", "later selection"] as const)("shows an Undo failure only for its %s editor", async intent => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  if (intent === "later selection") await click("b.md");
+  await act(async () => reverted.reject(new Error("Synthetic Undo refused")));
+  await tick();
+  if (intent === "current") expect(container.textContent).toContain("Synthetic Undo refused");
+  else expect(container.textContent).not.toContain("Synthetic Undo refused");
+});
+
+it.each(["current", "new activation"] as const)("shows a failed Undo journal only for its %s metadata", async intent => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const journal = deferred<MemoryJournalRow[]>();
+  fixture.journal.mockReturnValueOnce(journal.promise);
+  await click("Undo");
+  await type("Draft typed after Undo");
+  if (intent === "new activation") {
+    await render(false);
+    fixture.overview.mockResolvedValueOnce(overview("/synthetic/current-reactivation"));
+    fixture.journal.mockResolvedValueOnce([{ ...row, id: "new-current", path: "memory/b.md" }]);
+    await render();
+  }
+  await act(async () => journal.reject(new Error("Synthetic old Undo journal failed")));
+  await tick();
+  expect(editor().value).toBe("Draft typed after Undo");
+  expect(button("Save").disabled).toBe(false);
+  if (intent === "current") expect(container.textContent).toContain("Synthetic old Undo journal failed");
+  else {
+    expect(container.textContent).not.toContain("Synthetic old Undo journal failed");
+    expect(container.textContent).toContain("/synthetic/current-reactivation");
+    expect(container.textContent).toContain("the b topic");
+  }
+});
+
+it("accepts a newer same-path Save after an older Undo receipt finishes", async () => {
+  fixture.journal.mockResolvedValue([{ ...row, path: "memory/a.md" }]);
+  await render();
+  await click("a.md");
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  const saved = deferred<SaveResult>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  await click("b.md");
+  // This newer read already sees the restored file on disk; only Undo's
+  // earlier transport receipt is delayed. The subsequent Save owns this read.
+  fixture.doc.mockResolvedValueOnce(doc("memory/a.md", "Restored A", "restored-a"));
+  await click("a.md");
+  await type("Saved after reread");
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  await act(async () => reverted.resolve({ ...doc("memory/a.md", "Restored A", "restored-a"), overview: overview() }));
+  await tick();
+  await act(async () => saved.resolve({ ok: true, doc: doc("memory/a.md", "Saved after reread", "newer-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Saved after reread");
+  expect(button("Save").disabled).toBe(true);
+  await type("Next edit");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Next edit", "newer-save-hash");
+});
+
+it("retains a pending Save based on a newer successful saved revision during old Undo", async () => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const reverted = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.revert.mockReturnValueOnce(reverted.promise);
+  await click("Undo");
+  await type("First newer saved revision");
+  await click("Save");
+  const saved = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await type("Second newer saved revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Second newer saved revision", "saved-hash");
+  await act(async () => reverted.resolve({ ...doc("MEMORY.md", "Old Undo text", "old-undo-hash"), overview: overview() }));
+  await tick();
+  await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Second newer saved revision", "second-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Second newer saved revision");
+  expect(button("Save").disabled).toBe(true);
+  await type("Next current edit");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Next current edit", "second-save-hash");
 });

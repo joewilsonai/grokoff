@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-09): scope memory reads and Save receipts to the current editor; preserve newer drafts, hashes and mutation contracts.
+// GrokOff modification (2026-10-09): scope memory reads, Save and Undo receipts to the current editor; preserve newer drafts, hashes and mutation contracts.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -309,23 +309,45 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   };
 
   const revert = async (row: MemoryJournalRow) => {
+    const submitted = currentEditing.current;
+    const selection = selectionGeneration.current;
+    let document = documentGeneration.current;
+    const metadata = metadataGeneration.current;
+    const ownsUndoEditor = () => mounted.current && activeReads.current
+      && documentGeneration.current === document
+      && selectionGeneration.current === selection;
+    let journalGeneration: number | undefined;
     setReverting(row.id);
     setError(null);
     try {
       const result = await revertMemoryChange(bot.id, row.id);
-      // Undo changed this file on disk even when its draft stays dirty.
-      if (currentEditing.current?.path === row.path) documentGeneration.current += 1;
-      invalidateReads();
-      setOverview(result.overview);
-      setJournal(await fetchMemoryJournal(bot.id));
-      if (editing?.path === row.path && !editing.dirty) {
-        setEditing({ ...editing, text: result.text, hash: result.hash });
+      const editorCurrent = ownsUndoEditor() && currentEditing.current?.hash === submitted?.hash;
+      // Undo ends older Save ownership for its loaded revision, including a
+      // dirty draft. A later reread or saved hash keeps its own Save receipts.
+      if (mounted.current && documentGeneration.current === document
+        && currentEditing.current?.path === row.path
+        && currentEditing.current.hash === submitted?.hash) documentGeneration.current += 1;
+      if (editorCurrent) {
+        document = documentGeneration.current;
+        invalidateEditorReads();
+        // Reconcile before the journal read: later typing, navigation and
+        // already loaded/saved revisions must keep their own editor state.
+        setEditing(current => {
+          if (!ownsUndoEditor() || !current || current.path !== row.path || current.hash !== submitted?.hash || current.dirty) return current;
+          return { ...current, text: result.text, hash: result.hash };
+        });
       }
-      setNotice(`Put ${row.path} back the way it was.`);
+      if (ownsMetadata(metadata)) {
+        journalGeneration = ++metadataGeneration.current;
+        setOverview(result.overview);
+        const nextJournal = await fetchMemoryJournal(bot.id);
+        if (ownsMetadata(journalGeneration)) setJournal(nextJournal);
+      }
+      if (ownsUndoEditor()) setNotice(`Put ${row.path} back the way it was.`);
     } catch (e) {
-      setError(errorText(e));
+      if (journalGeneration === undefined ? ownsUndoEditor() : ownsMetadata(journalGeneration)) setError(errorText(e));
     } finally {
-      setReverting(null);
+      if (mounted.current) setReverting(null);
     }
   };
 
