@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): scope memory reads to the current active editor intent; preserve draft and mutation contracts.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -11,7 +12,7 @@
 // The dialog keeps this mounted while hidden so an unsaved draft survives
 // a visit to another section.
 import { FileText, FolderOpen, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import {
@@ -116,44 +117,75 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const [reviewing, setReviewing] = useState(false);
   const { dispatch } = useStore();
 
+  // Settings keeps this section mounted while hidden. A successful response
+  // needs the same lifetime/intent guard as a failure: a later selection,
+  // edit or completed mutation owns the editor even if an older read finishes.
+  const readGeneration = useRef(0);
+  // Typing/selection replace document intent, but metadata stays current
+  // until another refresh, deactivation or completed mutation supersedes it.
+  const metadataGeneration = useRef(0);
+  const activeReads = useRef(active);
+  const invalidateEditorReads = () => { readGeneration.current += 1; };
+  const invalidateReads = () => {
+    invalidateEditorReads();
+    metadataGeneration.current += 1;
+  };
+  const ownsRead = (generation: number) => activeReads.current && readGeneration.current === generation;
+  const ownsMetadata = (generation: number) => activeReads.current && metadataGeneration.current === generation;
+
   const refresh = async (openPath?: string) => {
-    const [nextOverview, nextJournal, nextUpkeep] = await Promise.all([
-      fetchMemoryOverview(bot.id),
-      fetchMemoryJournal(bot.id),
-      fetchUpkeepStatus(bot.id).catch(() => null),
-    ]);
-    setOverview(nextOverview);
-    setLendingReview(nextOverview.lendingReview ?? null);
-    setJournal(nextJournal);
-    setUpkeep(nextUpkeep);
-    if (openPath) {
-      const doc = await fetchMemoryDoc(bot.id, openPath);
-      setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
+    if (!activeReads.current) return;
+    const generation = openPath ? ++readGeneration.current : readGeneration.current;
+    const metadata = ++metadataGeneration.current;
+    let metadataLoaded = false;
+    try {
+      const [nextOverview, nextJournal, nextUpkeep] = await Promise.all([
+        fetchMemoryOverview(bot.id),
+        fetchMemoryJournal(bot.id),
+        fetchUpkeepStatus(bot.id).catch(() => null),
+      ]);
+      if (!ownsMetadata(metadata)) return;
+      metadataLoaded = true;
+      setOverview(nextOverview);
+      setLendingReview(nextOverview.lendingReview ?? null);
+      setJournal(nextJournal);
+      setUpkeep(nextUpkeep);
+      if (openPath && ownsRead(generation)) {
+        const doc = await fetchMemoryDoc(bot.id, openPath);
+        if (!ownsRead(generation)) return;
+        setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
+      }
+    } catch (e) {
+      if (metadataLoaded ? ownsRead(generation) : ownsMetadata(metadata)) setError(errorText(e));
     }
   };
 
   useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    setError(null);
-    // a dirty draft survives a re-activation; everything else re-reads
-    const keepDraft = editing?.dirty === true;
-    refresh(keepDraft ? undefined : (editing?.path ?? MEMORY_INDEX)).catch((e: unknown) => {
-      if (!cancelled) setError(errorText(e));
-    });
+    activeReads.current = active;
+    if (active) {
+      setError(null);
+      // a dirty draft survives a re-activation; everything else re-reads
+      const keepDraft = editing?.dirty === true;
+      void refresh(keepDraft ? undefined : (editing?.path ?? MEMORY_INDEX));
+    }
     return () => {
-      cancelled = true;
+      activeReads.current = false;
+      invalidateReads();
     };
   }, [active, bot.id]);
 
-  const open = async (path: string) => {
+  const open = async (path: string): Promise<number | undefined> => {
+    if (!activeReads.current) return;
+    const generation = ++readGeneration.current;
     setError(null);
     setConflict(null);
     try {
       const doc = await fetchMemoryDoc(bot.id, path);
+      if (!ownsRead(generation)) return;
       setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: path.startsWith("memory/log/") });
+      return generation;
     } catch (e) {
-      setError(errorText(e));
+      if (ownsRead(generation)) setError(errorText(e));
     }
   };
 
@@ -164,9 +196,11 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     try {
       const result = await saveMemoryDoc(bot.id, editing.path, editing.text, expectedHash);
       if (!result.ok) {
+        invalidateEditorReads();
         setConflict({ path: editing.path, current: result.current, currentHash: result.currentHash });
         return;
       }
+      invalidateReads();
       setConflict(null);
       setSavedDraft(null);
       setEditing({ ...editing, text: result.doc.text, hash: result.doc.hash, dirty: false });
@@ -184,6 +218,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
    * bot's version. */
   const reloadFromConflict = () => {
     if (!conflict || !editing) return;
+    invalidateEditorReads();
     setSavedDraft(editing.text);
     setEditing({ ...editing, text: conflict.current, hash: conflict.currentHash, dirty: false });
     setConflict(null);
@@ -194,6 +229,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       const { overview: next } = await deleteMemoryDoc(bot.id, file.path);
+      invalidateReads();
       setOverview(next);
       setJournal(await fetchMemoryJournal(bot.id));
       if (editing?.path === file.path) setEditing(null);
@@ -209,8 +245,11 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       return;
     }
     setNewTopic("");
-    await open(`memory/${name}`);
-    setEditing((current) => (current ? { ...current, dirty: true, text: current.text || topicTemplate(name) } : current));
+    const path = `memory/${name}`;
+    const generation = await open(path);
+    if (generation === undefined || !ownsRead(generation)) return;
+    invalidateEditorReads();
+    setEditing((current) => (current?.path === path ? { ...current, dirty: true, text: current.text || topicTemplate(name) } : current));
   };
 
   const revert = async (row: MemoryJournalRow) => {
@@ -218,6 +257,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       const result = await revertMemoryChange(bot.id, row.id);
+      invalidateReads();
       setOverview(result.overview);
       setJournal(await fetchMemoryJournal(bot.id));
       if (editing?.path === row.path && !editing.dirty) {
@@ -253,6 +293,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setNotice(null);
     try {
       const { report, overview: next } = await tidyMemoryNow(bot.id);
+      invalidateReads();
       setOverview(next);
       setJournal(await fetchMemoryJournal(bot.id));
       setUpkeep(await fetchUpkeepStatus(bot.id));
@@ -359,7 +400,10 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
                 : "Write the note here."
             }
             aria-label={editing.path === MEMORY_INDEX ? "Bot memory" : `Memory file ${editing.path}`}
-            onChange={(e) => setEditing({ ...editing, text: e.target.value, dirty: true })}
+            onChange={(e) => {
+              invalidateEditorReads();
+              setEditing({ ...editing, text: e.target.value, dirty: true });
+            }}
           />
           {editing.readOnly ? (
             <p className="mt-2 text-[12px] text-ink-secondary">Daily logs are the bot's own record of what it did; they are not loaded into conversations and are read-only here.</p>
