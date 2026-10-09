@@ -127,6 +127,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [shared/wire.ts](shared/wire.ts) | inline change notice |
 | [src/App.tsx](src/App.tsx) | inline change notice |
 | [src/components/AboutDialog.tsx](src/components/AboutDialog.tsx) | inline change notice |
+| [src/components/ApiKeys.tsx](src/components/ApiKeys.tsx) | inline change notice (owned API-key probes) |
 | [src/components/Avatar.tsx](src/components/Avatar.tsx) | inline change notice |
 | [src/components/AvatarImageGenerator.tsx](src/components/AvatarImageGenerator.tsx) | inline change notice |
 | [src/components/CanvasComputers.tsx](src/components/CanvasComputers.tsx) | inline change notice |

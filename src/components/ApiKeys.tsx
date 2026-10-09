@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): cancel invalidated API-key probes and release their busy state.
 // Paste-a-key rows. Packaged Electron saves secrets in the OS-backed store;
 // browser development falls back to PUT /api/config. Secrets are write-only
 // either way — GET /api/config returns configured flags, never values.
@@ -263,22 +264,45 @@ export function ApiKeyRow({
   const [testing, setTesting] = useState(false);
   const [verdict, setVerdict] = useState<string | null>(null);
   const testGeneration = useRef(0);
+  const testController = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
   // A ref, not the state: blur and Enter can both fire before a re-render.
   const savingRef = useRef(false);
   const saveAfterPaste = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      testGeneration.current++;
+      testController.current?.abort();
+      testController.current = null;
+    };
+  }, []);
 
   const configured = state.config ? SECTIONS[section].flag(state.config) : false;
   const included = state.config ? SECTIONS[section].included?.(state.config) === true : false;
   const clearing = !value.trim() && configured;
   const credential = credentialCopy(section);
 
+  const invalidateTest = () => {
+    testGeneration.current++;
+    testController.current?.abort();
+    testController.current = null;
+    setTesting(false);
+    setVerdict(null);
+  };
+
   const test = async () => {
-    if (!testProvider) return;
+    if (!testProvider || !mounted.current) return;
+    const generation = ++testGeneration.current;
+    testController.current?.abort();
+    const controller = new AbortController();
+    testController.current = controller;
     setTesting(true);
     setVerdict(null);
-    const generation = ++testGeneration.current;
     try {
-      const result = await api("/api/keys/test", { method: "POST", body: JSON.stringify({ provider: testProvider }) });
+      const result = await api("/api/keys/test", { method: "POST", body: JSON.stringify({ provider: testProvider }), signal: controller.signal });
       if (generation !== testGeneration.current) return;
       const outcome = result.ok
         ? result.check === "authentication" ? t("keys.testAuthenticated")
@@ -290,7 +314,10 @@ export function ApiKeyRow({
     } catch (cause) {
       if (generation === testGeneration.current) setVerdict(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      if (generation === testGeneration.current) setTesting(false);
+      if (generation === testGeneration.current) {
+        testController.current = null;
+        setTesting(false);
+      }
     }
   };
 
@@ -305,8 +332,7 @@ export function ApiKeyRow({
     savingRef.current = true;
     setSaving(true);
     setError(null);
-    testGeneration.current++;
-    setVerdict(null);
+    invalidateTest();
     const electronSlot = ELECTRON_CREDENTIAL[section];
     const request = window.ogb?.setCredential && electronSlot
       ? window.ogb.setCredential(electronSlot, next)
@@ -352,7 +378,7 @@ export function ApiKeyRow({
           <input
             type="password"
             value={value}
-            onChange={(e) => { testGeneration.current++; setVerdict(null); setError(null); setValue(e.target.value); }}
+            onChange={(e) => { invalidateTest(); setError(null); setValue(e.target.value); }}
             onPaste={() => { saveAfterPaste.current = true; }}
             onBlur={() => save()}
             disabled={saving}
