@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): maintain in-memory credential-state regressions in core CI.
 import { runInNewContext } from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";

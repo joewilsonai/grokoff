@@ -40,6 +40,17 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, and lazy phone-secret/cancellation behavior.
+It also runs the complete inherited [credential read](../electron/secure-credentials.test.mjs),
+[serialized state](../electron/secure-credential-state.test.mjs) and
+[workspace migration](../electron/workspace-credentials.test.mjs) files. They
+distinguish an empty store from an unreadable one, check bounded read retries,
+prevent writes derived from unreadable state, preserve concurrent commits and
+rollback, and keep migration, restart tombstones and environment mappings
+lossless. Reads, decryption, availability, sleeps and persistence use synthetic
+in-memory adapters; migration inputs and outputs are plain objects. These tests
+do not import Electron, invoke safeStorage or access the operating-system
+keychain. They do not reproduce a user's keychain failure or verify native
+encryption, filesystem persistence or packaged startup.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

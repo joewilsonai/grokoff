@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): maintain pure credential-migration regressions in core CI.
 import { describe, expect, it } from "vitest";
 
 import {
