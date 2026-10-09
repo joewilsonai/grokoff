@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): adopt provider-route coverage with shared sign-in recovery.
 // Grok Build's sign-in card, driven like a person would: start, see the code,
 // cancel or fail, and try again, against the engine's own auth routes.
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
@@ -6,7 +7,7 @@ import { setLocale } from "@/lib/i18n";
 
 const fixture = vi.hoisted(() => ({
   values: [] as unknown[], index: 0, effects: [] as (() => (() => void) | undefined)[],
-  api: vi.fn(), refreshInstances: vi.fn(), refreshModels: vi.fn(), openExternal: vi.fn(),
+  api: vi.fn(), refreshSignInModels: vi.fn(), openExternal: vi.fn(),
 }));
 vi.mock("react", async (original) => ({
   ...await original<typeof import("react")>(),
@@ -19,7 +20,7 @@ vi.mock("react", async (original) => ({
 }));
 vi.mock("@/state/store", async (original) => ({
   ...await original<typeof import("@/state/store")>(), api: fixture.api,
-  useStore: () => ({ refreshInstances: fixture.refreshInstances, refreshModels: fixture.refreshModels }),
+  useStore: () => ({ state: { instances: [] }, signInModelDiscovery: {}, refreshSignInModels: fixture.refreshSignInModels }),
 }));
 const { DeviceSignIn } = await import("./DeviceSignIn");
 
@@ -65,8 +66,8 @@ it("starts only on request on Grok's own route, and never opens a page on the pe
   const cleanup = fixture.effects.at(-1)!();
   await vi.advanceTimersByTimeAsync(2_000);
   expect(fixture.api).toHaveBeenCalledWith("/api/instances/grok/auth/status?flowId=grok-flow", expect.objectContaining({ signal: expect.any(AbortSignal) }));
-  expect(fixture.refreshInstances).toHaveBeenCalledOnce();
-  expect(fixture.refreshModels).toHaveBeenCalledWith("grok");
+  expect(fixture.refreshSignInModels).toHaveBeenCalledOnce();
+  expect(fixture.refreshSignInModels).toHaveBeenCalledWith("grok");
   cleanup?.();
 });
 

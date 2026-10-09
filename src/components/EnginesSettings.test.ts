@@ -10,7 +10,7 @@ import { AntigravityFreeSpace, formatDiskSize } from "./AntigravityFreeSpace";
 const fixture = vi.hoisted(() => ({ instances: [] as InstanceInfo[], bots: [] as Bot[] }));
 vi.mock("@/state/store", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/state/store")>(),
-  useStore: () => ({ state: fixture, refreshInstances: async () => {}, refreshModels: async () => {} }),
+  useStore: () => ({ state: fixture, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} }),
 }));
 afterEach(() => vi.unstubAllGlobals());
 

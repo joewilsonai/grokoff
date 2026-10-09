@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// GrokOff modification (2026-10-09): align setup fixtures with shared sign-in recovery.
 // Grok Build's setup card, wherever Grok is not ready: Settings → Engines,
 // My Cloud's sign-in and a failed turn's card all render this one. Signed out,
 // it is the in-app code, the same on the desktop, a server and My Cloud; the
@@ -35,7 +36,7 @@ let root: Root;
 const dispatch = vi.fn();
 function render(engine: InstanceInfo, ogb: object | undefined, cloudHome = false): string {
   vi.stubGlobal("ogb", ogb);
-  const store = { state: { config: cloudHome ? { cloudHome: true } : {} }, dispatch, refreshInstances: vi.fn(), refreshModels: vi.fn() } as unknown as ReturnType<typeof useStore>;
+  const store = { state: { instances: [engine], config: cloudHome ? { cloudHome: true } : {} }, dispatch, refreshInstances: vi.fn(), refreshModels: vi.fn(), refreshSignInModels: vi.fn(), signInModelDiscovery: {} } as unknown as ReturnType<typeof useStore>;
   flushSync(() => root.render(createElement(BotEditorStore, { value: store, children: createElement(EngineSetup, { instance: engine }) })));
   return host.innerHTML;
 }
