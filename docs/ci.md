@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-09): retain fork CI guidance and adopt isolated interrupted-tool coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
@@ -75,3 +75,13 @@ write scopes, secret access, persistent checkout credentials, unreviewed
 actions, and publishing commands. Repository branch protection and private
 vulnerability reporting are separate GitHub settings; these files do not
 enable them.
+
+## Interrupted tool receipts
+
+The maintained core also runs the complete tool-receipt, HTTP Stop/restart,
+timeline, tool-detail, run-log, verification-card, command-run and MCP test files listed in
+[the interrupted-tools recipe](verification/interrupted-tools.md). The HTTP
+fixtures use owned temporary homes/servers and scripted Claude/ACP CLI events;
+React and Store controls have no live provider or browser transport. These
+checks prove saved status and ownership, not whether a real website action
+completed or was rolled back.
