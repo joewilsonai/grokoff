@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks and maintained first-run/isolation coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
@@ -39,7 +39,11 @@ Do not aim those checks at your running personal workspace.
 authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
-independent application identity, and lazy phone-secret/cancellation behavior.
+independent application identity, lazy phone-secret/cancellation behavior,
+and first-run state/gating/local-name/approval-tip behavior. The welcome gate
+regression uses real disabled analytics. Disposable UI isolation checks cover
+private namespace identity and retained-HOME cleanup with an actual child
+process; the headless full-App recipe remains separate local acceptance.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

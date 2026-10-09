@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): verify the optional local profile without email collection or the omitted phone offer.
 // Assert the first-run workflow against a handle from `control-omb ui launch`.
 // The handle gate refuses live-app URLs and stopped fixtures. All profile,
 // bot and onboarding writes below stay inside that launch's disposable home.
@@ -54,14 +55,15 @@ const holdConfigWrite = () => evaluate(`(() => {
   return true;
 })()`);
 
-// The standard fixture suppresses onboarding. This opt-in entry skips that
-// suppression; only this fixture browser's localStorage is cleared.
+// Standard fixtures seed a completed server record. Reset only the owned
+// server behind this checked handle and clear only this browser's storage.
+await evaluate("fetch('/api/config', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({onboarding:{completedAt:'',version:0,hintsSeen:[]}})}).then(r => { if (!r.ok) throw new Error('Owned onboarding reset failed'); return true; })");
 await evaluate("localStorage.clear(); setTimeout(() => { location.search = '?onboarding=1'; }, 0); true");
 await textVisible("Your name");
 await evaluate("document.documentElement.dataset.reducedMotion = 'true'; true");
 await screenshot("welcome");
 await type("Your name", "Onboarding fixture");
-await type("Email", "onboarding@example.test");
+assert.equal(await evaluate("document.querySelectorAll('input[type=email]').length"), 0);
 await evaluate(`(() => {
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
@@ -75,10 +77,11 @@ await evaluate(`(() => {
 })()`);
 await click("Continue");
 await textVisible("Couldn't save your details");
-assert.equal(await evaluate("document.querySelector('input[type=email]').value"), "onboarding@example.test");
+assert.equal(await evaluate("document.querySelector('input[aria-label=\"Your name\"]').value"), "Onboarding fixture");
 await click("Continue");
 await textVisible("What your bots can do");
-assert.equal((await config()).profile.email, "onboarding@example.test");
+assert.equal((await config()).profile.name, "Onboarding fixture");
+assert.equal((await config()).profile.email, "");
 console.log("PASS profile failure preserves input; retry persists before advancing");
 
 // Reduced motion must hold every scene, particularly the timed /setup
@@ -113,13 +116,12 @@ assert.deepEqual(await evaluate("[...document.querySelectorAll('.welcome-card [a
 await click("Check again");
 await poll(async () => (await snapshot()).includes("Couldn't check your AI connections"), false, "inventory retry");
 await click("Continue");
-await textVisible("Your phone");
-await click("Not now");
+assert.equal((await snapshot()).includes("Your phone"), false);
 await textVisible("Start chatting");
 await screenshot("meet-bot");
 await click("Start chatting");
 await textVisible("This is where you talk to your bots");
-console.log("PASS reel, engine failure/retry, phone skip and welcome completion");
+console.log("PASS reel, engine failure/retry, no phone offer and welcome completion");
 
 // Complete every live-interface step and verify its server record. A missing
 // optional browser tab may skip itself, but every required anchor must work.
@@ -131,10 +133,10 @@ for (const step of TOUR_STEPS) {
   await poll(async () => (await config()).onboarding.hintsSeen.includes(step.id), true, `saved ${step.id}`);
 }
 await poll(() => evaluate("document.querySelectorAll('[data-tour-card]').length"), 0, "tour closed");
-await evaluate("setTimeout(() => location.reload(), 0); true");
+await evaluate("localStorage.clear(); setTimeout(() => location.reload(), 0); true");
 await textVisible("Message Pepper");
 assert.equal(await evaluate("document.querySelectorAll('.welcome-card, [data-tour-card]').length"), 0);
-console.log("PASS full guided tour, saved progress, reload stays dismissed");
+console.log("PASS full guided tour, saved server progress, cleared browser storage and reload stay dismissed");
 
 await openSettings();
 await click("Replay app tour");
@@ -158,9 +160,9 @@ await evaluate("window.releaseWrite(); true");
 console.log("PASS welcome replay can close while persistence is pending");
 await poll(async () => Boolean((await config()).onboarding.completedAt), true, "welcome save completed");
 
-// An upgraded install can have only the legacy browser gate. Replay still
-// works without a new welcome completion, and failures keep Settings open.
-await evaluate("fetch('/api/config', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({onboarding:{completedAt:'', version:0}})}).then(r=>r.ok)");
+// A returning GrokOff workspace is governed by its saved server completion,
+// not an email/legacy-browser gate. Failed replay writes keep Settings open.
+assert.ok((await config()).onboarding.completedAt);
 await evaluate("setTimeout(() => location.reload(), 0); true");
 await textVisible("Message Pepper");
 await openSettings();
@@ -180,7 +182,7 @@ await textVisible("Couldn't save your progress");
 await click("Replay app tour");
 await textVisible("This is where you talk to your bots");
 await click("Skip tour");
-await poll(async () => (await config()).onboarding.hintsSeen.filter((id: string) => id.startsWith("tour.")).length, TOUR_STEPS.length, "legacy replay saved");
-console.log("PASS legacy-install replay and failed replay retry");
+await poll(async () => (await config()).onboarding.hintsSeen.filter((id: string) => id.startsWith("tour.")).length, TOUR_STEPS.length, "returning workspace replay saved");
+console.log("PASS server-completed workspace replay and failed replay retry");
 await screenshot("complete");
 console.log(JSON.stringify({ ok: true, evidence, config: (await config()).onboarding }));

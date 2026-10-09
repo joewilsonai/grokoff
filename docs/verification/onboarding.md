@@ -1,5 +1,7 @@
 # Welcome flow and guided tour
 
+<!-- GrokOff modification (2026-10-09): local-only first-run recipe, real disabled-analytics regression, and private native fixture cleanup. -->
+
 Launch the isolated full-app fixture following [Chat UI](chat-ui.md):
 
 ```sh
@@ -12,23 +14,64 @@ In a second terminal, pass its exact printed handle:
 node --experimental-strip-types scripts/verify-onboarding-ui.ts /tmp/openmausbot-verify-data-XXXXXX/ui.json
 ```
 
-Use a fresh fixture. The recipe clears only its browser storage, then enables
-first-run onboarding through the fixture-only `?onboarding=1` entry. It uses
+Use a fresh fixture. Standard UI launches explicitly mark their owned server
+onboarding complete so other chat/Settings recipes remain unobstructed. This
+recipe resets only that checked fixture server's onboarding record, clears only
+its browser storage, then opens the `?onboarding=1` entry. It uses
 the real renderer and fake-engine server. No provider login, real phone
 pairing, native permissions or user workspace is involved.
 
-Assertions cover profile-save failure and retry, reduced-motion reel playback,
-engine refresh failure without losing inventory, phone skip, welcome completion,
-every guided tour step, persistence after reload, Settings replay, skipping
-while Next is saving, closing welcome while its save is pending, and replay on
-legacy installs with a failed-save retry. Screenshots
+Assertions cover an optional local profile name with no email field,
+profile-save failure and retry, reduced-motion reel playback, engine refresh
+failure without losing inventory, no phone offer, welcome completion,
+every guided tour step, persistence after clearing browser storage and
+reloading, Settings replay, skipping while Next is saving, closing welcome
+while its save is pending, and failed replay retry on a server-completed
+workspace. Screenshots
 are retained in `.omb-scratch/verify-evidence/onboarding/` with a PASS line for
 each workflow. Actual provider authentication and native Electron permissions
 remain covered by their separate platform recipes, not this browser fixture.
 
-Stop the launcher with Ctrl-C; it owns and removes only its disposable home.
+Stop the launcher with Ctrl-C. Open, subsequent commands and close use the
+same canonical `grokoff` namespace and socket identity derived from its private
+HOME. Cleanup captures every verified native session in that private namespace,
+including the bot browser opened by the guided tour, then stops its preview/server
+before closing those sessions. Close acknowledgement alone cannot remove HOME:
+the exact captured daemon/Chrome processes must have exited. Native acceptance
+requires a POSIX `ps` inventory; unreadable or uncertain ownership retains HOME.
+Cleanup stops only owned processes and retains that HOME on a failed close. Keep
+the handle, native process identity and final cleanup checks with private
+evidence; never kill by name or inspect a user browser profile.
 
-## Organization row, hosted beats and member note (Sep 23 2026)
+## Maintained GrokOff checks
+
+`pnpm test:core` adopts the complete onboarding state, WelcomeGate, HelloBeat
+and FirstConversationTour files, plus the disposable UI isolation regressions.
+WelcomeGate uses the real disabled analytics module: a satisfied email gate
+cannot suppress a fresh local welcome. Existing server completion/version,
+remote/read-only and replay boundaries remain covered. Email collection,
+telemetry and automatic phone offers stay disabled.
+
+The isolation checks exercise canonical private environment identity and an
+actual owned child processes: unsuccessful browser close retains HOME while
+stopping the server; two synthetic sessions are both closed; an acknowledgement
+and removed PID file without a process exit still retain HOME. Confirmed exits
+permit removal; separate owned-process controls cover orphan/late private
+browser profiles and a discovered executable without changing the launch
+environment. These controls use Node subprocesses as synthetic native helpers,
+not a real Chrome auto-discovery run. The component fixtures stub
+transport/state or hooks and do not prove real React scheduling. The renderer
+recipe above supplies separate full-App save/retry/skip/reload evidence. Its
+feature reel is an illustration, not acceptance of every feature it depicts.
+Inherited hosted-state unit branches are defensive coverage; they do not enable
+or establish a hosted GrokOff service.
+
+
+## Inherited organization/hosted verification record (Sep 23 2026)
+
+This preserved upstream record is historical. GrokOff disables the hosted
+organization offer; the table and retained historical images below are not
+current GrokOff service or enrollment acceptance.
 
 What each first-run surface depends on, and how it was checked:
 
