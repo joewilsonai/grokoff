@@ -85,8 +85,8 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
       body: JSON.stringify({ cli: committed }),
     })
       // onSaved (refreshInstances) failing must NOT read as "not saved" —
-      // the PATCH already returned 200. Close regardless; the global banner
-      // from refreshInstances already reports the refresh failure.
+      // the PATCH already returned 200. Close regardless; Check again can
+      // retry the inventory without misreporting a successful save.
       .then(() => Promise.resolve(onSaved()).catch(() => {}))
       .then(onClose)
       .catch((e) => setError(e.message))
@@ -232,7 +232,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     })
       // The reset already succeeded once PATCH returns 200. A follow-up list
       // refresh failure should not tell the user the reset itself failed.
-      .then(() => Promise.resolve(refreshInstances()).catch(() => {}))
+      .then(() => Promise.resolve(refreshInstances({ fresh: true })).catch(() => {}))
       .catch((e) => setError(e.message))
       .finally(() => setSwitching(false));
   };
@@ -248,7 +248,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     })
       .then(async ({ version }: { version: string }) => {
         setUpdatedVersion(version);
-        await Promise.resolve(refreshInstances()).catch(() => {});
+        await Promise.resolve(refreshInstances({ fresh: true })).catch(() => {});
       })
       .catch((e) => setError(e.message))
       .finally(() => setUpdating(false));
@@ -354,7 +354,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
               instance={instance}
               cliDefault={instance.cliDefault}
               onClose={() => setOpen(false)}
-              onSaved={refreshInstances}
+              onSaved={() => refreshInstances({ fresh: true })}
             />
           </div>
         )}

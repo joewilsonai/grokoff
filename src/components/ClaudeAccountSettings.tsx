@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): bounded, observable connection checks.
 import { useState } from "react";
 import { Loader2, Plus, RefreshCw } from "lucide-react";
 import { api, useStore, type InstanceInfo } from "@/state/store";
@@ -31,7 +32,7 @@ export function ClaudeAccountForm({ instance, onSaved, onCancel }: {
         body: JSON.stringify({ displayName: displayName.trim(), ...(configDir.trim() ? { configDir: configDir.trim() } : {}) }),
       });
       // The save has succeeded even if the subsequent catalog refresh fails.
-      await refreshInstances().catch(() => {});
+      await refreshInstances({ fresh: true }).catch(() => {});
       onSaved();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -123,8 +124,8 @@ export function ClaudeAccountSettings({ instance }: { instance: InstanceInfo }) 
     if (busy || signingOut) return;
     setBusy(true);
     setError(null);
-    try { await refreshInstances(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+    try { await refreshInstances({ reportFailure: true }); }
+    catch { setError(t("engines.library.refreshFailed")); }
     finally { setBusy(false); }
   };
 
@@ -135,7 +136,7 @@ export function ClaudeAccountSettings({ instance }: { instance: InstanceInfo }) 
     setError(null);
     try {
       await api(`/api/instances/${encodeURIComponent(instance.instanceId)}`, { method: "DELETE" });
-      await refreshInstances().catch(() => {});
+      await refreshInstances({ fresh: true }).catch(() => {});
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

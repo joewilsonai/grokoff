@@ -34,6 +34,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [deploy/.env.example](deploy/.env.example) | inline change notice |
 | [deploy/podman/.env.example](deploy/podman/.env.example) | inline change notice |
 | [docs/ci.md](docs/ci.md) | inline change notice |
+| [docs/verification/README.md](docs/verification/README.md) | inline change notice |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
 | [electron/cloud-account.mjs](electron/cloud-account.mjs) | inline change notice |
@@ -121,10 +122,15 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/ChatMarkdown.renderers.test.ts](src/components/ChatMarkdown.renderers.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.test.ts](src/components/ChatMarkdown.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.tsx](src/components/ChatMarkdown.tsx) | inline change notice |
+| [src/components/ClaudeAccountSettings.tsx](src/components/ClaudeAccountSettings.tsx) | inline change notice |
+| [src/components/ClaudeSignIn.tsx](src/components/ClaudeSignIn.tsx) | inline change notice |
+| [src/components/ClaudeUpdatePrompt.tsx](src/components/ClaudeUpdatePrompt.tsx) | inline change notice |
 | [src/components/CloudAccountSettings.test.ts](src/components/CloudAccountSettings.test.ts) | inline change notice |
 | [src/components/CloudAccountSettings.tsx](src/components/CloudAccountSettings.tsx) | inline change notice |
 | [src/components/CompanionSection.test.ts](src/components/CompanionSection.test.ts) | inline change notice |
+| [src/components/CodexAccountSettings.tsx](src/components/CodexAccountSettings.tsx) | inline change notice |
 | [src/components/ConnectedWorkspacesSettings.tsx](src/components/ConnectedWorkspacesSettings.tsx) | inline change notice |
+| [src/components/DeviceSignIn.tsx](src/components/DeviceSignIn.tsx) | inline change notice |
 | [src/components/EngineLibrary.test.ts](src/components/EngineLibrary.test.ts) | inline change notice |
 | [src/components/EngineLibrary.tsx](src/components/EngineLibrary.tsx) | inline change notice |
 | [src/components/EngineSetup.test.ts](src/components/EngineSetup.test.ts) | inline change notice |
@@ -165,6 +171,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/onboarding/WelcomeFlow.tsx](src/components/onboarding/WelcomeFlow.tsx) | inline change notice |
 | [src/components/onboarding/WelcomeGate.test.ts](src/components/onboarding/WelcomeGate.test.ts) | inline change notice |
 | [src/components/onboarding/beats/EnginesBeat.test.ts](src/components/onboarding/beats/EnginesBeat.test.ts) | inline change notice |
+| [src/components/onboarding/beats/EnginesBeat.tsx](src/components/onboarding/beats/EnginesBeat.tsx) | inline change notice |
 | [src/components/onboarding/beats/HelloBeat.test.ts](src/components/onboarding/beats/HelloBeat.test.ts) | inline change notice |
 | [src/components/onboarding/beats/HelloBeat.tsx](src/components/onboarding/beats/HelloBeat.tsx) | inline change notice |
 | [src/components/onboarding/beats/MeetYourBotBeat.tsx](src/components/onboarding/beats/MeetYourBotBeat.tsx) | inline change notice |

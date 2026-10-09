@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): refresh inventory after the confirmed update.
 import { useState } from "react";
 import { Check, Copy, Download, Loader2, RefreshCw, X } from "lucide-react";
 
@@ -40,7 +41,7 @@ export function ClaudeUpdatePrompt({
     })
       .then(async ({ version }) => {
         setPhase({ kind: "updated", version });
-        await Promise.resolve(refreshInstances()).catch(() => {});
+        await Promise.resolve(refreshInstances({ fresh: true })).catch(() => {});
       })
       .catch((error: unknown) =>
         setPhase({ kind: "failed", error: error instanceof Error ? error.message : String(error) }),

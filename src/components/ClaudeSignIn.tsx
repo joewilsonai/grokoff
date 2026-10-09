@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): refresh inventory after confirmed sign-in.
 import { useEffect, useState } from "react";
 import { ExternalLink, Loader2, LogIn } from "lucide-react";
 import { api } from "@/state/store";
@@ -37,7 +38,7 @@ export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
   const link = claudeSignInLink(auth?.authorizationUrl);
 
   const refresh = async () => {
-    await refreshInstances();
+    await refreshInstances({ fresh: true });
     await refreshModels(instanceId);
   };
 
