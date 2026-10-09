@@ -284,3 +284,19 @@ bytes; this remains an intentionally partial inventory.
 | [server/attachments.test.ts](server/attachments.test.ts) | inline change notice (owned fixture cleanup) |
 
 [Data export](docs/data-export.md) was written for GrokOff to document the inherited full-workspace backup path and its verified limits. The archive and policy tests are adopted unchanged into the maintained core suite; the workflow fixture adds sealed restarts and confirmed owned-process cleanup.
+
+## Native interface copy
+
+The 2026-10-09 native branding follow-up changes visible window titles,
+startup lease error messages and the diagnostics report header/default filename.
+Protocol, data, lease and session identifiers remain compatible. These imported
+files and corresponding existing tests carry inline GrokOff change notices:
+
+| Modified imported file | Change notice |
+| --- | --- |
+| [electron/environments.cjs](electron/environments.cjs) | inline change notice |
+| [electron/environments.node-test.mjs](electron/environments.node-test.mjs) | inline change notice |
+| [electron/data-dir-lease.mjs](electron/data-dir-lease.mjs) | inline change notice |
+| [electron/data-dir-lease.node-test.mjs](electron/data-dir-lease.node-test.mjs) | inline change notice |
+| [electron/diagnostics.mjs](electron/diagnostics.mjs) | inline change notice |
+| [electron/diagnostics.test.mjs](electron/diagnostics.test.mjs) | inline change notice |

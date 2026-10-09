@@ -173,3 +173,20 @@ local-model discovery and selection. Its Store mock supplies the required
 shared sign-in discovery state and retry method. The fixture controls hooks
 and renders the real picker; it does not prove mounted React effects, a native
 window, successful provider authentication or model quality.
+
+## Native interface copy checks
+
+The native branding follow-up changes window titles, startup lease error copy
+and diagnostics labels. Run the existing complete helper files in addition to
+the maintained source gates:
+
+```sh
+node --test electron/environments.node-test.mjs electron/data-dir-lease.node-test.mjs
+pnpm exec vitest run electron/diagnostics.test.mjs
+```
+
+These checks use synthetic workspace records, disposable lease directories
+and synthetic diagnostics inputs. They cover compatibility, ownership/recovery
+and redaction as well as the changed expectations; they do not launch Electron,
+read a real profile or prove the appearance of a native dialog. The selected
+`test:core` list remains its own narrower CI boundary.

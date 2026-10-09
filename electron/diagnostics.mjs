@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use the fork name in native interface copy and preserve compatibility identifiers.
 // One-click bug-report bundle: app facts, a safe config summary and the
 // server/updater log tails, formatted for pasting into a public issue. Formatting and
 // bounded log reads live here so redaction and path safety stay unit-testable
@@ -295,7 +296,7 @@ export function buildDiagnosticsReport({
   now = new Date().toISOString(),
 } = {}) {
   const lines = [];
-  lines.push("OpenMausBot diagnostics");
+  lines.push("GrokOff diagnostics");
   lines.push(`Generated: ${now}`);
   lines.push("");
   lines.push("## App");
@@ -342,7 +343,7 @@ export function buildDiagnosticsReport({
 export function diagnosticsFileName(date = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return (
-    `openmausbot-diagnostics-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `grokoff-diagnostics-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
     `-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}.txt`
   );
 }
