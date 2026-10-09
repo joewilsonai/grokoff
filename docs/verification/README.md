@@ -204,6 +204,11 @@ The [maintained routines CI group](routines-ci.md) maps the selected scheduler,
 restart, results, delegation, cron and webhook regressions plus renderer checks
 that run automatically in `test:core`, with their fixture and acceptance limits.
 
+The [opt-in routine lifecycle acceptance](routines.md#automated-renderer-lifecycle)
+automates manual creation, pause/resume, an unchanged interval edit, one manual
+run, result/execution navigation and persistence after a renderer reload. It
+requires explicit installed headless-browser binaries and retains private evidence.
+
 The [interval restrictions recipe](interval-restrictions.md) checks weekday and
 time-window limits on scheduled routines in that same disposable fixture.
 
