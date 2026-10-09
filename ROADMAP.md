@@ -2,6 +2,8 @@
 
 GrokOff is a Mac source alpha built on OpenMausBot's community edition. This roadmap describes intended milestones, not shipped features or promised dates. [Verification](research/verification.md) records what has actually been checked.
 
+The [October 9 integration record](research/verification-2026-10-09.md) reports the locally combined changes, isolated desktop checks and remaining release requirements. Its bounded fixtures do not complete the live-provider desktop milestone below.
+
 ## Browser to finished report
 
 The next milestone is one repeatable task through the real desktop interface: a bot researches in the browser and produces a finished report with traceable sources. Progress must stay visible, Allow/Deny/Stop must work, the completed artifact must open from the conversation, and the result must persist after an app restart.
