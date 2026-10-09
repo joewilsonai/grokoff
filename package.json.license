@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Applies to: package.json
 GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+GrokOff modification (2026-10-09): run the packaged-smoke provider-isolation regression before the normal smoke command.
 GrokOff modification (2026-10-09): adopt complete isolated engine-install and browser-cleanup regressions into test:core.
 GrokOff modification (2026-10-09): retain fork changes and add maintained offline interrupted-tool receipt, verification-card and MCP projection regression coverage.
 GrokOff modification (2026-10-09): adopt complete report PDF renderer and security/lifecycle tests in the maintained core command.

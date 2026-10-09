@@ -82,6 +82,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (Mac CUA and Electron notice gates) |
 | [scripts/mcp-server.ts](scripts/mcp-server.ts) | inline change notice |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
+| [scripts/smoke-packaged-server.mjs](scripts/smoke-packaged-server.mjs) | inline change notice (sealed packaged-smoke CLI discovery) |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
