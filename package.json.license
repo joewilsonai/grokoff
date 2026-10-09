@@ -7,6 +7,7 @@ GrokOff modification (2026-10-08): changed this imported OpenMausBot community f
 GrokOff modification (2026-10-09): adopt complete isolated engine-install and browser-cleanup regressions into test:core.
 GrokOff modification (2026-10-09): retain fork changes and add maintained offline interrupted-tool receipt, verification-card and MCP projection regression coverage.
 GrokOff modification (2026-10-09): adopt complete report PDF renderer and security/lifecycle tests in the maintained core command.
+GrokOff modification (2026-10-09): maintain the complete inherited chat helper locale regression file in test:core.
 Original source: https://github.com/milind-soni/OpenMausBot/tree/3e9e42b3a05e0b7c4edbaedba2e667b851296e27
 Retain the repository LICENSE, NOTICE, and applicable third-party attribution.
 

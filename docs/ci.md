@@ -1,4 +1,5 @@
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
+<!-- GrokOff modification (2026-10-09): document adopted existing chat helper locale regressions and their pure-helper limits. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks and maintained first-run/isolation coverage. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks, first-run isolation and Settings/tour interaction coverage. -->
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
@@ -161,6 +162,11 @@ manual with `pnpm package:grokoff`; it downloads pinned native helpers and
 requires Xcode command-line tools. Its output is an unsigned local `.app`,
 with publishing disabled. A GitHub source-check success is not native release
 acceptance; retain the [verification evidence](../research/verification.md).
+
+The complete chat helper locale test file also checks runtime language switching
+for activity labels, resolved locale state and reply text, plus localized usage
+units and cost captions. It uses pure helpers and catalog values; it does not
+contact providers or establish actual plan charges or native UI behavior.
 
 ## Workflow maintenance
 
