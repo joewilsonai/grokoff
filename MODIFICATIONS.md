@@ -42,6 +42,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [docs/verification/claude-account.md](docs/verification/claude-account.md) | inline change notice |
 | [docs/verification/README.md](docs/verification/README.md) | inline change notice |
 | [docs/verification/memory-layer.md](docs/verification/memory-layer.md) | inline change notice |
+| [docs/verification/onboarding.md](docs/verification/onboarding.md) | inline change notice (local first-run evidence and inherited-history limits) |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
 | [electron/cloud-account.mjs](electron/cloud-account.mjs) | inline change notice |
@@ -82,6 +83,9 @@ This inventory describes source changes; it does not claim that every inherited 
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
+| [scripts/testing/control-omb-ui.ts](scripts/testing/control-omb-ui.ts) | inline change notice (private namespace and retained-HOME teardown) |
+| [scripts/testing/threads-preview.tsx](scripts/testing/threads-preview.tsx) | inline change notice (explicit server-controlled fixture onboarding) |
+| [scripts/verify-onboarding-ui.ts](scripts/verify-onboarding-ui.ts) | inline change notice (local-only first-run recipe) |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
 | [scripts/verify-workspace-backup.ts](scripts/verify-workspace-backup.ts) | inline change notice (sealed restart and owned cleanup) |
 | [server/brand.ts](server/brand.ts) | inline change notice |
@@ -190,10 +194,12 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/SimpleModelPane.tsx](src/components/SimpleModelPane.tsx) | inline change notice |
 | [src/components/ThreadRefs.test.ts](src/components/ThreadRefs.test.ts) | inline change notice |
 | [src/components/WebhooksPanel.tsx](src/components/WebhooksPanel.tsx) | inline change notice |
+| [src/components/onboarding/FirstConversationTour.test.ts](src/components/onboarding/FirstConversationTour.test.ts) | inline change notice (disposable first-run globals) |
 | [src/components/onboarding/PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) | inline change notice |
 | [src/components/onboarding/SharedWorkspaceHint.tsx](src/components/onboarding/SharedWorkspaceHint.tsx) | inline change notice |
 | [src/components/onboarding/Spotlight.tsx](src/components/onboarding/Spotlight.tsx) | inline change notice |
 | [src/components/onboarding/WelcomeFlow.tsx](src/components/onboarding/WelcomeFlow.tsx) | inline change notice |
+| [src/components/onboarding/WelcomeGate.tsx](src/components/onboarding/WelcomeGate.tsx) | inline change notice (server-governed local welcome completion) |
 | [src/components/onboarding/WelcomeGate.test.ts](src/components/onboarding/WelcomeGate.test.ts) | inline change notice |
 | [src/components/onboarding/beats/EnginesBeat.test.ts](src/components/onboarding/beats/EnginesBeat.test.ts) | inline change notice |
 | [src/components/onboarding/beats/EnginesBeat.tsx](src/components/onboarding/beats/EnginesBeat.tsx) | inline change notice |

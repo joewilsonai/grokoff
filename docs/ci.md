@@ -1,4 +1,5 @@
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
+<!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks and maintained first-run/isolation coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
@@ -105,6 +106,10 @@ in-memory adapters; migration inputs and outputs are plain objects. These tests
 do not import Electron, invoke safeStorage or access the operating-system
 keychain. They do not reproduce a user's keychain failure or verify native
 encryption, filesystem persistence or packaged startup.
+and first-run state/gating/local-name/approval-tip behavior. The welcome gate
+regression uses real disabled analytics. Disposable UI isolation checks cover
+private namespace identity and retained-HOME cleanup with an actual child
+process; the headless full-App recipe remains separate local acceptance.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

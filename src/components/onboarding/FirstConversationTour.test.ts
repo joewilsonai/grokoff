@@ -1,6 +1,7 @@
+// GrokOff modification (2026-10-09): maintain approval-tip coverage with disposable globals.
 import { createElement, type EffectCallback, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withTourFinished } from "@/lib/guided-tour";
 import { EMPTY_ONBOARDING, WELCOME_VERSION } from "@/lib/onboarding";
 
@@ -58,6 +59,8 @@ beforeEach(() => {
     bots: [{ id: "bot-1", threadId: "t-1", busy: false, messages: [{ kind: "options", card: { requestId: "r", tool: "Bash", answered: false } }] }],
   };
 });
+
+afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("first-conversation spotlights", () => {
   it("explain the approval card as before", () => {

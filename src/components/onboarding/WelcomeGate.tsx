@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): a disabled email gate never completes local welcome onboarding.
 // Decides what first run looks like for whoever opened the app. The desktop
 // app's own window is the owner of its own server and gets the welcome flow
 // exactly as before, without waiting on anything new. Any other page (a
@@ -8,7 +9,6 @@
 // that cannot save the workspace config is never shown a tour it could not
 // finish.
 import { useEffect, useState } from "react";
-import { emailGateDone } from "@/lib/analytics";
 import { hostedMember, LOCAL_VIEWER, welcomeDue, welcomeViewer, type BeatId, type WelcomeViewer } from "@/lib/onboarding";
 import { api, useStore } from "@/state/store";
 import { SharedWorkspaceHint } from "./SharedWorkspaceHint";
@@ -73,7 +73,9 @@ export function WelcomeGate({ viewer }: { viewer: WelcomeViewer | null }) {
     !dismissed &&
     welcomeDue(state.config, {
       remoteClient,
-      legacyDone: emailGateDone(),
+      // This independent namespace has no email collection completion. The
+      // server's onboarding timestamp/version govern returning workspaces.
+      legacyDone: false,
       hosted: viewer.hosted,
       canSave: viewer.canSave,
       cloudHome: viewer.cloudHome,
