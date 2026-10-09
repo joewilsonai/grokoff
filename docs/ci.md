@@ -1,6 +1,8 @@
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
 # GrokOff source checks
 
+<!-- GrokOff modification (2026-10-09): adopt real React memory editor read-ownership regressions with sealed in-memory transports. -->
+
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
 job on pull requests, pushes to `main`, and manual dispatch. It uses Node 24,
 pnpm 10.33.0 and the committed lockfile. It does not build or publish a Mac
@@ -61,6 +63,15 @@ manual with `pnpm package:grokoff`; it downloads pinned native helpers and
 requires Xcode command-line tools. Its output is an unsigned local `.app`,
 with publishing disabled. A GitHub source-check success is not native release
 acceptance; retain the [verification evidence](../research/verification.md).
+
+The maintained suite also includes the complete memory editor interaction file.
+It mounts the actual React component with held in-memory memory responses and
+sealed transport, and checks newer selection/typing, activation lifetime,
+current errors, New topic, completed Save/conflict Reload/Undo, dirty-section
+survival, Discard, read-only logs and StrictMode cleanup. These are source-DOM
+checks; they do not prove native window behavior, filesystem persistence,
+provider output or model-driven upkeep. See the
+[memory verification recipe](verification/memory-layer.md#editor-read-ownership).
 
 ## Workflow maintenance
 

@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 # Memory: recall, upkeep and the tidy-up
 
 Automatic recall, the topic index and until dates only read memory. Memory
@@ -51,3 +52,30 @@ The fake engine answers the model steps with scripted JSON, so these tests
 prove the plumbing, not the quality of what a real model captures or judges
 contradictory. Check that by hand with a real Claude bot: switch upkeep on,
 mention a preference in passing, wait two minutes, and read the Memory panel.
+
+## Editor read ownership
+
+```sh
+pnpm exec vitest run src/components/bot-settings/MemorySection.interaction.test.ts src/components/bot-settings/MemorySection.test.ts src/lib/memory.test.ts
+pnpm exec vitest run server/memory-store.test.ts server/memory-journal.test.ts server/memory-routes.test.ts
+```
+
+The interaction fixture mounts the actual MemorySection and child controls in
+React with deferred in-memory memory responses. It seals fetch, Store dispatch
+and desktop capabilities, then disposes the DOM between cases. It sends no
+provider/model calls and does not use real accounts, bot folders or native UI.
+
+A held read for topic A cannot replace topic B or its newer draft. Document reads lose ownership after selection or typing; all reads lose
+ownership after deactivation, unmount or a completed memory mutation. A
+current metadata refresh can still finish while the preserved draft is typed. Current failures remain visible and a
+current read can recover. New topic's template follow-through also requires
+its own successful current read. Dirty drafts survive a section reactivation;
+Save keeps its existing expected-hash payload, conflict Reload keeps the
+unsaved draft, and Undo retains its restored document. Discard and daily-log
+read-only controls still work, including StrictMode lifetime cleanup.
+
+The separate existing isolated server files exercise containment, conflict,
+mutation/journal and HTTP behavior. The component fixture uses synthetic hash
+values; it does not establish real filesystem persistence or capture quality,
+and it does not test model-driven Tidy up. This unit changes read projection
+ownership without changing server mutation, hash, journal or memory APIs.
