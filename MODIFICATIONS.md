@@ -261,7 +261,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/ToolActivity.tsx](src/components/ToolActivity.tsx) | inline change notice |
 | [src/components/RunLog.tsx](src/components/RunLog.tsx) | inline change notice |
 | [src/lib/taskTimeline.ts](src/lib/taskTimeline.ts) | inline change notice |
-| [src/state/store.tsx](src/state/store.tsx) | inline change notice |
+| [src/state/store.tsx](src/state/store.tsx) | inline change notice; bounded optional routine snapshot read |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
 

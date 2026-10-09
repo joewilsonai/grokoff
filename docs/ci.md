@@ -85,6 +85,9 @@ execution/results continuity, delegation cancellation, cron tools and webhook
 retry identities across process restart. Existing renderer checks cover run
 status/report cards and historical results navigation. See the
 [test map and fixture boundaries](verification/routines-ci.md).
+The [routine snapshot hydration recovery](verification/routine-snapshot.md)
+checks mount the actual StoreProvider with sealed in-memory HTTP/SSE and
+virtual clocks; they do not run a scheduler, native app or live provider.
 Bot continuity coverage includes explicit setup, per-thread and bot-default
 model scope, group dispatch and saved file locations, independent turn Stop,
 and signed-out/missing-engine picker recovery. Picker handler checks use a
