@@ -32,12 +32,12 @@ test("checks original installed inputs and exact copied Mac notices without chan
   const proof = verifyGrokOffJavaScriptNotices(f.context, f.resources);
   assert.equal(proof.verified, true);
   assert.equal(proof.fullJavaScriptInventory, "pending");
-  assert.equal(proof.components.length, 5);
-  assert.equal(proof.files.length, 4);
+  assert.equal(proof.components.length, 7);
+  assert.equal(proof.files.length, 6);
   assert.deepEqual(readFileSync(path.join(f.record, "manifest.json")), before);
 });
 
-for (const name of ["react-LICENSE.txt", "ajv-LICENSE.txt", "croner-LICENSE.txt", "electron-updater-LICENSE.txt", "manifest.json"]) {
+for (const name of ["react-LICENSE.txt", "ajv-LICENSE.txt", "croner-LICENSE.txt", "electron-updater-LICENSE.txt", "lucide-react-LICENSE.txt", "mermaid-LICENSE.txt", "manifest.json"]) {
   for (const mutation of ["missing", "same-size altered"]) test(`rejects ${mutation} actual packaged ${name}`, t => {
     const f = fixture(t);
     const file = path.join(f.record, name);

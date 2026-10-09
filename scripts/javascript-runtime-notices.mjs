@@ -1,5 +1,5 @@
 // Copyright 2026 Joe Wilson. SPDX-License-Identifier: Apache-2.0
-// A bounded notice gate for five observed JS components, not a complete SBOM.
+// A bounded notice gate for seven observed JS components, not a complete SBOM.
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const JAVASCRIPT_NOTICE_DIRECTORY = fileURLToPath(new URL("../third_party/javascript-runtime", import.meta.url));
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
-const manifestHash = "317303de28a2b824d7eb562147307a90457a3d08a503f13b8fd22bffa27e10ab";
+const manifestHash = "dd0f647d6df1240fb0f6866e09145784246d14c2924c9f540eaa8326476e49dc";
 const digest = bytes => createHash("sha256").update(bytes).digest("hex");
 
 function realDirectory(directory) {
@@ -64,7 +64,7 @@ export function verifyPackagedJavaScriptNotices(resources) {
   for (const item of unique) checkedBytes(path.join(directory, item.retainedFile), item);
   return {
     verified: true,
-    scope: "five-observed-JavaScript-components",
+    scope: "seven-observed-JavaScript-components",
     fullJavaScriptInventory: "pending",
     manifestSha256: manifestHash,
     components: catalogue.components.map(({ name, version, license }) => ({ name, version, license })),
@@ -89,5 +89,5 @@ export function verifyGrokOffJavaScriptNotices(context, resources) {
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
   if (process.argv.length !== 3 || process.argv[2] !== "--check-installed") throw new Error("Usage: node scripts/javascript-runtime-notices.mjs --check-installed");
   const catalogue = validateInstalledJavaScriptNotices();
-  console.log(JSON.stringify({ verified: true, scope: "five-observed-JavaScript-components", fullJavaScriptInventory: "pending", components: catalogue.components.map(({ name, version }) => ({ name, version })) }));
+  console.log(JSON.stringify({ verified: true, scope: "seven-observed-JavaScript-components", fullJavaScriptInventory: "pending", components: catalogue.components.map(({ name, version }) => ({ name, version })) }));
 }
