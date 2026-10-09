@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, RefreshCw } from "lucide-react";
 import { EngineSetup } from "@/components/EngineSetup";
 import { engineReady } from "@/components/EngineLibrary";
+import { SignInModelRecovery } from "@/components/SignInModelRecovery";
 import { InstanceProviderMark } from "@/components/ProviderIcons";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -212,6 +213,7 @@ export function EnginesBeat({
                       className="mx-3.5 mb-3.5 border-0 bg-inset"
                     />
                   )}
+                  <SignInModelRecovery instance={instance} className="mx-3.5 mb-3.5" />
                 </div>
               );
             })}

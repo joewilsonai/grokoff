@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +23,8 @@ describe("provider key rows", () => {
       flushBotPatches: vi.fn(),
       refreshInstances: vi.fn(),
       refreshModels: vi.fn(),
+      refreshSignInModels: vi.fn(),
+      signInModelDiscovery: {},
     });
     const html = render(createElement(ApiKeyRow, { section: "openaiCompat", testProvider: "openaiCompat" }));
     expect(html).toContain("Configured");
@@ -65,6 +68,8 @@ describe("provider key rows", () => {
       flushBotPatches: vi.fn(),
       refreshInstances: vi.fn(),
       refreshModels: vi.fn(),
+      refreshSignInModels: vi.fn(),
+      signInModelDiscovery: {},
     });
     withBox({ configured: true, included: true });
     const included = render(createElement(ApiKeyRow, { section: "box" }));
@@ -87,6 +92,8 @@ describe("provider key rows", () => {
       flushBotPatches: vi.fn(),
       refreshInstances: vi.fn(),
       refreshModels: vi.fn(),
+      refreshSignInModels: vi.fn(),
+      signInModelDiscovery: {},
     });
     withAnthropic(false);
     const off = render(createElement(AnthropicEveryClaudeBot));
@@ -110,6 +117,8 @@ describe("provider key rows", () => {
       flushBotPatches: vi.fn(),
       refreshInstances: vi.fn(),
       refreshModels: vi.fn(),
+      refreshSignInModels: vi.fn(),
+      signInModelDiscovery: {},
     });
     withKeys(["GROQ_API_KEY", "VENICE_API_KEY"]);
     const saved = render(createElement(OpenCodeProviderKeys));

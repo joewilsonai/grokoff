@@ -11,6 +11,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
@@ -2808,6 +2809,10 @@ const StoreContext = createContext<{
   refreshInstances: (options?: InstanceRefreshOptions) => Promise<void>;
   /** Explicit provider/network model discovery. */
   refreshModels: (instanceId: string) => Promise<void>;
+  /** Only confirmed sign-in starts this recovery; discovery is independent of
+   * login and can outlive the conditional authentication card. */
+  refreshSignInModels: (instanceId: string) => Promise<void>;
+  signInModelDiscovery: Record<string, "checking" | "failed">;
 } | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -2820,6 +2825,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
   const instanceMutationRevision = useRef(0);
+  const [signInModelDiscovery, setSignInModelDiscovery] = useState<Record<string, "checking" | "failed">>({});
+  const signInModelFlights = useRef(new Map<string, Promise<void>>()).current;
+  const signInModelMounted = useRef(true);
   const applyInstances = useCallback((instances: InstanceInfo[]) => {
     rawDispatch({ type: "instances", instances });
   }, []);
@@ -2832,11 +2840,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return instanceRefresh.refresh(options);
   }, [instanceRefresh]);
   const modelRefreshes = useRef(new Set<() => void>()).current;
-  useEffect(() => () => {
-    instanceRefresh.cancel();
-    for (const cancel of modelRefreshes) cancel();
-    modelRefreshes.clear();
-  }, [instanceRefresh, modelRefreshes]);
+  useEffect(() => {
+    signInModelMounted.current = true;
+    return () => {
+      // Pending wrappers must not publish recovery into an unmounted store.
+      signInModelMounted.current = false;
+      signInModelFlights.clear();
+      instanceRefresh.cancel();
+      for (const cancel of modelRefreshes) cancel();
+      modelRefreshes.clear();
+    };
+  }, [instanceRefresh, modelRefreshes, signInModelFlights]);
   const clearChatError = useCallback(() => {
     rawDispatch({ type: "error", message: null });
   }, []);
@@ -2989,6 +3003,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Do not let that older check restore the previous account snapshot.
       if (action.type === "instances") {
         instanceMutationRevision.current += 1;
+        // A confirmed sign-out/removal ends its sign-in recovery. Quiet
+        // background snapshots do not pass this mutation boundary.
+        const connectedIds = new Set(action.instances.filter((instance) => instance.snapshot.authenticated !== false).map((instance) => instance.instanceId));
+        for (const id of signInModelFlights.keys()) if (!connectedIds.has(id)) signInModelFlights.delete(id);
+        setSignInModelDiscovery((previous) => {
+          const retained = Object.fromEntries(Object.entries(previous).filter(([id]) => connectedIds.has(id)));
+          return Object.keys(retained).length === Object.keys(previous).length ? previous : retained;
+        });
         instanceRefresh.accept({ instances: action.instances });
         return;
       }
@@ -3697,7 +3719,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
     return wrapped;
-  }, [botPatchQueue, instanceRefresh]);
+  }, [botPatchQueue, instanceRefresh, signInModelFlights]);
 
   // ── initial load + SSE fold ──────────────────────────────────────────
   useEffect(() => {
@@ -4110,6 +4132,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [dispatch, refreshInstances, modelRefreshes]);
 
+  const refreshSignInModels = useCallback((instanceId: string): Promise<void> => {
+    if (!signInModelMounted.current) return Promise.resolve();
+    const existing = signInModelFlights.get(instanceId);
+    if (existing) return existing;
+    // Confirmed authentication is newer than discovery on another account.
+    // Mark that boundary immediately without publishing an intermediate GET.
+    instanceMutationRevision.current += 1;
+    setSignInModelDiscovery((previous) => ({ ...previous, [instanceId]: "checking" }));
+    const flight = Promise.resolve().then(() => {
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      return refreshModels(instanceId);
+    }).then(() => {
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      setSignInModelDiscovery((previous) => {
+        const next = { ...previous };
+        delete next[instanceId];
+        return next;
+      });
+    }, () => {
+      // Confirmed login remains true even when discovery fails. Its stable
+      // parent owns the warning and retries discovery without another login.
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      setSignInModelDiscovery((previous) => ({ ...previous, [instanceId]: "failed" }));
+    }).finally(() => {
+      if (signInModelFlights.get(instanceId) === flight) signInModelFlights.delete(instanceId);
+    });
+    signInModelFlights.set(instanceId, flight);
+    return flight;
+  }, [refreshModels, signInModelFlights]);
+
   // Installing a CLI or signing one in happens in a terminal, outside this
   // window — so the moment the user comes back is exactly when our engine
   // snapshot is most likely stale. Re-probe on focus, throttled so that
@@ -4131,8 +4183,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [botPatchQueue],
   );
   const value = useMemo(
-    () => ({ state, dispatch, flushBotPatches, refreshInstances, refreshModels }),
-    [state, dispatch, flushBotPatches, refreshInstances, refreshModels],
+    () => ({ state, dispatch, flushBotPatches, refreshInstances, refreshModels, refreshSignInModels, signInModelDiscovery }),
+    [state, dispatch, flushBotPatches, refreshInstances, refreshModels, refreshSignInModels, signInModelDiscovery],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

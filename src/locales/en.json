@@ -3171,6 +3171,7 @@
   "engineSetup.claude.finishing": "Checking with Claude Code…",
   "engineSetup.claude.security": "Only paste a code from a sign-in you started here. It is handed to Claude Code on this server once and never stored; your password stays with Anthropic. Bots on this server share your subscription's usage limits.",
   "engineSetup.claude.connected": "Claude connected. Your models are being refreshed.",
+  "engineSetup.signInRefreshFailed": "{name} signed in, but your connection and models couldn't be refreshed. Check again to retry.",
   "engineSetup.claude.connectedAccount": "Claude connected on this server",
   "engineSetup.claude.invalidChallenge": "Claude Code did not return a valid Anthropic sign-in link. Cancel and try again.",
   "remote.signInAccess.title": "Who can sign in with an email",

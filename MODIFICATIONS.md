@@ -34,6 +34,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [deploy/.env.example](deploy/.env.example) | inline change notice |
 | [deploy/podman/.env.example](deploy/podman/.env.example) | inline change notice |
 | [docs/ci.md](docs/ci.md) | inline change notice |
+| [docs/verification/claude-account.md](docs/verification/claude-account.md) | inline change notice |
 | [docs/verification/README.md](docs/verification/README.md) | inline change notice |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
@@ -217,6 +218,15 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/state/store.tsx](src/state/store.tsx) | inline change notice |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
+
+| [src/components/ApiKeys.test.ts](src/components/ApiKeys.test.ts) | inline change notice |
+| [src/components/CallView.journeys.test.ts](src/components/CallView.journeys.test.ts) | inline change notice |
+| [src/components/ChatView.rows.test.ts](src/components/ChatView.rows.test.ts) | inline change notice |
+| [src/components/ComputerPanel.lazy.test.ts](src/components/ComputerPanel.lazy.test.ts) | inline change notice |
+| [src/components/ComputerPanel.live.test.ts](src/components/ComputerPanel.live.test.ts) | inline change notice |
+| [src/components/live-panels.test.ts](src/components/live-panels.test.ts) | inline change notice |
+| [src/components/LiveCallBar.render.test.ts](src/components/LiveCallBar.render.test.ts) | inline change notice |
+| [src/components/Sidebar.rows.test.ts](src/components/Sidebar.rows.test.ts) | inline change notice |
 
 ## New publication-support files
 

@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // A working bot's Cloud computer streams its screen over the app's one live
 // stream. The Computer panel takes those frames straight from it, shows them,
@@ -10,6 +11,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { AppState, Bot, InstanceInfo } from "@/state/store";
 
 const captured = vi.hoisted(() => ({ posts: 0 }));
+const sessionFetch = vi.fn(async (path: string, init?: RequestInit) => {
+  if (path === "/api/auth/session" && (init?.method ?? "GET") === "GET") return Response.json({ kind: "loopback" });
+  throw new Error(`Unexpected offline fixture fetch: ${init?.method ?? "GET"} ${path}`);
+});
 vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   ...await importOriginal<typeof import("./DesktopCapabilities")>(),
   useCaptionChrome: () => ({ padClass: undefined }),
@@ -26,7 +31,7 @@ vi.mock("./DesktopCapabilities", async (importOriginal) => ({
 }));
 vi.mock("@/lib/interface-mode", () => ({ useAdvancedMode: () => false, setAdvancedMode: () => {} }));
 vi.mock("./CloudScreenPreview", () => ({
-  CloudScreenPreview: ({ src }: { src: string | null }) => createElement("img", { "data-preview": "", src: src ?? "" }),
+  CloudScreenPreview: ({ src }: { src: string | null }) => createElement("img", { "data-preview": "", src: src ?? undefined }),
 }));
 vi.mock("./AndroidDevicePanel", () => ({ AndroidDevicePanel: () => null, useAndroidUsbDevices: () => ({ devices: [] }) }));
 vi.mock("./BrowserPanel", () => ({ BrowserPanel: () => null }));
@@ -80,6 +85,9 @@ const screen = (fields: { botId?: string; threadId?: string; png: string; mime?:
 };
 
 beforeAll(async () => {
+  // The panel's ownership probe shares this synthetic session; it must never
+  // fall back to HappyDOM's localhost page or a developer's running server.
+  vi.stubGlobal("fetch", sessionFetch);
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
   const state: AppState = {
     ...initialState,
@@ -88,7 +96,7 @@ beforeAll(async () => {
     instances: [engine],
     config: { box: { configured: true } } as AppState["config"],
   };
-  value = { state, dispatch: vi.fn(), flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {} };
+  value = { state, dispatch: vi.fn(), flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
   const container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -98,6 +106,8 @@ beforeAll(async () => {
 afterAll(() => {
   root.unmount();
   vi.useRealTimers();
+  expect(sessionFetch.mock.calls.map(([path]) => path)).toEqual(["/api/auth/session"]);
+  vi.unstubAllGlobals();
 });
 
 describe("Computer panel live frames", () => {

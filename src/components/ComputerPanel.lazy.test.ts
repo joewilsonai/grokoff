@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // Choosing Cloud computer, or opening the Computer panel, creates and wakes
 // nothing: the bot's first computer call starts its cloud computer. The
@@ -85,6 +86,8 @@ const value = (): Parameters<typeof BotEditorStore>[0]["value"] => ({
   flushBotPatches: async () => null,
   refreshInstances: async () => {},
   refreshModels: async () => {},
+  refreshSignInModels: async () => {},
+  signInModelDiscovery: {},
 });
 const settle = async () => {
   for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));

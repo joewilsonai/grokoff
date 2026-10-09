@@ -214,7 +214,8 @@ retried connection checks through the real Settings and store in a disposable
 Electron profile against synthetic loopback inventory.
 
 The [Claude account recipe](claude-account.md) checks sign-out, cancellation and
-retry against an offline Claude CLI confined to a disposable home.
+retry against an offline Claude CLI confined to a disposable home, plus
+pasted-code completion and discovery recovery with a synthetic provider session.
 
 The [provider recovery recipe](provider-recovery.md) verifies real Grok image
 transport and Claude authentication against loopback APIs, plus scoped thread
