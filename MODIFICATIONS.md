@@ -314,3 +314,7 @@ Cargo build behavior remain unchanged. The source record and README retain
 the pins and document prerequisites; this is not a completed native rebuild
 or full SBOM claim. Disposable source controls use a stand-in Cargo against
 the actual pinned archive and make no native compilation or provider call.
+
+## First-run sample labels — 2026-10-09
+
+The illustrated onboarding scene in [Hands.tsx](src/components/onboarding/reel/scenes/Hands.tsx) uses “Assistant” and “Message Assistant” for its two visible example-bot labels. The synthetic member name in [Channels.tsx](src/components/onboarding/reel/scenes/Channels.tsx) is also “Assistant”; it currently serves as a React key rather than displayed text. Internal avatar/type names, real bot names, provider terminology, scene behavior, and upstream attribution are retained. Existing scene, onboarding, and branding checks cover source behavior; this change does not claim a new native-app walkthrough.
