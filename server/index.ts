@@ -7947,7 +7947,9 @@ bus.subscribe((event: RuntimeEvent) => {
       }
       break;
     case "turn.completed": {
-      if (event.stopReason === "interrupted") interruptToolMessages(store, toolMessageByItem, event.threadId, completedTurnId);
+      if (event.stopReason === "interrupted" || event.stopReason === "cancelled") {
+        interruptToolMessages(store, toolMessageByItem, event.threadId, completedTurnId);
+      }
       settleWaitingOnPersonChips(event.threadId);
       // A peer-started turn settles as coordination, not as news. What keeps
       // that classification from outliving its turn is the rewrite at

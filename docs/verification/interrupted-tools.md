@@ -1,6 +1,7 @@
 # Interrupted tool receipts
 
-When Stop ends a turn before a provider reports a tool result, the saved tool
+When a provider records a turn completion with `stopReason: "interrupted"`
+or `"cancelled"` before reporting a tool result, the saved unfinished tool
 receipt shows **Interrupted** in tool details and the run log. Its `ok` and
 output remain unrecorded. Check what happened before repeating an action;
 stopping a tool does not prove that an external side effect was undone.
@@ -19,8 +20,15 @@ browser-shaped call, then uses the real interrupt route. It verifies the
 unfinished receipt, unchanged actual outcomes and identical saved receipts
 after restarting only that owned server. Cleanup waits for those exact child
 processes and verifies their absence before the temporary data is removed.
-This POSIX wrapper/restart test is skipped on Windows; the maintained Ubuntu CI
-runs it. No browser is launched and no webpage is changed.
+A second owned server uses the real ACP adapter and scripted fake ACP CLI.
+Its normal interrupt route produces `cancelled` with `ok: true`; the event
+retains those provider values while the unfinished tool outcome stays unknown.
+An owned process-exit control produces `exit_before_result` with `ok: false`
+and is not relabeled as interrupted. Unknown exits, crashes, and historical
+unfinished receipts loaded at restart are outside the cancellation rule.
+
+These POSIX wrapper/restart tests are skipped on Windows; the maintained Ubuntu CI
+runs them. No browser is launched and no webpage is changed.
 
 The real disposable Store controls test exact turn/thread/bot isolation,
 idempotent interruption, persisted unknown outcomes, legacy receipts and a late

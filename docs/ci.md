@@ -81,7 +81,7 @@ enable them.
 The maintained core also runs the complete tool-receipt, HTTP Stop/restart,
 timeline, tool-detail and run-log test files listed in
 [the interrupted-tools recipe](verification/interrupted-tools.md). The HTTP
-fixture uses an owned temporary home/server and scripted Claude CLI events;
+fixtures use owned temporary homes/servers and scripted Claude/ACP CLI events;
 React and Store controls have no live provider or browser transport. These
 checks prove saved status and ownership, not whether a real website action
 completed or was rolled back.

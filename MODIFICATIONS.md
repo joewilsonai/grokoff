@@ -221,7 +221,9 @@ This inventory describes source changes; it does not claim that every inherited 
 ## Interrupted tool receipts (2026-10-09)
 
 `server/index.ts` settles only unfinished provider tool receipts of an explicitly
-interrupted turn. The optional `tool.interrupted` wire field preserves an unknown
+interrupted or cancelled turn. The provider completion reason and `ok` are
+retained; unknown exits and historical unfinished receipts are not inferred to
+be cancelled. The optional `tool.interrupted` wire field preserves an unknown
 execution outcome: it does not fabricate success, failure, output or rollback.
 Provider completion checks the stored receipt's turn ownership before replacing
 its outcome or removing its pending item entry. Tool details and the run log show
@@ -230,7 +232,8 @@ Completed and failed receipts retain their recorded outcomes; old records remain
 readable without the new field.
 
 The maintained core adopts owned HTTP/fake-CLI Stop and server-restart coverage,
-real disposable Store ownership controls, actual React disclosure/run-log
+real ACP cancellation and unknown-exit controls, real disposable Store ownership
+controls, actual React disclosure/run-log
 interaction, and the existing complete tool-detail/run-log/timeline test files.
 The recipe is [interrupted tools](docs/verification/interrupted-tools.md). No real
 browser action, provider account, user workspace or native app is exercised.
