@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): add sealed source-renderer access-check recovery checks; retain the inherited native recipe. -->
 # Live browser and profiles
 
 Use installed native engine and Chrome binaries explicitly; the fixture never
@@ -159,3 +160,23 @@ data. VM/cloud transport and turn-bound switching are separately covered by
 `server/group-local-vm.e2e.test.ts`, `server/vps-routing.test.ts` and
 `server/index.test.ts` with
 isolated providers. These are not evidence of real cloud provisioning.
+
+## Browser access-check recovery
+
+Run the production BrowserPanel with actual React hooks and disposable in-memory
+session transport:
+
+```sh
+pnpm exec vitest run src/components/BrowserPanel.access.test.ts src/components/BrowserPanel.test.ts src/components/browser-install-opt-in.test.ts src/lib/browser-control.test.ts src/lib/browser-input-queue.test.ts src/components/BrowserViewport.test.ts
+```
+
+The access-check fixture rejects a session request, clicks Retry and observes a
+synthetic viewer only after a confirmed admin response. Confirmed non-admin
+sessions retain the permission refusal. Malformed replies stay closed; held
+headers/body requests hit the production 30-second deadline, abort their owned
+signal and permit Retry. Late responses cannot replace a newer result, and
+unmount aborts quietly. Installation stays explicit and requires confirmed
+admin access; Retry only checks access. All fetches and EventSource instances
+are owned synthetic transports with no network or native engine. This proves
+source-renderer state transitions, not installed Chrome, native browser input,
+real account authorization or packaged desktop acceptance.
