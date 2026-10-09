@@ -1,8 +1,9 @@
+// GrokOff modification (2026-10-09): keep the inherited picker fixture aligned with shared sign-in discovery state and retry.
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Bot, InstanceInfo } from "@/state/store";
+import type { Bot, InstanceInfo, useStore } from "@/state/store";
 
 // Opens the real picker and clicks through it without a DOM: useState is
 // held here by call order (the picker's own hooks run first, children after),
@@ -20,6 +21,8 @@ const fixture = vi.hoisted(() => {
     dispatch: (() => {}) as (...args: unknown[]) => void,
     refreshInstances: (() => Promise.resolve()) as () => Promise<void>,
     refreshModels: ((_id: string) => Promise.resolve()) as (instanceId: string) => Promise<void>,
+    refreshSignInModels: ((_id: string) => Promise.resolve()) as ReturnType<typeof useStore>["refreshSignInModels"],
+    signInModelDiscovery: {} as ReturnType<typeof useStore>["signInModelDiscovery"],
   };
 });
 vi.mock("react", async (original) => ({
@@ -43,6 +46,8 @@ vi.mock("@/state/store", async (importOriginal) => ({
     dispatch: fixture.dispatch,
     refreshInstances: fixture.refreshInstances,
     refreshModels: fixture.refreshModels,
+    refreshSignInModels: fixture.refreshSignInModels,
+    signInModelDiscovery: fixture.signInModelDiscovery,
   }),
 }));
 
@@ -125,6 +130,8 @@ beforeEach(() => {
   fixture.dispatch = vi.fn();
   fixture.refreshInstances = vi.fn(() => Promise.resolve());
   fixture.refreshModels = vi.fn(() => Promise.resolve());
+  fixture.refreshSignInModels = vi.fn(() => Promise.resolve());
+  fixture.signInModelDiscovery = {};
 });
 afterEach(() => vi.useRealTimers());
 
