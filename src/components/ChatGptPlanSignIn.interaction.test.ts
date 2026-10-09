@@ -1,9 +1,10 @@
+// GrokOff modification (2026-10-09): adopt provider-route coverage with shared sign-in recovery.
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
   values: [] as unknown[], index: 0, effects: [] as (() => (() => void) | undefined)[],
-  api: vi.fn(), dispatch: vi.fn(), refreshInstances: vi.fn(), refreshModels: vi.fn(), openExternal: vi.fn(),
+  api: vi.fn(), dispatch: vi.fn(), refreshSignInModels: vi.fn(), openExternal: vi.fn(),
 }));
 vi.mock("react", async (original) => ({
   ...await original<typeof import("react")>(),
@@ -16,7 +17,7 @@ vi.mock("react", async (original) => ({
 }));
 vi.mock("@/state/store", async (original) => ({
   ...await original<typeof import("@/state/store")>(), api: fixture.api,
-  useStore: () => ({ dispatch: fixture.dispatch, refreshInstances: fixture.refreshInstances, refreshModels: fixture.refreshModels }),
+  useStore: () => ({ state: { instances: [] }, signInModelDiscovery: {}, dispatch: fixture.dispatch, refreshSignInModels: fixture.refreshSignInModels }),
 }));
 const { DeviceSignIn } = await import("./DeviceSignIn");
 const { AddProviderAccount } = await import("./CodexAccountSettings");
@@ -59,8 +60,8 @@ it("starts only on request, opens the official page, and refreshes models after 
   const cleanup = fixture.effects[0]!();
   await vi.advanceTimersByTimeAsync(2_000);
   expect(fixture.api).toHaveBeenCalledWith("/api/instances/chatgpt/auth/status?flowId=flow-one", expect.objectContaining({ signal: expect.any(AbortSignal) }));
-  expect(fixture.refreshInstances).toHaveBeenCalledOnce();
-  expect(fixture.refreshModels).toHaveBeenCalledWith("chatgpt");
+  expect(fixture.refreshSignInModels).toHaveBeenCalledOnce();
+  expect(fixture.refreshSignInModels).toHaveBeenCalledWith("chatgpt");
   cleanup?.();
 });
 
@@ -73,7 +74,7 @@ it("cancels the same flow and never opens an untrusted authorization URL", async
   await flush();
   expect(fixture.api).toHaveBeenLastCalledWith("/api/instances/chatgpt/auth/cancel", { method: "POST", body: JSON.stringify({ flowId: "flow-one" }) });
   expect(fixture.values[0]).toMatchObject({ phase: "cancelled", flowId: null });
-  expect(fixture.refreshModels).not.toHaveBeenCalled();
+  expect(fixture.refreshSignInModels).not.toHaveBeenCalled();
 });
 
 it.each([undefined, "google-original"])("adds a named account independently without signing it in or replacing an existing identity (%s)", async (antigravityInstanceId) => {

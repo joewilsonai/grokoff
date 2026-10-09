@@ -81,3 +81,11 @@ write scopes, secret access, persistent checkout credentials, unreviewed
 actions, and publishing commands. Repository branch protection and private
 vulnerability reporting are separate GitHub settings; these files do not
 enable them.
+
+Device and ChatGPT browser sign-in recovery also uses real Settings and store
+components with synthetic, owner-scoped auth sessions. Those tests distinguish
+confirmed login from model discovery, including held requests, focus changes,
+Settings remounts and retries without creating another auth flow. The adopted
+provider-route tests retain official URL and cancellation checks; their hook
+shim does not prove a React lifecycle. These checks do not authenticate a real
+account or establish live provider compatibility.
