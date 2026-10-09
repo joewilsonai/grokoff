@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-09): verify bounded Save reconciliation without altering memory mutation or journal APIs. -->
+<!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 # Memory: recall, upkeep and the tidy-up
 
@@ -99,3 +99,22 @@ ownership of its still-loaded document. Save metadata and delayed journal reads
 cannot supersede newer activation metadata or its document hydration. Server mutation, expected-hash and journal APIs remain
 unchanged. These are isolated source-DOM checks, not native acceptance or a
 claim that every asynchronous editor mutation has been reconciled.
+
+## Undo response ownership
+
+The same interaction fixture holds either the Undo mutation or its subsequent
+journal response. Typing while either request is pending stays dirty; a later
+selection, same-path reread or successful Save keeps its own text and hash.
+Navigation started after Undo keeps its pending read. A clean current document
+receives the restored text/hash before the journal refresh, while a dirty
+document retains its existing optimistic hash for the server's next conflict
+check. A successful Undo still invalidates older Save ownership for its loaded
+revision; a Save started after a later same-path reread retains its own receipt
+and uses its successful hash on the next Save.
+Undo metadata/journal responses cannot replace newer activation metadata, and
+an error from an abandoned editor cannot appear on its later selection. A
+current journal failure remains visible; an old journal failure cannot appear
+after reactivation has loaded newer metadata beside a retained dirty draft. These
+are actual source-component interactions with sealed in-memory transports;
+they do not establish native behavior or filesystem commit order. Delete,
+Tidy up and server mutation/journal contracts are outside this correction.
