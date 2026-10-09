@@ -14,6 +14,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [CONTRIBUTING.md](CONTRIBUTING.md) | inline change notice |
 | [LICENSING.md](LICENSING.md) | inline change notice |
 | [README.md](README.md) | inline change notice |
+| [docs/verification/workspace-backups.md](docs/verification/workspace-backups.md) | inline change notice (maintained disposable backup recipe) |
 | [SECURITY.md](SECURITY.md) | inline change notice |
 | [build/icon-1024.png](build/icon-1024.png) | [build/icon-1024.png.license](build/icon-1024.png.license) |
 | [build/icon.icns](build/icon.icns) | [build/icon.icns.license](build/icon.icns.license) |
@@ -69,6 +70,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
+| [scripts/verify-workspace-backup.ts](scripts/verify-workspace-backup.ts) | inline change notice (sealed restart and owned cleanup) |
 | [server/brand.ts](server/brand.ts) | inline change notice |
 | [server/browser-engine.test.ts](server/browser-engine.test.ts) | inline change notice |
 | [server/browser-engine.ts](server/browser-engine.ts) | inline change notice |
@@ -108,6 +110,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/testing/fake-claude-cli.ts](server/testing/fake-claude-cli.ts) | inline change notice |
 | [server/testing/fake-codex-app-server.ts](server/testing/fake-codex-app-server.ts) | inline change notice |
 | [server/testing/setup.ts](server/testing/setup.ts) | inline change notice |
+| [server/workspace-backup-workflow.test.ts](server/workspace-backup-workflow.test.ts) | inline change notice (maintained restore and cleanup acceptance) |
 | [server/turn-continuation.test.ts](server/turn-continuation.test.ts) | inline change notice |
 | [server/turn-continuation.ts](server/turn-continuation.ts) | inline change notice |
 | [shared/pairing-link.test.ts](shared/pairing-link.test.ts) | inline change notice |
@@ -214,3 +217,5 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+[Data export](docs/data-export.md) was written for GrokOff to document the inherited full-workspace backup path and its verified limits. The archive and policy tests are adopted unchanged into the maintained core suite; the workflow fixture adds sealed restarts and confirmed owned-process cleanup.
