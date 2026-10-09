@@ -1,7 +1,7 @@
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
 # GrokOff source checks
 
-<!-- GrokOff modification (2026-10-09): adopt real React memory editor read/Save/Undo ownership regressions with sealed in-memory transports. -->
+<!-- GrokOff modification (2026-10-09): adopt real React memory editor read/Save/Undo ownership and overlapping mutation metadata regressions with sealed in-memory transports. -->
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
 job on pull requests, pushes to `main`, and manual dispatch. It uses Node 24,
@@ -67,7 +67,7 @@ acceptance; retain the [verification evidence](../research/verification.md).
 The maintained suite also includes the complete memory editor interaction file.
 It mounts the actual React component with held in-memory memory responses and
 sealed transport, and checks newer selection/typing, activation lifetime,
-current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, current conflict Reload/Undo, dirty-section
+current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, overlapping Save/Undo metadata completion orders, obsolete metadata/error rejection, current metadata failure/recovery without clearing later file errors, current conflict Reload/Undo, dirty-section
 survival, Discard, read-only logs and StrictMode cleanup. These are source-DOM
 checks; they do not prove native window behavior, filesystem persistence,
 provider output or model-driven upkeep. See the

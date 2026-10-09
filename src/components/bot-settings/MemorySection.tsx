@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-09): scope memory reads, Save and Undo receipts to the current editor; preserve newer drafts, hashes and mutation contracts.
+// GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -69,6 +69,12 @@ interface Conflict {
   currentHash: string;
 }
 
+interface SectionError {
+  message: string;
+  /** Only successful newer metadata can clear this class of failure. */
+  metadata?: number;
+}
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** On an OMB Cloud home: this bot's memory changed in a conversation the
@@ -104,7 +110,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const [editing, setEditing] = useState<Editing | null>(null);
   const [conflict, setConflict] = useState<Conflict | null>(null);
   const [savedDraft, setSavedDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setSectionError] = useState<SectionError | null>(null);
+  const setError = (message: string | null) => setSectionError(message === null ? null : { message });
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [reverting, setReverting] = useState<string | null>(null);
@@ -132,6 +139,9 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   // Typing/selection replace document intent, but metadata stays current
   // until another refresh, deactivation or completed mutation supersedes it.
   const metadataGeneration = useRef(0);
+  // Mutations in one active view may supersede each other's metadata reads.
+  // A later activation still owns its own hydration and must not be cancelled.
+  const activationGeneration = useRef(0);
   const activeReads = useRef(active);
   const mounted = useRef(true);
   useEffect(() => {
@@ -145,6 +155,17 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   };
   const ownsRead = (generation: number) => activeReads.current && readGeneration.current === generation;
   const ownsMetadata = (generation: number) => activeReads.current && metadataGeneration.current === generation;
+  const ownsMutationView = (activation: number) => mounted.current && activeReads.current && activationGeneration.current === activation;
+  const refreshMutationMetadata = async (generation: number) => {
+    // A mutation response carries its earlier snapshot. Re-read both metadata
+    // surfaces after success so overlapping writes keep their journal controls.
+    const [nextOverview, nextJournal] = await Promise.all([fetchMemoryOverview(bot.id), fetchMemoryJournal(bot.id)]);
+    if (!ownsMetadata(generation)) return;
+    setOverview(nextOverview);
+    setLendingReview(nextOverview.lendingReview ?? null);
+    setJournal(nextJournal);
+    setSectionError(current => current?.metadata !== undefined && current.metadata < generation ? null : current);
+  };
 
   const refresh = async (openPath?: string) => {
     if (!activeReads.current) return;
@@ -175,7 +196,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     } catch (e) {
       if (metadataLoaded ? ownsRead(generation) : ownsMetadata(metadata)) {
         if (pendingRead.current === generation) pendingRead.current = null;
-        setError(errorText(e));
+        if (metadataLoaded) setError(errorText(e));
+        else setSectionError({ message: errorText(e), metadata });
       }
     }
   };
@@ -190,6 +212,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     }
     return () => {
       activeReads.current = false;
+      activationGeneration.current += 1;
       invalidateReads();
     };
   }, [active, bot.id]);
@@ -222,7 +245,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     const selection = selectionGeneration.current;
     const revision = draftRevision.current;
     const document = documentGeneration.current;
-    const metadata = metadataGeneration.current;
+    const activation = activationGeneration.current;
     const ownsSave = () => mounted.current
       && documentGeneration.current === document
       && currentEditing.current?.path === submitted.path
@@ -256,14 +279,14 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
             : { ...current, text: result.doc.text, hash: result.doc.hash, dirty: false };
         });
       }
-      if (ownsMetadata(metadata)) {
+      if (ownsMutationView(activation)) {
         journalGeneration = ++metadataGeneration.current;
-        setOverview(result.overview);
-        const nextJournal = await fetchMemoryJournal(bot.id);
-        if (ownsMetadata(journalGeneration)) setJournal(nextJournal);
+        await refreshMutationMetadata(journalGeneration);
       }
     } catch (e) {
-      if (journalGeneration === undefined ? ownsSaveControls() : ownsMetadata(journalGeneration)) setError(errorText(e));
+      if (journalGeneration === undefined) {
+        if (ownsSaveControls()) setError(errorText(e));
+      } else if (ownsMetadata(journalGeneration)) setSectionError({ message: errorText(e), metadata: journalGeneration });
     } finally {
       setSaving(false);
     }
@@ -312,7 +335,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     const submitted = currentEditing.current;
     const selection = selectionGeneration.current;
     let document = documentGeneration.current;
-    const metadata = metadataGeneration.current;
+    const activation = activationGeneration.current;
     const ownsUndoEditor = () => mounted.current && activeReads.current
       && documentGeneration.current === document
       && selectionGeneration.current === selection;
@@ -337,15 +360,15 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
           return { ...current, text: result.text, hash: result.hash };
         });
       }
-      if (ownsMetadata(metadata)) {
+      if (ownsMutationView(activation)) {
         journalGeneration = ++metadataGeneration.current;
-        setOverview(result.overview);
-        const nextJournal = await fetchMemoryJournal(bot.id);
-        if (ownsMetadata(journalGeneration)) setJournal(nextJournal);
+        await refreshMutationMetadata(journalGeneration);
       }
       if (ownsUndoEditor()) setNotice(`Put ${row.path} back the way it was.`);
     } catch (e) {
-      if (journalGeneration === undefined ? ownsUndoEditor() : ownsMetadata(journalGeneration)) setError(errorText(e));
+      if (journalGeneration === undefined) {
+        if (ownsUndoEditor()) setError(errorText(e));
+      } else if (ownsMetadata(journalGeneration)) setSectionError({ message: errorText(e), metadata: journalGeneration });
     } finally {
       if (mounted.current) setReverting(null);
     }
@@ -566,7 +589,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       </div>
 
       {notice && <div className="text-[12.5px] text-ink-secondary">{notice}</div>}
-      {error && <div className="text-[12.5px] text-danger">{error}</div>}
+      {error && <div className="text-[12.5px] text-danger">{error.message}</div>}
     </div>
   );
 }
