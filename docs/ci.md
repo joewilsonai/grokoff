@@ -40,6 +40,13 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, and lazy phone-secret/cancellation behavior.
+Representative group-delegation checks exercise scripted dispatch through the
+real HTTP/MCP proxy, room and team access boundaries, approvals and revocation,
+returned results, cancellation and interruption after an owned server restart.
+Roster-order and activity-visibility helpers are included. The restart fixture
+uses the shared isolated environment, seals provider discovery to the fake CLI,
+and verifies the replacement server PID. See the
+[test map and evidence limits](verification/room-ci.md).
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

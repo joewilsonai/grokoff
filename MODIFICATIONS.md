@@ -101,6 +101,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
 | [server/request-auth.ts](server/request-auth.ts) | inline change notice |
+| [server/room-recovery.e2e.test.ts](server/room-recovery.e2e.test.ts) | inline change notice (hermetic restart and replacement-PID check) |
 | [server/service-unit.test.ts](server/service-unit.test.ts) | inline change notice |
 | [server/service-unit.ts](server/service-unit.ts) | inline change notice |
 | [server/startup-model-catalog.test.ts](server/startup-model-catalog.test.ts) | inline change notice |
