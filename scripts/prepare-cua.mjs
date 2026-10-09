@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): preserve pinned Mac CUA notices and source routes.
 // Stage the macOS CUA executable and native SDK outside ASAR. The npm SDK
 // deliberately does not ship the `cua-driver` CLI, so packaging must fail
 // loudly instead of producing an app whose "This computer" option can never
@@ -13,6 +14,8 @@ import { promisify } from "node:util";
 import { build } from "esbuild";
 import { resolveCuaMacArches } from "./cua-mac-arches.mjs";
 import { LIPO_ARCH, writeThinMachO } from "./mac-thin.mjs";
+import { MAC_CUA_BUNDLE_NOTICE, copyMacCuaNativeNotice, validateMacCuaDependencies } from "./cua-mac-notices.mjs";
+import { patchBundledMacCuaResolver } from "../third_party/cua-macos/source/grokoff-resolver-patch.mjs";
 
 if (process.platform !== "darwin") throw new Error("prepare-cua is macOS-only");
 
@@ -34,6 +37,8 @@ if (expectedVersion !== release.version) {
     `CUA SDK ${expectedVersion} has no pinned executable asset in prepare-cua.mjs; update the release checksum first`,
   );
 }
+const MAC_ARCHES = resolveCuaMacArches(process.env);
+for (const arch of MAC_ARCHES) validateMacCuaDependencies({ sdkRoot, dependencyRoot, arch });
 
 async function binaryVersion(candidate) {
   if (!candidate || !existsSync(candidate)) return null;
@@ -110,8 +115,6 @@ if (!details.isFile() || (details.mode & 0o111) === 0) {
 // installs because of supportedArchitectures in pnpm-workspace.yaml, but both
 // packages ship the same universal files. Each staging dir gets only its own
 // arch's slice of all three: a single-arch app can never run the other one.
-const MAC_ARCHES = resolveCuaMacArches(process.env);
-
 const { stdout: archList } = await run("/usr/bin/lipo", ["-archs", binary]);
 for (const arch of MAC_ARCHES) {
   const lipoName = LIPO_ARCH[arch];
@@ -142,6 +145,7 @@ for (const arch of MAC_ARCHES) {
   await mkdir(nativeDir, { recursive: true });
   await Promise.all(["libcua_driver_sdk.dylib", "cua_driver_node_runtime.node"].map((name) =>
     writeThinMachO(join(realpathSync(nativePackage), name), join(nativeDir, name), LIPO_ARCH[arch])));
+  copyMacCuaNativeNotice({ nativePackage, nativeDir, arch });
 }
 
 // Bundle the JS side into one ESM file so electron-builder's intentional
@@ -165,24 +169,13 @@ await build({
   target: "node20",
   format: "esm",
   banner: {
-    js: 'import { createRequire as __openmausbotCreateRequire } from "node:module"; const require = __openmausbotCreateRequire(import.meta.url);',
+    js: `${MAC_CUA_BUNDLE_NOTICE}\nimport { createRequire as __openmausbotCreateRequire } from "node:module"; const require = __openmausbotCreateRequire(import.meta.url);`,
   },
   outfile: bundle,
   logLevel: "silent",
 });
 const bundledSource = await readFile(bundle, "utf8");
-const resolverPattern = /function resolveLibPath\d*\(opts\) \{/g;
-const resolvers = bundledSource.match(resolverPattern) ?? [];
-if (resolvers.length !== 1) {
-  throw new Error("could not patch the bundled CUA native-library resolver");
-}
-await writeFile(
-  bundle,
-  bundledSource.replace(
-    resolverPattern,
-    `${resolvers[0]}\n      if (process.env.OPENMAUSBOT_CUA_SDK_LIBRARY) return resolveOverride(opts.crateName, process.env.OPENMAUSBOT_CUA_SDK_LIBRARY);`,
-  ),
-);
+await writeFile(bundle, patchBundledMacCuaResolver(bundledSource));
 
 for (const arch of MAC_ARCHES.slice(1)) {
   await copyFile(bundle, join(stage, arch, "cua-sdk", "cua-sdk.mjs"));
