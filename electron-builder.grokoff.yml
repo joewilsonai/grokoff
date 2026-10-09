@@ -9,6 +9,7 @@ publish: null
 directories:
   buildResources: build
   output: release-grokoff
+afterExtract: ./scripts/electron-runtime-notices.mjs
 afterPack: ./scripts/after-pack.mjs
 files:
   - electron/**
