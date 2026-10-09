@@ -214,4 +214,13 @@ This inventory describes source changes; it does not claim that every inherited 
 
 ## New publication-support files
 
+<!-- GrokOff modification (2026-10-09): bounded observed JavaScript notice gate. -->
+The imported `scripts/after-pack.mjs` now also checks five directly observed
+JavaScript notice records and carries an inline change notice. `package.json`
+prepends installed-input validation to Mac preparation and adopts the offline
+notice rejection tests in its maintained Node gate. New
+`scripts/javascript-runtime-notices.mjs`, its disposable fixture tests and
+`third_party/javascript-runtime/` records preserve the original npm license
+bytes; this remains an intentionally partial inventory.
+
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
