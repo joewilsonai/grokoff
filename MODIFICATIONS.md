@@ -262,7 +262,7 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 <!-- GrokOff modification (2026-10-09): bounded observed JavaScript notice gate. -->
-The imported `scripts/after-pack.mjs` now also checks five directly observed
+The imported `scripts/after-pack.mjs` now also checks seven directly observed
 JavaScript notice records and carries an inline change notice. `package.json`
 prepends installed-input validation to Mac preparation and adopts the offline
 notice rejection tests in its maintained Node gate. New

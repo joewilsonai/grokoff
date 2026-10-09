@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "Five directly observed JavaScript components; intentionally partial, not a complete SBOM or release clearance.",
+  "scope": "Seven directly observed JavaScript components; intentionally partial, not a complete SBOM or release clearance.",
   "observedOn": "2026-10-09",
   "components": [
     {
@@ -57,6 +57,28 @@
       "retainedFile": "electron-updater-LICENSE.txt",
       "bytes": 1084,
       "sha256": "bed8d0ab3e6031817f775a641ff37313b0f5591bc8ba0ed79b978dafbd4231ce"
+    },
+    {
+      "name": "lucide-react",
+      "version": "0.539.0",
+      "license": "ISC",
+      "source": "npm:lucide-react@0.539.0/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.539.0.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "lucide-react-LICENSE.txt",
+      "bytes": 880,
+      "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+    },
+    {
+      "name": "mermaid",
+      "version": "12.1.0",
+      "license": "MIT",
+      "source": "npm:mermaid@12.1.0/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/mermaid/-/mermaid-12.1.0.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "mermaid-LICENSE.txt",
+      "bytes": 1089,
+      "sha256": "ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80"
     }
   ]
 }
