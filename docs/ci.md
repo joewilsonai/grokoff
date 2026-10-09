@@ -13,6 +13,12 @@ job. The packaged-server smoke stages the bundled server outside the checkout,
 uses temporary data and home directories, and checks startup, bundled workers,
 MCP, backup export, and shutdown without provider inference.
 
+The maintained attachment group runs complete composer intake, keyed draft,
+private storage and upload-recovery files. It checks bounded held transport/body
+failures, idempotent retry, no replay of permission/size refusals and real
+Composer draft/Send recovery with synthetic transport. The
+[attachment test map](verification/attachment-recovery.md) records its limits.
+
 ## Run the same checks locally
 
 Use the Node version in [.nvmrc](../.nvmrc) and the pnpm version in

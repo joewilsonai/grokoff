@@ -214,3 +214,12 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+<!-- GrokOff modification (2026-10-09): attachment recovery and fixture notice inventory. -->
+
+| Additional modified imported file | Change notice |
+| --- | --- |
+| [src/lib/composer-attachments.ts](src/lib/composer-attachments.ts) | inline change notice (bounded upload transport and response reads) |
+| [src/components/Composer.tsx](src/components/Composer.tsx) | inline change notice (failed pasted image names and stale warnings) |
+| [src/components/ComposerAttachments.tsx](src/components/ComposerAttachments.tsx) | inline change notice (stale warnings on a fresh drop) |
+| [server/attachments.test.ts](server/attachments.test.ts) | inline change notice (owned fixture cleanup) |
