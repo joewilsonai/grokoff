@@ -40,6 +40,10 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, and lazy phone-secret/cancellation behavior.
+Memory coverage includes first edits before a bot has run, hash conflicts,
+workspace containment, capture/recall and journal undo, plus explicit edits and
+topic recall after an owned server restart. Memory model steps use scripted
+fake replies; these checks do not establish model judgment or packaged UI behavior.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

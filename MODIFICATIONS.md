@@ -34,6 +34,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [deploy/.env.example](deploy/.env.example) | inline change notice |
 | [deploy/podman/.env.example](deploy/podman/.env.example) | inline change notice |
 | [docs/ci.md](docs/ci.md) | inline change notice |
+| [docs/verification/memory-layer.md](docs/verification/memory-layer.md) | inline change notice |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
 | [electron/cloud-account.mjs](electron/cloud-account.mjs) | inline change notice |
@@ -99,6 +100,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/index.ts](server/index.ts) | inline change notice |
 | [server/local-computer.test.ts](server/local-computer.test.ts) | inline change notice |
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
+| [server/memory-store.ts](server/memory-store.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
 | [server/request-auth.ts](server/request-auth.ts) | inline change notice |
 | [server/service-unit.test.ts](server/service-unit.test.ts) | inline change notice |
