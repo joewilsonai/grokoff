@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): maintain synthetic browser cleanup coverage and product error wording.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -61,7 +62,11 @@ describe("durable browser lifecycle cleanup", () => {
     const acknowledged = await coordinator.ensure(request);
     expect(acknowledged).toBe(false);
     expect(() => requireBrowserCleanupAcknowledged(acknowledged, "The browser profile"))
-      .toThrow(expect.objectContaining({ status: 503 }));
+      .toThrow(expect.objectContaining({
+        status: 503,
+        message: "The browser profile was removed, but GrokOff could not confirm its local browser data was erased. "
+          + "Restart the desktop app before reusing it; cleanup will retry automatically.",
+      }));
     expect(coordinator.hasPendingProfile("client_1")).toBe(true);
 
     const afterRestart = new BrowserCleanupCoordinator({

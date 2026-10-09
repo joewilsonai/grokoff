@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): maintain isolated engine-install coverage and product error wording.
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
@@ -184,6 +185,8 @@ describe.skipIf(process.platform === "win32")("installing with npm", () => {
     // cannot empty, so absence is injected at both call sites.
     expect(serverInstallFor({ command: { linux: "npm install -g fake-engine" } }, false)).toBeNull();
     mkdirSync(join(ctx.scratch, "empty"));
-    await expect(installNpmEngine("fake-engine", { baseDir: ctx.base, path: join(ctx.scratch, "empty") })).rejects.toThrow("npm is not installed");
+    await expect(installNpmEngine("fake-engine", { baseDir: ctx.base, path: join(ctx.scratch, "empty") })).rejects.toThrow(
+      "npm is not installed on this server. Install Node.js with npm for the user running GrokOff, then try again.",
+    );
   });
 });

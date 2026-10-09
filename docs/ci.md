@@ -1,4 +1,5 @@
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-09): document isolated engine-install and browser cleanup coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
@@ -39,7 +40,11 @@ Do not aim those checks at your running personal workspace.
 authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
-independent application identity, and lazy phone-secret/cancellation behavior.
+independent application identity, lazy phone-secret/cancellation behavior,
+engine-install errors and process cancellation, and durable browser-cleanup
+acknowledgements. Engine-install tests use a disposable fake npm executable;
+browser-cleanup tests use disposable journals and synthetic acknowledgements.
+They do not install provider packages or erase real browser profiles.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

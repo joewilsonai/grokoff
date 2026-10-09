@@ -72,9 +72,13 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/brand.ts](server/brand.ts) | inline change notice |
 | [server/browser-engine.test.ts](server/browser-engine.test.ts) | inline change notice |
 | [server/browser-engine.ts](server/browser-engine.ts) | inline change notice |
+| [server/browser-lifecycle-cleanup.test.ts](server/browser-lifecycle-cleanup.test.ts) | inline change notice (synthetic cleanup coverage and product wording) |
+| [server/browser-lifecycle-cleanup.ts](server/browser-lifecycle-cleanup.ts) | inline change notice (product error wording) |
 | [server/browser-live.ts](server/browser-live.ts) | inline change notice |
 | [server/browser-runtime.test.ts](server/browser-runtime.test.ts) | inline change notice |
 | [server/browser-runtime.ts](server/browser-runtime.ts) | inline change notice |
+| [server/engine-install.test.ts](server/engine-install.test.ts) | inline change notice (isolated npm coverage and product wording) |
+| [server/engine-install.ts](server/engine-install.ts) | inline change notice (product error wording) |
 | [server/claude-account-api.test.ts](server/claude-account-api.test.ts) | inline change notice |
 | [server/cli.test.ts](server/cli.test.ts) | inline change notice |
 | [server/cli.ts](server/cli.ts) | inline change notice |
