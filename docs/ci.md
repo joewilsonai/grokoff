@@ -17,6 +17,11 @@ The docs job separately generates route types, typechecks the docs app, and
 builds its pages, search index and Open Graph images with Next.js. This keeps
 docs dependency patches covered by their actual build. The inherited docs
 content still describes OpenMausBot; this check does not publish that site.
+The maintained attachment group runs complete composer intake, keyed draft,
+private storage and upload-recovery files. It checks bounded held transport/body
+failures, idempotent retry, no replay of permission/size refusals and real
+Composer draft/Send recovery with synthetic transport. The
+[attachment test map](verification/attachment-recovery.md) records its limits.
 
 ## Run the same checks locally
 

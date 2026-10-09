@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): identify failed pasted uploads and clear stale warnings on a new attempt.
 import { track } from "@/lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { ArrowUp, BookOpen, Clock, Mic, Paperclip, Square, Target, Users, X } from "lucide-react";
@@ -544,6 +545,7 @@ export function Composer({
   }, [draftId]);
   const pickFiles = async (picked: FileList | null) => {
     if (!picked?.length) return;
+    setAttachmentNotice(null);
     changeDraftAttachmentPending(draftId, true);
     try {
       const { attachments: added, notice } = await intakeFiles(Array.from(picked), {
@@ -687,15 +689,16 @@ export function Composer({
         return;
       }
       if (imageFiles.length > 0) {
+        setAttachmentNotice(null);
         changeDraftAttachmentPending(draftId, true);
         void (async () => {
           try {
             const results = await Promise.allSettled(imageFiles.map(uploadImage));
-            for (const result of results) {
+            for (const [index, result] of results.entries()) {
               if (result.status === "rejected") {
                 dispatch({
                   type: "error",
-                  message: result.reason instanceof Error ? result.reason.message : "image upload failed",
+                  message: `${imageFiles[index]!.name}: ${result.reason instanceof Error ? result.reason.message : "image upload failed"}`,
                 });
               }
             }
