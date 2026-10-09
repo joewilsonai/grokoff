@@ -29,3 +29,7 @@ overrides:
   fast-uri: 3.1.8
   # rehype-katex, Mermaid and remark math must share the patched renderer.
   katex: 0.18.2
+  # Patch the inherited Next peer as well as the docs app's direct pin.
+  next@16.3.2: 16.3.8
+  # Next and Miniflare use this same release line; retain other sharp minors.
+  sharp@>=0.35.0 <0.36.0: 0.35.5
