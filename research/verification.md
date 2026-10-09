@@ -3,6 +3,8 @@
 October 8, 2026. Evidence distinguishes source checks, simulated integration,
 observed UI and a public release. This is a locally built prototype.
 
+This first-build record is historical. See the [October 9 integration verification](verification-2026-10-09.md) for the later unsigned candidate and its separate evidence boundaries.
+
 ## Artifact and provenance
 
 - App: `release-grokoff/mac-arm64/GrokOff.app`
