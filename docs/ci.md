@@ -109,7 +109,8 @@ in-memory adapters; migration inputs and outputs are plain objects. These tests
 do not import Electron, invoke safeStorage or access the operating-system
 keychain. They do not reproduce a user's keychain failure or verify native
 encryption, filesystem persistence or packaged startup.
-and first-run state/gating/local-name/approval-tip behavior. The welcome gate
+
+First-run checks cover state, gating, local names and approval tips. The welcome gate
 regression uses real disabled analytics. Disposable UI isolation checks cover
 private namespace identity and retained-HOME cleanup with an actual child
 process; the headless full-App recipe remains separate local acceptance.
@@ -118,8 +119,9 @@ app/provider or bot Settings, resuming without a progress write, and a pending
 Next that saves progress without reopening a panel over Settings. React hooks
 run in a disposable DOM with synthetic Store and API seams; this is not a
 native desktop interaction or provider authentication claim.
-engine-install errors and process cancellation, and durable browser-cleanup
-acknowledgements. Engine-install tests use a disposable fake npm executable;
+
+Maintained tests also cover engine-install errors, process cancellation and
+durable browser-cleanup acknowledgements. Engine-install tests use a disposable fake npm executable;
 browser-cleanup tests use disposable journals and synthetic acknowledgements.
 They do not install provider packages or erase real browser profiles.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
