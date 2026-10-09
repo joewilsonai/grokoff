@@ -41,7 +41,8 @@ Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, lazy phone-secret/cancellation behavior,
 Markdown report previews and message-scoped file access, browser turn
-cancellation, and an isolated HTTP browser Stop integration.
+cancellation, an isolated HTTP browser Stop integration, and bounded browser
+fixture teardown when a worker exits while a descendant retains its pipes.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

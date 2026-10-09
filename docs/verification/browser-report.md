@@ -56,3 +56,7 @@ or native browser download is required for these portable tests.
 
 Live-provider observations and their limits are recorded separately in
 [the dated acceptance record](../../research/browser-report-2026-10-08.md).
+
+The separate [synthetic browser login check](browser-login.md) closes and replaces
+the native daemon before verifying an encrypted loopback cookie/localStorage
+restore. It complements this recipe without using real website accounts.
