@@ -182,6 +182,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/brand.ts](src/lib/brand.ts) | inline change notice |
 | [src/lib/call-capability.ts](src/lib/call-capability.ts) | inline change notice |
 | [src/lib/cloud-plan.ts](src/lib/cloud-plan.ts) | inline change notice |
+| [src/lib/chat-copy.i18n.test.ts](src/lib/chat-copy.i18n.test.ts) | inline change notice; existing Portuguese cost-caption expectation corrected to current catalog wording |
 | [src/lib/computer-control.ts](src/lib/computer-control.ts) | inline change notice |
 | [src/lib/local-computer.ts](src/lib/local-computer.ts) | inline change notice |
 | [src/lib/model-friendly.test.ts](src/lib/model-friendly.test.ts) | inline change notice |

@@ -1,4 +1,5 @@
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
+<!-- GrokOff modification (2026-10-09): document adopted existing chat helper locale regressions and their pure-helper limits. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs one Ubuntu
@@ -61,6 +62,11 @@ manual with `pnpm package:grokoff`; it downloads pinned native helpers and
 requires Xcode command-line tools. Its output is an unsigned local `.app`,
 with publishing disabled. A GitHub source-check success is not native release
 acceptance; retain the [verification evidence](../research/verification.md).
+
+The complete chat helper locale test file also checks runtime language switching
+for activity labels, resolved locale state and reply text, plus localized usage
+units and cost captions. It uses pure helpers and catalog values; it does not
+contact providers or establish actual plan charges or native UI behavior.
 
 ## Workflow maintenance
 
