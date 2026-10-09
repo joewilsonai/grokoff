@@ -9,6 +9,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | Modified imported file | Change notice |
 | --- | --- |
 | [.gitignore](.gitignore) | inline change notice |
+| [apps/docs/package.json](apps/docs/package.json) | [apps/docs/package.json.license](apps/docs/package.json.license) |
 | [AGENTS.md](AGENTS.md) | inline change notice |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | inline change notice |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | inline change notice |
