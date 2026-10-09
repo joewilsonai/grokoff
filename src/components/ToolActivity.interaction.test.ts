@@ -7,6 +7,8 @@ import type { Message } from "@/state/store";
 import { timelineEvents, runLogText } from "@/lib/taskTimeline";
 import { ToolActivity } from "./ToolActivity";
 import { RunLog } from "./RunLog";
+import { VerifyCard } from "./VerifyCard";
+import { runSteps, runSummary, skillPrompt } from "@/lib/verify-steps";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -23,6 +25,51 @@ afterEach(async () => {
 const renderTool = async (tool: NonNullable<Message["tool"]>) => act(async () => root.render(createElement(ToolActivity, { tool })));
 
 describe("interrupted tool disclosure", () => {
+  it("settles the actual verification card and only fills a reviewed skill draft from a mixed stopped run", async () => {
+    const messages: Message[] = [
+      { id: "pass", role: "bot", kind: "activity", at: 1, tool: { name: "Bash", summary: "pnpm control:omb doctor", ok: true } },
+      { id: "stop", role: "bot", kind: "activity", at: 2, tool: { name: "Bash", summary: "pnpm control:omb send --text synthetic" } },
+    ];
+    const save = vi.fn();
+    const renderCard = () => {
+      const steps = runSteps(messages); const counts = runSummary(steps);
+      return act(async () => root.render(createElement(VerifyCard, { steps,
+        canSave: counts.passed > 0 && counts.running === 0, skill: null, onDismiss: () => {},
+        onSave: () => save(skillPrompt(steps)),
+      })));
+    };
+    await renderCard();
+    expect(host.querySelector(".animate-spin")).not.toBeNull();
+    expect(host.textContent).not.toContain("Save as skill");
+    messages[1]!.tool!.interrupted = true;
+    await renderCard();
+    const rows = host.querySelectorAll("li");
+    expect(host.querySelector(".animate-spin")).toBeNull();
+    expect(rows[1]?.textContent).toContain("Interrupted");
+    expect(rows[1]?.textContent).not.toContain("Verified");
+    expect(host.textContent).toContain("Check what happened before repeating the action");
+    expect(host.querySelector('[role="status"]')?.textContent).toContain("1 interrupted");
+    expect(save).not.toHaveBeenCalled();
+    const button = [...host.querySelectorAll("button")].find(item => item.textContent?.includes("Save as skill"))!;
+    expect(button).toBeDefined();
+    await act(async () => button.click());
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[0]).toContain("Exclude interrupted steps from the recipe");
+    expect(save.mock.calls[0]?.[0]).toContain("[interrupted, outcome unknown]");
+  });
+
+  it("never offers to save an all-interrupted verification run as proven work", async () => {
+    const messages: Message[] = [{ id: "stop", role: "bot", kind: "activity", at: 1,
+      tool: { name: "Bash", summary: "pnpm control:omb doctor", interrupted: true } }];
+    const steps = runSteps(messages); const counts = runSummary(steps);
+    await act(async () => root.render(createElement(VerifyCard, { steps,
+      canSave: counts.passed > 0 && counts.running === 0, skill: null, onDismiss: () => {}, onSave: () => {},
+    })));
+    expect(host.textContent).toContain("Interrupted");
+    expect(host.textContent).not.toContain("Save as skill");
+    expect(host.textContent).not.toContain("Verified");
+    expect(host.querySelector(".animate-spin")).toBeNull();
+  });
   it("updates an open running disclosure to an honest interrupted receipt without discarding its input", async () => {
     const tool = { name: "browser.get_text", input: "main", itemId: "owned" };
     await renderTool(tool);

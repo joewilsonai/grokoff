@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): add interrupted run counts and outcome-unknown skill-draft regressions.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -246,10 +247,23 @@ describe("showRun", () => {
 });
 
 describe("runSummary", () => {
+  it("settles interrupted commands without inventing success, failure, verification or a dry-run result", () => {
+    const stopped = claude(DOCTOR); stopped.tool!.interrupted = true;
+    const dryStopped = claude(`${SEND} --dry-run`); dryStopped.tool!.interrupted = true;
+    const passed = claude(PUSH, true); passed.tool!.interrupted = true;
+    const failed = claude("npm publish", false); failed.tool!.interrupted = true;
+    const steps = runSteps([stopped, dryStopped, passed, failed, claude(PRESS)]);
+    expect(steps.map(step => step.status)).toEqual(["interrupted", "interrupted", "passed", "failed", "running"]);
+    expect(runSummary(steps)).toMatchObject({ passed: 1, failed: 1, interrupted: 2, running: 1, verified: 1, dryRuns: 0 });
+    expect(runSummary(steps).label).toContain("2 interrupted");
+    expect(runSummary(steps.slice(0, 2))).toMatchObject({ passed: 0, failed: 0, running: 0, verified: 0, interrupted: 2 });
+    expect(stopped.tool).not.toHaveProperty("ok");
+    expect(stopped.tool).not.toHaveProperty("output");
+  });
   it("counts the steps first, then only the non-zero verified, failed and running counts", () => {
     const steps = runSteps([claude(DOCTOR, true), claude(DOCTOR, true), codex(SEND, false), acp(PRESS), claude(PUSH, true)]);
     expect(runSummary(steps)).toEqual({
-      total: 5, verified: 4, passed: 3, failed: 1, running: 1, dryRuns: 0, label: "5 steps · 4 verified · 1 failed · 1 running",
+      total: 5, verified: 4, passed: 3, failed: 1, running: 1, interrupted: 0, dryRuns: 0, label: "5 steps · 4 verified · 1 failed · 1 running",
     });
     expect(runSummary(steps.slice(0, 1)).label).toBe("1 step · 1 verified");
     expect(runSummary(steps.slice(4)).label).toBe("1 step");
@@ -259,7 +273,7 @@ describe("runSummary", () => {
   it("counts a settled dry run as neither passed nor failed", () => {
     const steps = runSteps([claude(`${DOCTOR} --dry-run`, true), claude(`${SEND} --dry-run`, false), claude(`${PRESS} --dry-run`)]);
     expect(runSummary(steps)).toEqual({
-      total: 3, verified: 3, passed: 0, failed: 0, running: 1, dryRuns: 2, label: "3 steps · 3 verified · 1 running · 2 dry runs",
+      total: 3, verified: 3, passed: 0, failed: 0, running: 1, interrupted: 0, dryRuns: 2, label: "3 steps · 3 verified · 1 running · 2 dry runs",
     });
     expect(runSummary(steps.slice(0, 1)).label).toBe("1 step · 1 verified · 1 dry run");
   });
@@ -283,6 +297,19 @@ describe("runSkill", () => {
 });
 
 describe("skillPrompt", () => {
+  it("keeps interrupted commands as outcome-unknown notes rather than verified recipe steps, without replaying them", () => {
+    const stopped = claude(DOCTOR); stopped.tool!.interrupted = true;
+    const steps = runSteps([claude(PUSH, true), stopped]);
+    const prompt = skillPrompt(steps, "synthetic research");
+    expect(prompt).toContain(`✓ git push — ${PUSH}`);
+    expect(prompt).toContain(`[interrupted, outcome unknown] doctor — ${DOCTOR}`);
+    expect(prompt).not.toContain(`${DOCTOR} (verified)`);
+    expect(prompt).toContain("Exclude interrupted steps from the recipe");
+    expect(prompt).toContain("Do not re-run any step");
+    expect(prompt).not.toContain("their results are in this thread");
+    const dryStopped = claude(`${DOCTOR} --dry-run`); dryStopped.tool!.interrupted = true;
+    expect(skillPrompt(runSteps([dryStopped]))).toContain(`[interrupted, outcome unknown] doctor — ${DOCTOR} --dry-run`);
+  });
   describe("for a run with a verified step", () => {
     const steps = runSteps([claude(DOCTOR, true), codex(SEND, false), acp(PRESS), claude(`${DOCTOR} --dry-run`, true), claude(PUSH, true)]);
     const prompt = skillPrompt(steps, "verify the fixture");

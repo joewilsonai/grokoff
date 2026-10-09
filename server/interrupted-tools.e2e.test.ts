@@ -9,6 +9,7 @@ import type { InspectorPage } from "../shared/inspector.ts";
 import type { WireBot, WireMessage } from "../shared/wire.ts";
 import { launchVerificationServer, verificationServerEnvironment } from "../scripts/control-omb.ts";
 import { waitForExit } from "./testing/cleanup.ts";
+import { handleToolCall } from "../scripts/mcp-server.ts";
 
 type BotSnapshot = WireBot & { messages: WireMessage[] };
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -65,6 +66,26 @@ it.skipIf(process.platform === "win32")("settles a stopped browser tool as inter
     expect(after.messages.filter(message => message.tool?.ok !== undefined)).toEqual(finished);
     expect(finished.some(message => message.tool?.ok === true && message.tool.output?.includes("Recorded synthetic result"))).toBe(true);
     expect(finished.some(message => message.tool?.ok === false && message.tool.output?.includes("Recorded synthetic refusal"))).toBe(true);
+
+    // Exercise the production MCP projection over the same owned HTTP receipt.
+    // This transport cannot discover or address the user's running server.
+    const projected = async (name: "get_bot_messages" | "wait_for_conversation") => {
+      const args = name === "get_bot_messages" ? { bot_id: bot.id, task_id: bot.threadId, limit: 200 }
+        : { target_type: "bot", target_id: bot.id, task_id: bot.threadId };
+      return JSON.parse(JSON.stringify(await handleToolCall(name, args, async (path, options) => {
+        expect(options?.method ?? "GET").toBe("GET");
+        expect(path.startsWith("/api/")).toBe(true);
+        return api("GET", path);
+      }))) as { messages: WireMessage[]; status?: string };
+    };
+    for (const name of ["get_bot_messages", "wait_for_conversation"] as const) {
+      const result = await projected(name);
+      const tool = result.messages.find(message => message.id === interrupted.id)?.tool;
+      expect(tool).toMatchObject({ name: "mcp__browser__get_text", interrupted: true });
+      expect(tool).not.toHaveProperty("ok"); expect(tool).not.toHaveProperty("output");
+      expect(tool).not.toHaveProperty("input");
+      if (name === "wait_for_conversation") expect(result.status).toBe("settled");
+    }
 
     await waitForExit(fixture.child, { signal: "SIGTERM" });
     expect(alive(fixture.info.pid)).toBe(false);

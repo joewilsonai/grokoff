@@ -1,4 +1,5 @@
-import { BookmarkPlus, CheckCircle2, ChevronDown, ChevronUp, ListChecks, Loader2, X, XCircle } from "lucide-react";
+// GrokOff modification (2026-10-09): show interrupted command receipts without a live spinner or verified claim.
+import { BookmarkPlus, CheckCircle2, ChevronDown, ChevronUp, ListChecks, Loader2, PauseCircle, X, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { cn } from "@/lib/cn";
@@ -14,6 +15,8 @@ function StatusIcon({ status }: { status: RunStep["status"] }) {
       return <CheckCircle2 aria-hidden="true" className={cn(className, "text-success")} />;
     case "failed":
       return <XCircle aria-hidden="true" className={cn(className, "text-danger")} />;
+    case "interrupted":
+      return <PauseCircle aria-hidden="true" className={cn(className, "text-ink-secondary")} />;
   }
 }
 
@@ -86,7 +89,10 @@ export function VerifyCard({
               <li key={step.id} className="flex min-w-0 items-center gap-2 py-1">
                 <StatusIcon status={step.status} />
                 <span className="shrink-0 text-[13px] font-medium">{step.label}</span>
-                {step.verified && (
+                {step.status === "interrupted" && (
+                  <span className="shrink-0 text-[10.5px] text-ink-secondary">{t("toolDetail.interrupted")}</span>
+                )}
+                {step.verified && step.status !== "interrupted" && (
                   <span className="shrink-0 text-[10.5px] uppercase tracking-wide text-success">{t("chat.verify.verifiedTag")}</span>
                 )}
                 <code className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-ink-secondary" title={step.command}>
@@ -95,6 +101,9 @@ export function VerifyCard({
               </li>
             ))}
           </ol>
+          {steps.some(step => step.status === "interrupted") && (
+            <p className="border-t border-hairline/25 px-3 py-2 text-[12px] text-ink-secondary">{t("toolDetail.interruptedHint")}</p>
+          )}
           {skill ? (
             <div className="border-t border-hairline/25 px-3 py-2 text-[12px] text-ink-secondary">
               {t(skill === "saved" ? "chat.verify.saved" : "chat.verify.staged")}

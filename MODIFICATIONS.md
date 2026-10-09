@@ -65,6 +65,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [pnpm-workspace.yaml](pnpm-workspace.yaml) | inline change notice |
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
+| [scripts/mcp-server.ts](scripts/mcp-server.ts) | inline change notice |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
@@ -99,6 +100,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/index.ts](server/index.ts) | inline change notice |
 | [server/local-computer.test.ts](server/local-computer.test.ts) | inline change notice |
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
+| [server/mcp-server.test.ts](server/mcp-server.test.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
 | [server/request-auth.ts](server/request-auth.ts) | inline change notice |
 | [server/service-unit.test.ts](server/service-unit.test.ts) | inline change notice |
@@ -179,6 +181,8 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/analytics.test.ts](src/lib/analytics.test.ts) | inline change notice |
 | [src/lib/analytics.ts](src/lib/analytics.ts) | inline change notice |
 | [src/lib/app-links.ts](src/lib/app-links.ts) | inline change notice |
+| [src/lib/verify-steps.ts](src/lib/verify-steps.ts) | inline change notice |
+| [src/lib/verify-steps.test.ts](src/lib/verify-steps.test.ts) | inline change notice |
 | [src/lib/brand.ts](src/lib/brand.ts) | inline change notice |
 | [src/lib/call-capability.ts](src/lib/call-capability.ts) | inline change notice |
 | [src/lib/cloud-plan.ts](src/lib/cloud-plan.ts) | inline change notice |
@@ -207,6 +211,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
 | [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
+| [src/components/VerifyCard.tsx](src/components/VerifyCard.tsx) | inline change notice |
 | [src/components/ToolActivity.tsx](src/components/ToolActivity.tsx) | inline change notice |
 | [src/components/RunLog.tsx](src/components/RunLog.tsx) | inline change notice |
 | [src/lib/taskTimeline.ts](src/lib/taskTimeline.ts) | inline change notice |
@@ -237,3 +242,9 @@ controls, actual React disclosure/run-log
 interaction, and the existing complete tool-detail/run-log/timeline test files.
 The recipe is [interrupted tools](docs/verification/interrupted-tools.md). No real
 browser action, provider account, user workspace or native app is exercised.
+
+Interrupted command-run cards and bounded MCP transcript/wait projections retain
+the same optional interruption marker. Run cards remove the live spinner and
+verified badge for unknown interrupted outcomes; skill drafts preserve these as
+notes to check, exclude them from the passing recipe and never replay them.
+Existing MCP redaction, ownership checks and transcript bounds are retained.

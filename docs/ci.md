@@ -79,7 +79,7 @@ enable them.
 ## Interrupted tool receipts
 
 The maintained core also runs the complete tool-receipt, HTTP Stop/restart,
-timeline, tool-detail and run-log test files listed in
+timeline, tool-detail, run-log, verification-card, command-run and MCP test files listed in
 [the interrupted-tools recipe](verification/interrupted-tools.md). The HTTP
 fixtures use owned temporary homes/servers and scripted Claude/ACP CLI events;
 React and Store controls have no live provider or browser transport. These

@@ -1111,6 +1111,7 @@
   "chat.verify.verifiedTag": "verified",
   "chat.verify.failed": "{count} failed",
   "chat.verify.running": "{count} running",
+  "chat.verify.interrupted": "{count} interrupted",
   "chat.verify.dryRunOne": "1 dry run",
   "chat.verify.dryRunMany": "{count} dry runs",
   "chat.verify.collapse": "Collapse the run",

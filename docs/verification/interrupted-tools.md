@@ -2,7 +2,7 @@
 
 When a provider records a turn completion with `stopReason: "interrupted"`
 or `"cancelled"` before reporting a tool result, the saved unfinished tool
-receipt shows **Interrupted** in tool details and the run log. Its `ok` and
+receipt shows **Interrupted** in tool details, the run log and command verification cards. Its `ok` and
 output remain unrecorded. Check what happened before repeating an action;
 stopping a tool does not prove that an external side effect was undone.
 Completed and failed calls keep their original outcomes. Legacy records without
@@ -11,7 +11,7 @@ an interruption field remain readable with their original status.
 Run from the checkout with Node 24 and the pinned pnpm:
 
 ```sh
-pnpm exec vitest run server/tool-messages.test.ts server/interrupted-tools.e2e.test.ts server/task-timeline.test.ts src/components/ToolActivity.test.ts src/components/ToolActivity.interaction.test.ts src/components/RunLog.test.ts
+pnpm exec vitest run server/tool-messages.test.ts server/interrupted-tools.e2e.test.ts server/task-timeline.test.ts src/components/ToolActivity.test.ts src/components/ToolActivity.interaction.test.ts src/components/RunLog.test.ts src/lib/verify-steps.test.ts src/components/VerifyCard.test.ts server/mcp-server.test.ts
 ```
 
 The HTTP regression owns its loopback URL, temporary data/home, server and
@@ -39,7 +39,20 @@ check, not a claim that every late provider event is globally quarantined.
 
 Actual React DOM controls open a running disclosure, rerender its stopped
 receipt while retaining input/open state, preserve known success/failure, and
-compare interrupted/running/failed/completed rows in the real run log. Fetch is
+compare interrupted/running/failed/completed rows in the real run log. The actual
+verification card stops spinning, displays the unknown-outcome warning and removes
+the verified badge for interrupted commands. A mixed run may fill a skill draft
+only when it has proven passing work and no still-running steps; the draft marks
+interrupted commands as outcome-unknown notes to check and excludes them from the
+recipe. It never sends or repeats them. An all-interrupted run offers no Save.
+Fetch is
 forbidden in that renderer fixture. No live account, real user data, native
 app, browser control or provider performance is covered. The complete selected
 files are part of `pnpm test:core`; the usual source gates remain required.
+
+The bounded MCP bot/channel message and conversation-wait projections retain only
+the boolean `interrupted: true` marker. Legacy absent markers remain absent;
+recorded success/failure and existing transcript bounds/redaction are preserved.
+An interrupted tool does not turn a settled conversation into a failed one. The
+HTTP fixture checks the projected stopped receipt through the production MCP
+handler with its exact owned server transport; no port discovery is allowed.
