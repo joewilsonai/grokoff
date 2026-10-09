@@ -49,3 +49,9 @@ The iOS companion app bundles a prebuilt WebRTC library for Live calls
 (stasel/WebRTC), built from the WebRTC project, Copyright (c) 2011, The WebRTC
 project authors, used under the BSD 3-Clause License. WebRTC includes
 third-party components under their own licenses, listed with the library.
+
+GrokOff bundles KaTeX 0.18.2 math rendering and its supplied font assets,
+Copyright (c) 2013-2020 Khan Academy and other contributors. Original
+font-project notice: Copyright (c) 2018 Khan Academy. Both are used under
+the MIT License; full notices are retained in third_party/katex/.
+GrokOff modification (2026-10-09): retain the updated math-renderer notices.

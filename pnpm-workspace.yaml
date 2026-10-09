@@ -25,3 +25,5 @@ onlyBuiltDependencies:
 # mermaid 12.1 still allows dompurify 3.4.13. Force the patched release.
 overrides:
   dompurify: 3.4.16
+  # rehype-katex, Mermaid and remark math must share the patched renderer.
+  katex: 0.18.2
