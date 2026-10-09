@@ -199,6 +199,10 @@ The [routines fixture](routines.md) checks confirmed proposals, manual and
 scheduled runs, central run logs, List/Calendar views, and bot-scoped routines
 using the real renderer and an isolated fake-engine server.
 
+The [maintained routines CI group](routines-ci.md) maps the selected scheduler,
+restart, results, delegation, cron and webhook regressions plus renderer checks
+that run automatically in `test:core`, with their fixture and acceptance limits.
+
 The [interval restrictions recipe](interval-restrictions.md) checks weekday and
 time-window limits on scheduled routines in that same disposable fixture.
 
