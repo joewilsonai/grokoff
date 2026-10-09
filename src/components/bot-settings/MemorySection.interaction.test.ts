@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// GrokOff: actual memory editor lifecycle, Save and Undo reconciliation with deferred in-memory responses.
+// GrokOff: actual memory editor read/Save/Undo ownership and fresh mutation metadata with deferred in-memory responses.
 // Transport, Store dispatch and desktop capabilities are sealed synthetic seams;
 // no provider, server, filesystem, account, native UI or background model calls.
 import { act, createElement, StrictMode } from "react";
@@ -795,4 +795,170 @@ it("retains a pending Save based on a newer successful saved revision during old
   await type("Next current edit");
   await click("Save");
   expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Next current edit", "second-save-hash");
+});
+
+// Overlapping mutations must refresh from current server metadata. A mutation
+// response overview is a historical snapshot; it cannot describe a later write.
+it.each(["Save", "Undo"] as const)("refreshes the visible journal and overview when held %s completes after the other mutation", async heldKind => {
+  const topicRow = { ...row, id: "topic-change", path: "memory/b.md" };
+  const savedRow = { ...row, id: "saved-index", added: 2 };
+  const undoRow = { ...topicRow, id: "undone-topic", via: "revert" as const, added: 0, removed: 3 };
+  let serverRows = [topicRow];
+  let serverOverview = overview("/synthetic/before-overlap");
+  fixture.journal.mockImplementation(async () => [...serverRows]);
+  fixture.overview.mockImplementation(async () => serverOverview);
+  await render();
+  const saved = deferred<SaveResult>();
+  const undone = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  fixture.revert.mockReturnValueOnce(undone.promise);
+  await type("Current index edit");
+  await click(heldKind);
+  await click(heldKind === "Save" ? "Undo" : "Save");
+  if (heldKind === "Save") {
+    serverRows = [topicRow, undoRow];
+    serverOverview = overview("/synthetic/after-first-undo");
+    await act(async () => undone.resolve({ ...doc("memory/b.md", "Restored topic", "undone-topic-hash"), overview: overview("/synthetic/old-undo-response") }));
+  } else {
+    serverRows = [topicRow, savedRow];
+    serverOverview = overview("/synthetic/after-first-save");
+    await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Current index edit", "current-save-hash"), overview: overview("/synthetic/old-save-response") }));
+  }
+  await tick();
+  serverRows = [topicRow, undoRow, savedRow];
+  serverOverview = overview("/synthetic/after-both-mutations");
+  await act(async () => {
+    if (heldKind === "Save") saved.resolve({ ok: true, doc: doc("MEMORY.md", "Current index edit", "current-save-hash"), overview: overview("/synthetic/stale-held-response") });
+    else undone.resolve({ ...doc("memory/b.md", "Restored topic", "undone-topic-hash"), overview: overview("/synthetic/stale-held-response") });
+  });
+  await tick();
+  expect(container.textContent).toContain("You added 2 lines to MEMORY.md");
+  expect(container.textContent).toContain("You removed 3 lines from the b topic");
+  expect([...container.querySelectorAll("button")].filter(el => el.textContent?.trim() === "Undo")).toHaveLength(3);
+  expect(container.textContent).toContain("/synthetic/after-both-mutations");
+  expect(container.textContent).not.toContain("/synthetic/stale-held-response");
+  expect(editor().value).toBe("Current index edit");
+  expect(button("Save").disabled).toBe(true);
+  await type("Next current index edit");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Next current index edit", "current-save-hash");
+});
+
+it.each(["resolve", "reject"] as const)("ignores an obsolete Save metadata %s after a later Undo refreshed current metadata", async completion => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const oldOverview = deferred<MemoryOverview>();
+  const oldJournal = deferred<MemoryJournalRow[]>();
+  fixture.overview.mockReturnValueOnce(oldOverview.promise);
+  fixture.journal.mockReturnValueOnce(oldJournal.promise);
+  await type("Index saved before later Undo");
+  await click("Save");
+  const latestRow = { ...row, id: "latest-undo", via: "revert" as const, added: 0, removed: 4 };
+  fixture.overview.mockResolvedValueOnce(overview("/synthetic/latest-mutation"));
+  fixture.journal.mockResolvedValueOnce([latestRow]);
+  await click("Undo");
+  await act(async () => {
+    oldOverview.resolve(overview("/synthetic/obsolete-save-metadata"));
+    if (completion === "resolve") oldJournal.resolve([{ ...row, id: "obsolete-row", added: 17 }]);
+    else oldJournal.reject(new Error("Obsolete Save metadata failed"));
+  });
+  await tick();
+  expect(container.textContent).toContain("/synthetic/latest-mutation");
+  expect(container.textContent).toContain("You removed 4 lines from MEMORY.md");
+  expect(container.textContent).not.toContain("/synthetic/obsolete-save-metadata");
+  expect(container.textContent).not.toContain("Obsolete Save metadata failed");
+  expect(container.textContent).not.toContain("You added 17 lines");
+  expect(editor().value).toBe("Reverted text");
+});
+
+it.each(["Save", "Undo"] as const)("does not start late %s metadata over a newer active view", async kind => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  const saved = deferred<SaveResult>();
+  const undone = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  fixture.revert.mockReturnValueOnce(undone.promise);
+  await type("Draft across activation");
+  await click(kind);
+  await render(false);
+  fixture.overview.mockResolvedValueOnce(overview("/synthetic/new-view"));
+  fixture.journal.mockResolvedValueOnce([{ ...row, id: "new-view-row", added: 8 }]);
+  await render();
+  const reads = fixture.overview.mock.calls.length;
+  await act(async () => {
+    if (kind === "Save") saved.resolve({ ok: true, doc: doc("MEMORY.md", "Draft across activation", "saved-hash"), overview: overview("/synthetic/old-view-response") });
+    else undone.resolve({ ...doc("MEMORY.md", "Old Undo", "old-undo-hash"), overview: overview("/synthetic/old-view-response") });
+  });
+  await tick();
+  expect(fixture.overview).toHaveBeenCalledTimes(reads);
+  expect(container.textContent).toContain("/synthetic/new-view");
+  expect(container.textContent).toContain("You added 8 lines to MEMORY.md");
+  expect(container.textContent).not.toContain("/synthetic/old-view-response");
+  expect(editor().value).toBe("Draft across activation");
+});
+
+it.each(["overview", "journal"] as const)("reports a current post-Save %s read failure and recovers on the next successful mutation", async phase => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  fixture[phase].mockRejectedValueOnce(new Error("Current post-Save metadata failed"));
+  await type("Saved despite metadata failure");
+  await click("Save");
+  expect(editor().value).toBe("Saved despite metadata failure");
+  expect(button("Save").disabled).toBe(true);
+  expect(container.textContent).toContain("Current post-Save metadata failed");
+  fixture.overview.mockResolvedValueOnce(overview("/synthetic/recovered-metadata"));
+  fixture.journal.mockResolvedValueOnce([{ ...row, id: "recovered-row", added: 9 }]);
+  await type("Next successful edit");
+  await click("Save");
+  expect(container.textContent).not.toContain("Current post-Save metadata failed");
+  expect(container.textContent).toContain("/synthetic/recovered-metadata");
+  expect(container.textContent).toContain("You added 9 lines to MEMORY.md");
+});
+
+it("clears an obsolete metadata failure that arrives while the later Undo mutation is pending", async () => {
+  const topicRow = { ...row, id: "topic-change", path: "memory/b.md" };
+  fixture.journal.mockResolvedValue([topicRow]);
+  await render();
+  const oldJournal = deferred<MemoryJournalRow[]>();
+  fixture.journal.mockReturnValueOnce(oldJournal.promise);
+  await type("Save before held Undo");
+  await click("Save");
+  const undone = deferred<MemoryDoc & { overview: MemoryOverview }>();
+  fixture.revert.mockReturnValueOnce(undone.promise);
+  await click("Undo");
+  await act(async () => oldJournal.reject(new Error("Superseded metadata error")));
+  await tick();
+  expect(container.textContent).toContain("Superseded metadata error");
+  fixture.overview.mockResolvedValueOnce(overview("/synthetic/current-after-recovery"));
+  fixture.journal.mockResolvedValueOnce([{ ...topicRow, id: "latest-undo", via: "revert", added: 0, removed: 6 }]);
+  await act(async () => undone.resolve({ ...doc("memory/b.md", "Restored topic", "restored-topic"), overview: overview("/synthetic/old-receipt") }));
+  await tick();
+  expect(container.textContent).toContain("/synthetic/current-after-recovery");
+  expect(container.textContent).toContain("You removed 6 lines from the b topic");
+  expect(container.textContent).not.toContain("Superseded metadata error");
+  expect(editor().value).toBe("Save before held Undo");
+});
+
+it("keeps a later current file-read error even when it matches the old metadata failure text", async () => {
+  const topicRow = { ...row, id: "topic-change", path: "memory/b.md" };
+  fixture.journal.mockResolvedValue([topicRow]);
+  await render();
+  fixture.journal.mockRejectedValueOnce(new Error("Shared failure text"));
+  await type("Saved index");
+  await click("Save");
+  expect(container.textContent).toContain("Shared failure text");
+  const latest = deferred<MemoryOverview>();
+  fixture.overview.mockReturnValueOnce(latest.promise);
+  fixture.journal.mockResolvedValueOnce([{ ...topicRow, id: "latest-undo", via: "revert", added: 0, removed: 7 }]);
+  await click("Undo");
+  fixture.doc.mockRejectedValueOnce(new Error("Shared failure text"));
+  await click("b.md");
+  expect(fixture.doc).toHaveBeenLastCalledWith(bot.id, "memory/b.md");
+  expect(container.textContent).toContain("Shared failure text");
+  await act(async () => latest.resolve(overview("/synthetic/fresh-metadata-with-current-file-error")));
+  await tick();
+  expect(container.textContent).toContain("/synthetic/fresh-metadata-with-current-file-error");
+  expect(container.textContent).toContain("You removed 7 lines from the b topic");
+  expect(container.textContent).toContain("Shared failure text");
+  expect(editor().value).toBe("Saved index");
 });

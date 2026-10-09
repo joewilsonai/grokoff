@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation without altering memory mutation or journal APIs. -->
+<!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation and fresh overlapping mutation metadata without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): first-edit and source restart acceptance. -->
 
@@ -144,3 +144,22 @@ after reactivation has loaded newer metadata beside a retained dirty draft. Thes
 are actual source-component interactions with sealed in-memory transports;
 they do not establish native behavior or filesystem commit order. Delete,
 Tidy up and server mutation/journal contracts are outside this correction.
+
+## Metadata after overlapping Save and Undo
+
+The interaction fixture holds Save while Undo on another file completes, then
+reverses the completion order. Each successful mutation in the same active view
+starts fresh overview and journal reads. The resulting change rows and Undo
+controls appear without reopening Settings; the older overview carried in a
+mutation response cannot replace current server metadata. These reads leave
+current document selection, dirty drafts and successful Save hashes unchanged.
+
+Later metadata reads supersede earlier metadata results and errors. A later
+activation owns its own hydration, so an old mutation cannot start reads over
+that view. Current overview/journal failures remain visible. A subsequent successful
+metadata refresh clears only an older metadata failure, including one that
+arrived while the later mutation was pending; a newer file-read error remains
+visible even if its text matches the old failure. These are actual component interactions
+with deferred in-memory responses, not native app, filesystem commit ordering,
+provider or concurrency load acceptance. The server mutation, expected-hash and
+journal APIs, Delete and Tidy up remain unchanged.
