@@ -76,6 +76,13 @@ and signed-out/missing-engine picker recovery. Picker handler checks use a
 hook fixture; they do not drive a native account or operating-system menu.
 The inert local-computer lease case runs on macOS and is skipped by Linux CI;
 its descriptor stays in the disposable GrokOff home and starts no UI driver.
+Representative group-delegation checks exercise scripted dispatch through the
+real HTTP/MCP proxy, room and team access boundaries, approvals and revocation,
+returned results, cancellation and interruption after an owned server restart.
+Roster-order and activity-visibility helpers are included. The restart fixture
+uses the shared isolated environment, seals provider discovery to the fake CLI,
+and verifies the replacement server PID. See the
+[test map and evidence limits](verification/room-ci.md).
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
