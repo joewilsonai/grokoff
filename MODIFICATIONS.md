@@ -163,7 +163,9 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/SimpleModelPane.tsx](src/components/SimpleModelPane.tsx) | inline change notice |
 | [src/components/ThreadRefs.test.ts](src/components/ThreadRefs.test.ts) | inline change notice |
 | [src/components/WebhooksPanel.tsx](src/components/WebhooksPanel.tsx) | inline change notice |
-| [src/components/onboarding/FirstConversationTour.test.ts](src/components/onboarding/FirstConversationTour.test.ts) | inline change notice (disposable first-run globals) |
+| [src/components/onboarding/FirstConversationTour.test.ts](src/components/onboarding/FirstConversationTour.test.ts) | inline change notice (disposable first-run globals and Settings pause) |
+| [src/components/onboarding/FirstConversationTour.tsx](src/components/onboarding/FirstConversationTour.tsx) | inline change notice (pause approval tips in Settings) |
+| [src/components/onboarding/GuidedTour.tsx](src/components/onboarding/GuidedTour.tsx) | inline change notice (pause Settings overlays and pending panel effects) |
 | [src/components/onboarding/PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) | inline change notice |
 | [src/components/onboarding/SharedWorkspaceHint.tsx](src/components/onboarding/SharedWorkspaceHint.tsx) | inline change notice |
 | [src/components/onboarding/Spotlight.tsx](src/components/onboarding/Spotlight.tsx) | inline change notice |

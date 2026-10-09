@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-09): maintain approval-tip coverage with disposable globals.
+// GrokOff modification (2026-10-09): maintain approval-tip coverage and Settings pause with disposable globals.
 import { createElement, type EffectCallback, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,6 +63,18 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("first-conversation spotlights", () => {
+  for (const modal of ["appSettingsOpen", "settingsOpen"]) it(`pauses an active approval tip around ${modal} without dismissing it`, () => {
+    render(false);
+    for (const effect of fixture.effects) effect();
+    expect(render(false)?.type).toBe(Spotlight);
+    store.state[modal] = true;
+    expect(render(false)).toBeNull();
+    for (const effect of fixture.effects) effect();
+    expect(store.api).not.toHaveBeenCalled();
+    store.state[modal] = false;
+    expect(render(false)?.type).toBe(Spotlight);
+  });
+
   it("explain the approval card as before", () => {
     render(false);
     for (const effect of fixture.effects) effect();
