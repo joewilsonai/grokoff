@@ -28,4 +28,6 @@ it.each(["source", "destination"] as const)("cleans every owned fixture when evi
     expect(existsSync(fixture.dataDir)).toBe(false);
     expect(() => process.kill(fixture.pid, 0)).toThrow(/ESRCH/);
   }
-}, 60_000);
+// Destination failure follows two initial/restart launches (20s +30s each).
+// Keep a bounded margin for exact owned-process cleanup before Vitest expires.
+}, 150_000);
