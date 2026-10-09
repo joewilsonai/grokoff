@@ -6,7 +6,7 @@ Subscription connections and API providers are separate choices.
 
 ## Connect an existing account
 
-1. Open **Settings → Model providers** and choose **Check again**.
+1. Open **Settings → AI** (**Settings → Model providers** in Advanced mode), then choose **Check again** under **Model providers and accounts**.
 2. If Claude Code or Codex is already installed and signed in with a subscription,
    GrokOff can reuse that CLI-managed account. The card shows **Ready** and either
    **Claude subscription** or **ChatGPT subscription**.

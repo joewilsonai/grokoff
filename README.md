@@ -52,9 +52,11 @@ pnpm package:grokoff
 
 This prepares the pinned browser, CUA driver, tunnel, and speech helpers and creates `release-grokoff/mac-arm64/GrokOff.app` with publishing disabled. The local app is unsigned and not notarized. Intel Mac, Windows, and Linux releases are not established by this alpha.
 
+The [October 9 morning verification](research/verification-morning-2026-10-09.md) records the later locally combined candidate, measured checks and remaining acceptance work.
+
 ## Connect Claude or Codex
 
-Open **Settings → Model providers** to detect the official Claude Code and Codex CLIs and reuse their signed-in accounts, or complete provider sign-in. The default subscription adapters require recognized subscription authentication and block API-key or unknown authentication instead of silently switching to API billing. Explicit API connections remain separate.
+Open **Settings → AI** (**Settings → Model providers** in Advanced mode) to detect the official Claude Code and Codex CLIs and reuse their signed-in accounts, or complete provider sign-in. The default subscription adapters require recognized subscription authentication and block API-key or unknown authentication instead of silently switching to API billing. Explicit API connections remain separate.
 
 Provider services and models are not made open source by GrokOff. Your provider's limits, eligibility, terms, and any enabled extra-usage charges still apply. Signing out of a shared CLI account affects other local uses of that CLI. Read [subscription connections](docs/subscription-connections.md) before connecting accounts.
 

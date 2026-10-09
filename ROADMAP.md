@@ -2,7 +2,7 @@
 
 GrokOff is a Mac source alpha built on OpenMausBot's community edition. This roadmap describes intended milestones, not shipped features or promised dates. [Verification](research/verification.md) records what has actually been checked.
 
-The [October 9 integration record](research/verification-2026-10-09.md) reports the locally combined changes, isolated desktop checks and remaining release requirements. Its bounded fixtures do not complete the live-provider desktop milestone below.
+The [October 9 integration record](research/verification-2026-10-09.md) and [later verification supplement](research/verification-morning-2026-10-09.md) report separately pinned candidates, isolated desktop checks and remaining release requirements. Its bounded fixtures do not complete the live-provider desktop milestone below.
 
 ## Browser to finished report
 
@@ -13,6 +13,10 @@ The current source adds an in-app Markdown report reader and cancellation of in-
 Full packaged-app acceptance with a live provider, browser UI navigation and saved-login continuity remain before calling the whole milestone complete. The controlled-source and deterministic desktop checks establish narrower behavior.
 
 Memory continuity follows this milestone: verify explicit preference capture, useful recall, and restart behavior without silently importing another application's state.
+
+## Current implementation sequence
+
+The [October 9 product plan](docs/plans/2026-10-09-product-plan.md) turns the research into bounded work: publish the combined review source, make report loading recoverable, add local PDF export and finish the welcome example wording. Each unit requires a reviewed PR and actual acceptance evidence before it is described as complete. The [combined draft](https://github.com/joewilsonai/grokoff/pull/32) is available for source review; main and binary release remain separate.
 
 ## Make the alpha usable
 
