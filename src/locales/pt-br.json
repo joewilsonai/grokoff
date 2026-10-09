@@ -1487,8 +1487,6 @@
   "place.view.ccAtOnce.short": "Em uso",
   "place.view.localUnavailable.short": "Não está pronto",
   "place.view.autoTeam.short": "Compartilhado",
-  "onboarding.reel.terminal.body": "Run pnpm omb from the GrokOff source to open the local app in your browser. Connect another server explicitly in Settings.",
-  "onboarding.reel.automations.body": "Schedule a bot to work while GrokOff and this Mac are running. Webhooks can start work when this computer is reachable.",
   "grokoff.modificationNotice": "GrokOff edition: product names and first-run copy modified on 2026-10-08. Original OpenMausBot translations remain attributed to their contributors.",
   "remote.client.companion.hint": "On the other desktop app, open Settings → Remote access and create a six-digit companion code. Use its local network address or your own HTTPS address, or a full Tailscale name ending in .ts.net. For a self-hosted server or custom domain, choose Self-hosted server."
 }

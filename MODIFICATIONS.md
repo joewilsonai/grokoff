@@ -195,17 +195,17 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/thread-refs.test.ts](src/lib/thread-refs.test.ts) | inline change notice |
 | [src/lib/thread-refs.ts](src/lib/thread-refs.ts) | inline change notice |
 | [src/lib/usage.test.ts](src/lib/usage.test.ts) | inline change notice |
-| [src/locales/de.json](src/locales/de.json) | [src/locales/de.json.license](src/locales/de.json.license) |
+| [src/locales/de.json](src/locales/de.json) | [src/locales/de.json.license](src/locales/de.json.license); explicit English fallback for two untranslated onboarding reel entries |
 | [src/locales/en.json](src/locales/en.json) | [src/locales/en.json.license](src/locales/en.json.license) |
-| [src/locales/es.json](src/locales/es.json) | [src/locales/es.json.license](src/locales/es.json.license) |
-| [src/locales/fr.json](src/locales/fr.json) | [src/locales/fr.json.license](src/locales/fr.json.license) |
-| [src/locales/hi.json](src/locales/hi.json) | [src/locales/hi.json.license](src/locales/hi.json.license) |
-| [src/locales/ja.json](src/locales/ja.json) | [src/locales/ja.json.license](src/locales/ja.json.license) |
-| [src/locales/pt-br.json](src/locales/pt-br.json) | [src/locales/pt-br.json.license](src/locales/pt-br.json.license) |
-| [src/locales/source-hashes.json](src/locales/source-hashes.json) | [src/locales/source-hashes.json.license](src/locales/source-hashes.json.license) |
-| [src/locales/uk.json](src/locales/uk.json) | [src/locales/uk.json.license](src/locales/uk.json.license) |
-| [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
-| [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
+| [src/locales/es.json](src/locales/es.json) | [src/locales/es.json.license](src/locales/es.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/fr.json](src/locales/fr.json) | [src/locales/fr.json.license](src/locales/fr.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/hi.json](src/locales/hi.json) | [src/locales/hi.json.license](src/locales/hi.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/ja.json](src/locales/ja.json) | [src/locales/ja.json.license](src/locales/ja.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/pt-br.json](src/locales/pt-br.json) | [src/locales/pt-br.json.license](src/locales/pt-br.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/source-hashes.json](src/locales/source-hashes.json) | [src/locales/source-hashes.json.license](src/locales/source-hashes.json.license); remove only the 18 corresponding untranslated onboarding source records |
+| [src/locales/uk.json](src/locales/uk.json) | [src/locales/uk.json.license](src/locales/uk.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license); explicit English fallback for two untranslated onboarding reel entries |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
 | [src/state/store.tsx](src/state/store.tsx) | inline change notice |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
