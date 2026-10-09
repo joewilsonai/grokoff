@@ -1,4 +1,4 @@
-<!-- GrokOff modification (2026-10-09): adopt real React memory editor read/Save ownership regressions with sealed in-memory transports. -->
+<!-- GrokOff modification (2026-10-09): adopt real React memory editor read/Save/Undo ownership regressions with sealed in-memory transports. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
 <!-- GrokOff modification (2026-10-09): document adopted existing chat helper locale regressions and their pure-helper limits. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks and maintained first-run/isolation coverage. -->
@@ -172,7 +172,7 @@ contact providers or establish actual plan charges or native UI behavior.
 The maintained suite also includes the complete memory editor interaction file.
 It mounts the actual React component with held in-memory memory responses and
 sealed transport, and checks newer selection/typing, activation lifetime,
-current errors, New topic, held Save typing/selection and saved-hash follow-through, current conflict Reload/Undo, dirty-section
+current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, current conflict Reload/Undo, dirty-section
 survival, Discard, read-only logs and StrictMode cleanup. These are source-DOM
 checks; they do not prove native window behavior, filesystem persistence,
 provider output or model-driven upkeep. See the
