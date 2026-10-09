@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): local-edition identity, UI availability, or matching verification.
+// GrokOff modification (2026-10-09): retain local-edition identity and label the illustrated example bot Assistant.
 // A drawn phone showing what pairing gives you: the same chat on a small
 // screen, with an approval card you can answer from the sofa. Used by the
 // welcome tour's phone beat in place of three identical value cards. Purely
@@ -25,7 +25,7 @@ export function PhonePreview({ className }: { className?: string }) {
           {/* chat header */}
           <div className="flex items-center gap-1.5 border-b border-hairline/40 px-3 py-1.5">
             <MausAvatar color="green" state="happy" size={16} animated={false} trackPointer={false} />
-            <span className="text-[9.5px] font-semibold text-ink">Maus</span>
+            <span className="text-[9.5px] font-semibold text-ink">Assistant</span>
             <span className="ml-auto size-1.5 rounded-full bg-success" />
           </div>
           {/* transcript */}
