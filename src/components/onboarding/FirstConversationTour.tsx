@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): pause conversation tips while Settings is open.
 // Watches the selected bot's chat and puts a spotlight on the right control
 // at the right moment during the first real turn. The order and the
 // once-only rule live in lib/first-conversation.ts; this component only
@@ -45,6 +46,8 @@ export function FirstConversationTour({ quiet = false }: { quiet?: boolean }) {
 
   const eligible =
     !quiet &&
+    !state.appSettingsOpen &&
+    !state.settingsOpen &&
     !remoteClient &&
     !state.welcomeOpen &&
     Boolean(record?.completedAt) &&

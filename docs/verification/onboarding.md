@@ -1,6 +1,6 @@
 # Welcome flow and guided tour
 
-<!-- GrokOff modification (2026-10-09): local-only first-run recipe, real disabled-analytics regression, and private native fixture cleanup. -->
+<!-- GrokOff modification (2026-10-09): local-only first-run recipe, real disabled-analytics regression, and private native fixture cleanup and Settings/tour pause. -->
 
 Launch the isolated full-app fixture following [Chat UI](chat-ui.md):
 
@@ -43,10 +43,16 @@ Cleanup stops only owned processes and retains that HOME on a failed close. Keep
 the handle, native process identity and final cleanup checks with private
 evidence; never kill by name or inspect a user browser profile.
 
+Opening app/provider Settings or bot Settings pauses guided-tour and first-
+conversation spotlights. Closing Settings resumes the unfinished step without
+marking it seen. An already pending Next can finish saving its progress, but
+cannot reopen a Computer panel over Settings. Explicit Skip still ends the tour.
+
 ## Maintained GrokOff checks
 
 `pnpm test:core` adopts the complete onboarding state, WelcomeGate, HelloBeat
-and FirstConversationTour files, plus the disposable UI isolation regressions.
+and FirstConversationTour files, guided-tour state/React interactions, and the
+disposable UI isolation regressions.
 WelcomeGate uses the real disabled analytics module: a satisfied email gate
 cannot suppress a fresh local welcome. Existing server completion/version,
 remote/read-only and replay boundaries remain covered. Email collection,
@@ -59,8 +65,11 @@ and removed PID file without a process exit still retain HOME. Confirmed exits
 permit removal; separate owned-process controls cover orphan/late private
 browser profiles and a discovered executable without changing the launch
 environment. These controls use Node subprocesses as synthetic native helpers,
-not a real Chrome auto-discovery run. The component fixtures stub
-transport/state or hooks and do not prove real React scheduling. The renderer
+not a real Chrome auto-discovery run. The older component fixtures stub
+transport/state or hooks and do not prove real React scheduling. The new guided-
+tour interaction file uses real React hooks and a disposable DOM with synthetic
+Store/API seams; it covers pause/resume and delayed-save ordering, not native
+visibility or authentication. The renderer
 recipe above supplies separate full-App save/retry/skip/reload evidence. Its
 feature reel is an illustration, not acceptance of every feature it depicts.
 Inherited hosted-state unit branches are defensive coverage; they do not enable
