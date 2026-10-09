@@ -56,7 +56,9 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, lazy phone-secret/cancellation behavior,
-Markdown report previews and message-scoped file access, browser turn
+Markdown report previews and message-scoped file access, real report-dialog
+state with synthetic held response headers/bodies and explicit deadline recovery,
+browser turn
 cancellation, an isolated HTTP browser Stop integration, bounded browser
 fixture teardown when a worker exits while a descendant retains its pipes,
 and real Markdown math rendering with resource/trust regressions for the direct

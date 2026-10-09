@@ -1,5 +1,6 @@
 // GrokOff: read a shared Markdown report without granting its contents access
 // to other files. Only the original stored message authorizes the initial read.
+// GrokOff modification (2026-10-09): bound preview attempts with manual recovery.
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Markdown, { type Components } from "react-markdown";
@@ -9,6 +10,9 @@ import { t } from "@/lib/i18n";
 import { requestMessageFile, useLocalFileSave, type MessageAttachmentContext } from "./AttachmentPreview";
 
 export const REPORT_PREVIEW_MAX_BYTES = 1024 * 1024;
+// A preview is at most 1 MiB. Allow remote connections time to respond, while
+// ending a stalled attempt without making the person close the report.
+export const REPORT_PREVIEW_TIMEOUT_MS = 30_000;
 
 /** Check the actual linked path, not a display label that can disguise it. */
 export function isMarkdownReport(path: string): boolean {
@@ -141,6 +145,13 @@ function ReportContent({ path, message }: { path: string; message: MessageAttach
     const controller = new AbortController();
     setText(null);
     setError(null);
+    // One deadline covers both response headers and the complete UTF-8 body.
+    // Report the timeout here: the catch deliberately keeps aborted reads
+    // quiet, including dialog close and replacement by a newer attempt.
+    const deadline = setTimeout(() => {
+      controller.abort();
+      setError("timeout");
+    }, REPORT_PREVIEW_TIMEOUT_MS);
     void (async () => {
       try {
         const response = await requestMessageFile(path, message, controller.signal);
@@ -148,11 +159,13 @@ function ReportContent({ path, message }: { path: string; message: MessageAttach
         if (!controller.signal.aborted) setText(content);
       } catch (reason) {
         if (!controller.signal.aborted) setError(reason instanceof Error && ["size", "format"].includes(reason.message) ? reason.message : "load");
+      } finally {
+        clearTimeout(deadline);
       }
     })();
-    return () => controller.abort();
+    return () => { clearTimeout(deadline); controller.abort(); };
   }, [path, message.threadId, message.messageId, attempt]);
-  if (error) return <div className="py-8 text-center text-sm"><p role="alert" className="mb-3 text-ink-secondary">{t(error === "size" ? "report.tooLarge" : error === "format" ? "report.invalid" : "report.loadFailed")}</p><button type="button" className="rounded-lg border border-hairline px-3 py-2 hover:bg-raised" onClick={() => setAttempt(attempt + 1)}>{t("chat.retry")}</button></div>;
+  if (error) return <div className="py-8 text-center text-sm"><p role="alert" className="mb-3 text-ink-secondary">{t(error === "timeout" ? "report.timedOut" : error === "size" ? "report.tooLarge" : error === "format" ? "report.invalid" : "report.loadFailed")}</p><button type="button" className="rounded-lg border border-hairline px-3 py-2 hover:bg-raised" onClick={() => setAttempt(attempt + 1)}>{t("chat.retry")}</button></div>;
   if (text === null) return <div role="status" className="flex items-center justify-center gap-2 p-10 text-sm text-ink-secondary"><LoaderCircle size={16} className="animate-spin" />{t("report.loading")}</div>;
   return text.trim() ? <ReportMarkdown text={text} /> : <p className="py-8 text-center text-sm text-ink-secondary">{t("report.empty")}</p>;
 }

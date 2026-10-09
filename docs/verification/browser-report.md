@@ -7,7 +7,10 @@ links; Download keeps a copy. Escape closes the reader and restores focus.
 The reader uses the original message's file grant. Report contents cannot grant
 access to additional local files, execute HTML, or automatically fetch images.
 Previews accept UTF-8 Markdown/plain text up to 1 MiB, including streamed
-responses. Larger files can still be downloaded.
+responses. A preview attempt has a 30-second deadline across its request and
+body decoding. If the connection stalls, the reader shows an actionable timeout
+and Retry; retry is explicit and uses the same message grant. Closing the reader
+cancels its attempt quietly. Larger files can still be downloaded.
 
 Stop now cancels browser work already dispatched by the stopped turn, closes
 that browser session, and blocks further actions until explicit recovery.
@@ -49,7 +52,8 @@ login continuity, or the complete packaged-app startup path.
 ## Regression checks
 
 `pnpm test:core` includes report rendering/file boundaries, bounded previews,
-browser turn cancellation, and a real isolated HTTP Stop test with a delayed
+real report-dialog deadline/retry/close/stale-attempt controls using synthetic
+held responses and fake timers, browser turn cancellation, and a real isolated HTTP Stop test with a delayed
 synthetic browser. The Stop test checks revoked credentials, the exact session
 close, blocking a replacement turn and explicit recovery. No provider account
 or native browser download is required for these portable tests.
