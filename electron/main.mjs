@@ -3430,7 +3430,8 @@ app.whenReady().then(async () => {
     }
   }
   if (app.isPackaged) {
-    app.setAsDefaultProtocolClient("grokoff");
+    // A disposable package check must not reassign the user's URL handler.
+    if (process.env.OMB_SMOKE_TEST !== "1") app.setAsDefaultProtocolClient("grokoff");
     // Chromium adds this capability below JavaScript, so renderer requests
     // can mutate the local harness while a Full-access shell using curl
     // cannot impersonate the person operating the desktop app.

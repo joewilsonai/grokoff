@@ -285,6 +285,7 @@ interface Gate {
 
 /** Closes one session's native browser daemon; true only when it is gone. */
 export type CloseBrowser = (session: string, spec: BrowserSpawnSpec) => Promise<boolean>;
+type TurnBrowserCall = { session: string; spec: BrowserSpawnSpec; cancelled: boolean; dispatched: boolean; viewport?: Promise<unknown> };
 
 export class BrowserRuntime {
   private gates = new Map<string, Gate>();
@@ -292,6 +293,8 @@ export class BrowserRuntime {
   /** Last advertised tools per session, so a turn that starts while the
    * browser is uncertain still sees the tools it can use after recovering. */
   private toolLists = new Map<string, unknown>();
+  private turnCalls = new Map<string, Set<TurnBrowserCall>>();
+  private stopping = new Map<string, Promise<void>>();
   private options: { requestTimeoutMs: number; takeoverTimeoutMs: number; idleMs: number; maxPending: number; resultBudget: number };
   private closeBrowser: CloseBrowser;
   private applyViewport?: ApplyViewport;
@@ -320,6 +323,15 @@ export class BrowserRuntime {
     for (const notify of gate.changed) notify();
   }
 
+  /** Only a proven native close retires owners of transport-lost work. Once
+   * recovered, an old turn's late Stop must not close the replacement browser. */
+  private forgetSessionCalls(session: string): void {
+    for (const [owner, calls] of this.turnCalls) {
+      for (const call of calls) if (call.session === session) calls.delete(call);
+      if (calls.size === 0) this.turnCalls.delete(owner);
+    }
+  }
+
   async withAgentAction<T>(session: string, fn: () => Promise<T>): Promise<T> {
     const gate = this.gate(session);
     if (gate.owner !== null) throw new Error(BROWSER_CONTROL_REFUSAL);
@@ -337,7 +349,79 @@ export class BrowserRuntime {
     }
   }
 
-  async agentRpc(session: string, spec: BrowserSpawnSpec, method: "tools/list" | "tools/call", params: unknown, beforeDispatch?: () => void): Promise<unknown> {
+  /** Revocation reaches accepted actions as well as the next capability check.
+   * The daemon can outlive its MCP transport, so seal the session immediately
+   * and close that exact browser. Keep the uncertainty latch until explicit
+   * recovery: stopping cannot undo a submission that already reached a site. */
+  stopTurn(owner: string): void {
+    for (const call of this.turnCalls.get(owner) ?? []) {
+      call.cancelled = true;
+      if (!call.dispatched) continue;
+      const gate = this.gate(call.session);
+      gate.uncertain = true;
+      gate.ready = false;
+      // Explicit recovery already owns a native close too. A second close
+      // could finish after recovery and kill a newly admitted browser.
+      if (gate.closing || this.stopping.has(call.session)) continue;
+      gate.closing = true;
+      this.changed(gate);
+      const entry = this.clients.get(call.session);
+      // Reject pending RPCs synchronously. A viewport launch already accepted
+      // must settle before native close, or it could reopen the daemon later.
+      const transport = entry?.client.stop(new Error("Browser action stopped. Check what happened before trying it again."), "transport");
+      // Native actions must stop while a sluggish transport is retiring, not
+      // after its one-second exit deadline. Only viewport launch is a native
+      // dependency: closing before it drains could let it reopen the daemon.
+      // A dead transport has already removed its client entry. Each admitted
+      // turn retains its launch too, so all launches drain before native close.
+      const launches = new Set<Promise<unknown>>();
+      if (entry?.viewport) launches.add(entry.viewport);
+      for (const calls of this.turnCalls.values()) {
+        for (const pending of calls) if (pending.session === call.session && pending.viewport) launches.add(pending.viewport);
+      }
+      const nativeClose = Promise.allSettled(launches).then(async () => {
+        if (await this.closeBrowser(call.session, call.spec)) this.forgetSessionCalls(call.session);
+      });
+      const stopping = Promise.allSettled([transport, nativeClose])
+        // Failed close stays quarantined and retains owners for another Stop.
+        .then(() => {})
+        .finally(() => {
+          this.stopping.delete(call.session);
+          gate.closing = false;
+          this.changed(gate);
+        });
+      this.stopping.set(call.session, stopping);
+    }
+  }
+
+  async agentRpc(session: string, spec: BrowserSpawnSpec, method: "tools/list" | "tools/call", params: unknown, beforeDispatch?: () => void, owner?: string): Promise<unknown> {
+    const call: TurnBrowserCall = { session, spec, cancelled: false, dispatched: false };
+    if (owner && method === "tools/call") {
+      const calls = this.turnCalls.get(owner) ?? new Set<TurnBrowserCall>();
+      calls.add(call);
+      this.turnCalls.set(owner, calls);
+    }
+    const check = () => {
+      if (call.cancelled) throw new Error("Browser action stopped. Check what happened before trying it again.");
+      beforeDispatch?.();
+    };
+    try {
+      return await this.runAgentRpc(session, spec, method, params, check, (viewport) => {
+        call.dispatched = true;
+        if (viewport) call.viewport = viewport;
+      });
+    } finally {
+      // The daemon can keep acting after a request timeout or pipe loss. Keep
+      // that accepted work addressable by Stop until native close or recovery.
+      if (owner && (!call.dispatched || !this.gate(session).uncertain)) {
+        const calls = this.turnCalls.get(owner);
+        calls?.delete(call);
+        if (calls?.size === 0) this.turnCalls.delete(owner);
+      }
+    }
+  }
+
+  private async runAgentRpc(session: string, spec: BrowserSpawnSpec, method: "tools/list" | "tools/call", params: unknown, beforeDispatch: () => void, dispatched: (viewport?: Promise<unknown>) => void): Promise<unknown> {
     if (method !== "tools/list" && method !== "tools/call") throw new Error("Unsupported browser method.");
     // tools/list bypasses withAgentAction (a human may hold control), so it
     // must refuse the closing window itself or its client outlives restart().
@@ -377,7 +461,9 @@ export class BrowserRuntime {
         // The bot's first call on a transport may launch the browser. Size its
         // page first, once per transport, so the page, the bot's screenshots
         // and the live view agree. Failure only leaves the engine's default.
+        dispatched();
         entry.viewport ??= this.applyViewport(spec).catch(() => undefined);
+        dispatched(entry.viewport);
         await entry.viewport;
         beforeDispatch?.();
         if (this.gate(session).owner !== null) throw new Error(BROWSER_CONTROL_REFUSAL);
@@ -386,6 +472,7 @@ export class BrowserRuntime {
         // The model sees slimmed schemas and text-only, bounded results; the
         // launch/session parameters OMB owns never reach the engine from a call.
         const request = method === "tools/call" ? stripHarnessOwnedArguments(params) : params;
+        if (method === "tools/call") dispatched();
         let result = await entry.client.rpc(method, request);
         beforeDispatch?.(); // A turn revoked while the tool ran receives no result.
         if (method === "tools/list") {
@@ -535,6 +622,7 @@ export class BrowserRuntime {
       // while that stop awaits; registration is synchronous, so one re-check
       // is deterministic and no stray transport survives to idle expiry.
       await this.clients.get(session)?.client.stop();
+      this.forgetSessionCalls(session);
       gate.uncertain = false;
       gate.owner = null;
       gate.releasing = false;
@@ -563,6 +651,7 @@ export class BrowserRuntime {
       if (!await closeBrowser()) throw new Error("The browser could not be closed. Ask the person to press Restart in the Browser panel of OpenMausBot on their computer, or to restart OpenMausBot.");
       await this.clients.get(session)?.client.stop();
       await this.clients.get(session)?.client.stop(); // see restart()
+      this.forgetSessionCalls(session);
       gate.uncertain = false;
     } catch (error) {
       gate.uncertain = true;
@@ -576,6 +665,7 @@ export class BrowserRuntime {
   /** Call after the underlying browser is closed when recovering an uncertain
    * action. This closes the MCP transport, not saved logins or profile files. */
   async close(session: string): Promise<void> {
+    await this.stopping.get(session);
     const gate = this.gate(session);
     gate.closing = true;
     gate.ready = false;
@@ -583,6 +673,7 @@ export class BrowserRuntime {
     gate.uncertain = false;
     this.changed(gate);
     await this.clients.get(session)?.client.stop();
+    this.forgetSessionCalls(session);
     gate.closing = false;
     this.changed(gate);
     if (!gate.owner && !gate.agents && !gate.humans) { this.gates.delete(session); this.toolLists.delete(session); }

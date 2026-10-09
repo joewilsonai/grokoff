@@ -2332,6 +2332,7 @@ function endForeignTurns(threadId: string, generation?: string): void {
 }
 
 function revokeInternalCapabilityGeneration(threadId: string, generation: string): void {
+  browserRuntime.stopTurn(`${threadId}:${generation}`);
   endForeignTurns(threadId, generation);
   if (guestDrivenTurns.get(threadId) === generation) guestDrivenTurns.delete(threadId);
   for (const [token, capability] of internalCapabilities) {
@@ -2355,7 +2356,10 @@ function revokeEarlierTurnCapabilities(threadId: string): void {
   // introduced. This force variant is used only by explicit stop/delete and
   // before a brand-new generation is published, never by a stale async catch.
   for (const [token, capability] of internalCapabilities) {
-    if (capability.threadId === threadId) internalCapabilities.delete(token);
+    if (capability.threadId === threadId) {
+      browserRuntime.stopTurn(`${threadId}:${capability.generation}`);
+      internalCapabilities.delete(token);
+    }
   }
 }
 
@@ -2368,6 +2372,9 @@ function revokeInternalCapabilitiesForThread(threadId: string): void {
 
 function revokeAllInternalCapabilities(): void {
   computerSelectionTurns.clear();
+  for (const capability of internalCapabilities.values()) {
+    browserRuntime.stopTurn(`${capability.threadId}:${capability.generation}`);
+  }
   internalCapabilities.clear();
   sessionCredentials.clear();
   // foreignTurns stays: a turn that is not provably the owner's can still
@@ -16821,7 +16828,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
           if (body.method === "tools/call" && !claimTurnResource(internalCapability, `browser:${browser.session}`)) {
             throw Object.assign(new Error("another thread is using this browser — pause browser work until that thread finishes"), { status: 409 });
           }
-        });
+        }, `${internalCapability.threadId}:${internalCapability.generation}`);
         requireActiveInternalCapability();
         return json(res, 200, { result });
       }

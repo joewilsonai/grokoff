@@ -118,6 +118,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/Avatar.tsx](src/components/Avatar.tsx) | inline change notice |
 | [src/components/AvatarImageGenerator.tsx](src/components/AvatarImageGenerator.tsx) | inline change notice |
 | [src/components/CanvasComputers.tsx](src/components/CanvasComputers.tsx) | inline change notice |
+| [src/components/AttachmentPreview.tsx](src/components/AttachmentPreview.tsx) | inline change notice |
 | [src/components/ChatMarkdown.renderers.test.ts](src/components/ChatMarkdown.renderers.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.test.ts](src/components/ChatMarkdown.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.tsx](src/components/ChatMarkdown.tsx) | inline change notice |

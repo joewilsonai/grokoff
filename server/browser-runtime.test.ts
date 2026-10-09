@@ -1,28 +1,39 @@
 // GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
-import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserRuntime, TransportError, browserCommandEnv, browserRuntimeEnv, defaultBrowserSocketDirectory, type BrowserSpawnSpec } from "./browser-runtime.ts";
 
-const defaultTestSockets = defaultBrowserSocketDirectory(browserRuntimeEnv({}));
-afterAll(() => rmSync(defaultTestSockets, { recursive: true, force: true }));
+// Own these paths locally as well as using the suite-wide setup isolation.
+// An alternate Vitest config must never make cleanup follow a developer's HOME
+// or inherited native-browser socket override.
+const suiteHome = mkdtempSync(join(tmpdir(), "grokoff-runtime-suite-"));
+const fixtureEnv = (home = suiteHome): BrowserSpawnSpec["env"] => ({
+  HOME: home, USERPROFILE: home, PATH: process.env.PATH,
+  AGENT_BROWSER_NAMESPACE: "grokoff", AGENT_BROWSER_SOCKET_DIR: "",
+});
+const defaultTestSockets = defaultBrowserSocketDirectory(fixtureEnv());
+afterAll(() => {
+  rmSync(defaultTestSockets, { recursive: true, force: true });
+  rmSync(suiteHome, { recursive: true, force: true });
+});
 
 describe("private browser runtime sockets", () => {
   const scratch: string[] = [];
   afterEach(() => { vi.restoreAllMocks(); for (const path of scratch.splice(0)) rmSync(path, { recursive: true, force: true }); });
   function fixture() {
     const home = mkdtempSync(join(tmpdir(), "grokoff-browser-sockets-"));
-    const env = browserRuntimeEnv({ HOME: home, USERPROFILE: home });
+    const env = browserRuntimeEnv(fixtureEnv(home));
     scratch.push(home, env.AGENT_BROWSER_SOCKET_DIR!);
     return { home, env };
   }
 
   it("uses stable sockets per home and namespace and keeps ordinary UUID profiles below the native Mac limit", () => {
     const { home, env } = fixture();
-    expect(browserRuntimeEnv({ HOME: home, USERPROFILE: home }).AGENT_BROWSER_SOCKET_DIR).toBe(env.AGENT_BROWSER_SOCKET_DIR);
-    expect(browserRuntimeEnv({ HOME: `${home}-other`, USERPROFILE: `${home}-other` }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
-    expect(browserRuntimeEnv({ HOME: home, USERPROFILE: home, AGENT_BROWSER_NAMESPACE: "other-app" }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv(fixtureEnv(home)).AGENT_BROWSER_SOCKET_DIR).toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv(fixtureEnv(`${home}-other`)).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
+    expect(browserRuntimeEnv({ ...fixtureEnv(home), AGENT_BROWSER_NAMESPACE: "other-app" }).AGENT_BROWSER_SOCKET_DIR).not.toBe(env.AGENT_BROWSER_SOCKET_DIR);
     if (process.platform !== "win32") {
       for (const session of ["bot-7dfc2147-e601-4a19-8b5c-4e718cd99733", "guest-7dfc2147-e601-4a19-8b5c-4e718cd99733"]) {
         expect(Buffer.byteLength(join(env.AGENT_BROWSER_SOCKET_DIR!, "namespaces", "grokoff", "run", `${session}.sock`))).toBeLessThanOrEqual(103);
@@ -33,7 +44,7 @@ describe("private browser runtime sockets", () => {
   it("preserves explicit fixture sockets", () => {
     const { home } = fixture();
     const sockets = join(home, "s");
-    expect(browserRuntimeEnv({ HOME: home, AGENT_BROWSER_SOCKET_DIR: sockets }).AGENT_BROWSER_SOCKET_DIR).toBe(sockets);
+    expect(browserRuntimeEnv({ ...fixtureEnv(home), AGENT_BROWSER_SOCKET_DIR: sockets }).AGENT_BROWSER_SOCKET_DIR).toBe(sockets);
   });
 
   it.skipIf(process.platform === "win32")("creates an owner-only runtime directory and tightens its permissions", () => {
@@ -235,6 +246,17 @@ lines.on('line', line => {
   if (m.method === 'initialize') result = { protocolVersion:'2024-11-05',capabilities:{tools:{}} };
   else if (m.method === 'tools/list') result = { tools:[{name:'echo'}],pid:process.pid,initialized };
   else if (m.params.name === 'hang') return;
+  else if (m.params.name === 'delayed-action') {
+    require('node:fs').writeFileSync(process.env.ACTION_STARTED, 'accepted');
+    setTimeout(() => {
+      const fs = require('node:fs');
+      if (!process.env.ACTION_NATIVE_CLOSED || !fs.existsSync(process.env.ACTION_NATIVE_CLOSED)) fs.writeFileSync(process.env.ACTION_FINISHED, 'finished');
+      if (process.env.ACTION_SETTLED) fs.writeFileSync(process.env.ACTION_SETTLED, 'settled');
+      process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result:{content:[{type:'text',text:'late result'}]}})+'\\n');
+    }, 250);
+    if (process.env.HOLD_TRANSPORT === '1') setInterval(() => {}, 1000);
+    return;
+  }
   else if (m.params.name === 'crash') process.exit(23);
   else if (m.params.name === 'oversized') { process.stdout.write('x'.repeat(16777217)); return; }
   else if (m.params.name === 'bulky') result = { content:[{type:'text',text:'x'.repeat(50000)},{type:'image',data:'AAAA',mimeType:'image/png'}], structuredContent:{ huge: 'y'.repeat(200000) } };
@@ -249,9 +271,167 @@ lines.on('line', line => {
   process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result})+'\\n');
 });
 `;
-const spec = (): BrowserSpawnSpec => ({ command: process.execPath, args: ["-e", FAKE_MCP], env: { PATH: process.env.PATH } });
+const spec = (): BrowserSpawnSpec => ({ command: process.execPath, args: ["-e", FAKE_MCP], env: fixtureEnv() });
 
 describe("server-owned browser MCP runtime", () => {
+  it("closes native work before waiting for a slow transport to retire", async () => {
+    const home = mkdtempSync(join(tmpdir(), "grokoff-browser-stop-fast-"));
+    const browser = spec();
+    Object.assign(browser.env, {
+      ACTION_STARTED: join(home, "accepted"), ACTION_FINISHED: join(home, "finished"),
+      ACTION_NATIVE_CLOSED: join(home, "closed"), ACTION_SETTLED: join(home, "settled"), HOLD_TRANSPORT: "1",
+    });
+    const closeBrowser = vi.fn(async () => { writeFileSync(browser.env.ACTION_NATIVE_CLOSED!, "closed"); return true; });
+    const value = runtime({ closeBrowser });
+    try {
+      const pending = value.agentRpc("slow-transport", browser, "tools/call", { name: "delayed-action" }, undefined, "stopped-turn");
+      const rejected = expect(pending).rejects.toThrow(/stopped/i);
+      await vi.waitFor(() => expect(existsSync(browser.env.ACTION_STARTED!)).toBe(true));
+      value.stopTurn("stopped-turn");
+      await rejected;
+      // The fixture keeps its transport alive beyond the 250 ms action. Native
+      // close must interrupt the action while transport retirement is pending.
+      await vi.waitFor(() => expect(existsSync(browser.env.ACTION_SETTLED!)).toBe(true));
+      expect(closeBrowser).toHaveBeenCalledTimes(1);
+      expect(existsSync(browser.env.ACTION_FINISHED!)).toBe(false);
+      await expect(value.agentRpc("slow-transport", browser, "tools/call", { name: "restart_browser" })).rejects.toThrow(/busy/);
+    } finally {
+      await value.closeAll();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["hang", "crash"])("retains uncertain native work after %s for Stop and drops old ownership after recovery", async (failure) => {
+    const closeBrowser = vi.fn(async () => false);
+    const value = runtime({ requestTimeoutMs: 1_000, closeBrowser });
+    await value.agentRpc("timed-out", spec(), "tools/list", {});
+    await expect(value.agentRpc("timed-out", spec(), "tools/call", { name: failure }, undefined, "timed-out-turn")).rejects.toThrow(/timed out|closed/);
+    expect(value.interrupted("timed-out")).toBe(true);
+    value.stopTurn("timed-out-turn");
+    await vi.waitFor(() => expect(closeBrowser).toHaveBeenCalledTimes(1));
+    await vi.waitFor(async () => {
+      await expect(value.agentRpc("timed-out", spec(), "tools/call", { name: "restart_browser" })).rejects.toThrow(/could not be closed/);
+    });
+    closeBrowser.mockResolvedValue(true);
+    await value.agentRpc("timed-out", spec(), "tools/call", { name: "restart_browser" });
+    closeBrowser.mockClear();
+    await value.agentRpc("timed-out", spec(), "tools/call", { name: "echo" }, undefined, "replacement-turn");
+    value.stopTurn("timed-out-turn");
+    expect(closeBrowser).not.toHaveBeenCalled();
+    expect(value.interrupted("timed-out")).toBe(false);
+  });
+
+  it("does not start a late close while explicit recovery already owns the browser", async () => {
+    const closeBrowser = vi.fn(async () => true);
+    const value = runtime({ closeBrowser });
+    await expect(value.agentRpc("recovering", spec(), "tools/call", { name: "crash" }, undefined, "old-turn")).rejects.toThrow();
+    const closure = deferred<boolean>();
+    const recovery = value.agentRestart("recovering", () => closure.promise);
+    value.stopTurn("old-turn");
+    await Promise.resolve();
+    expect(closeBrowser).not.toHaveBeenCalled();
+    closure.resolve(true);
+    await recovery;
+    await expect(value.agentRpc("recovering", spec(), "tools/call", { name: "echo" }, undefined, "new-turn")).resolves.toBeTruthy();
+    value.stopTurn("old-turn");
+    expect(closeBrowser).not.toHaveBeenCalled();
+  });
+
+  it("stops a turn before dispatch without closing or poisoning its saved browser", async () => {
+    const closeBrowser = vi.fn(async () => true);
+    const value = runtime({ closeBrowser });
+    const pending = value.agentRpc("not-dispatched", spec(), "tools/call", { name: "crash" }, undefined, "old-turn");
+    value.stopTurn("old-turn");
+    await expect(pending).rejects.toThrow(/stopped/i);
+    expect(value.interrupted("not-dispatched")).toBe(false);
+    expect(closeBrowser).not.toHaveBeenCalled();
+    await expect(value.agentRpc("not-dispatched", spec(), "tools/call", { name: "echo" }, undefined, "new-turn")).resolves.toBeTruthy();
+    // Late settlement of the retired owner must not close the new turn's browser.
+    value.stopTurn("old-turn");
+    expect(closeBrowser).not.toHaveBeenCalled();
+  });
+
+  it("drains a viewport launch before closing a stopped browser and requires explicit recovery", async () => {
+    const viewport = deferred();
+    const started = deferred();
+    const closeBrowser = vi.fn(async () => true);
+    const value = runtime({ closeBrowser, applyViewport: () => { started.resolve(); return viewport.promise; } });
+    const pending = value.agentRpc("launching", spec(), "tools/call", { name: "crash" }, undefined, "launch-turn");
+    await started.promise;
+    value.stopTurn("launch-turn");
+    expect(value.interrupted("launching")).toBe(true);
+    expect(closeBrowser).not.toHaveBeenCalled();
+    await expect(value.agentRpc("launching", spec(), "tools/call", { name: "echo" })).rejects.toThrow(/Restart/);
+    viewport.resolve();
+    await expect(pending).rejects.toThrow(/stopped/i);
+    await vi.waitFor(() => expect(closeBrowser).toHaveBeenCalledTimes(1));
+    await vi.waitFor(async () => {
+      await expect(value.agentRpc("launching", spec(), "tools/call", { name: "restart_browser" })).resolves.toBeTruthy();
+    });
+    expect(value.interrupted("launching")).toBe(false);
+    await expect(value.agentRpc("launching", spec(), "tools/call", { name: "echo" })).resolves.toBeTruthy();
+  });
+
+  it("retains a pending viewport launch after its transport exits and closes only after it drains", async () => {
+    const viewport = deferred();
+    const started = deferred();
+    const closeBrowser = vi.fn(async () => true);
+    const value = runtime({ closeBrowser, applyViewport: () => { started.resolve(); return viewport.promise; } });
+    const browser = spec();
+    const connection = await value.agentRpc("lost-launch", browser, "tools/list", {}) as { pid: number };
+    const pending = value.agentRpc("lost-launch", browser, "tools/call", { name: "echo" }, undefined, "lost-launch-turn")
+      .catch((error: unknown) => error);
+    try {
+      await started.promise;
+      process.kill(connection.pid, "SIGTERM");
+      await vi.waitFor(() => expect(() => process.kill(connection.pid, 0)).toThrow());
+      // Let the owned child's close handler remove its transport entry.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      value.stopTurn("lost-launch-turn");
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(closeBrowser).not.toHaveBeenCalled();
+      expect(value.interrupted("lost-launch")).toBe(true);
+      await expect(value.agentRpc("lost-launch", browser, "tools/call", { name: "restart_browser" })).rejects.toThrow(/busy/);
+      viewport.resolve();
+      expect(await pending).toMatchObject({ message: expect.stringMatching(/stopped/i) });
+      await vi.waitFor(() => expect(closeBrowser).toHaveBeenCalledTimes(1));
+      await value.closeAll();
+      value.stopTurn("lost-launch-turn");
+      expect(closeBrowser).toHaveBeenCalledTimes(1);
+    } finally {
+      viewport.resolve();
+      await pending;
+      await value.closeAll();
+    }
+  });
+
+  it("quarantines accepted browser work immediately when its owning turn stops", async () => {
+    const home = mkdtempSync(join(tmpdir(), "grokoff-browser-stop-"));
+    const closing = deferred<boolean>();
+    const closeBrowser = vi.fn(() => closing.promise);
+    const value = runtime({ closeBrowser });
+    const browser = spec();
+    browser.env.ACTION_STARTED = join(home, "accepted");
+    browser.env.ACTION_FINISHED = join(home, "finished");
+    try {
+      const pending = value.agentRpc("stopped", browser, "tools/call", { name: "delayed-action" }, undefined, "old-turn");
+      const rejected = expect(pending).rejects.toThrow(/stopped/i);
+      await vi.waitFor(() => expect(existsSync(browser.env.ACTION_STARTED!)).toBe(true));
+      value.stopTurn("old-turn");
+      expect(value.interrupted("stopped")).toBe(true);
+      await rejected;
+      await expect(value.agentRpc("stopped", browser, "tools/call", { name: "echo" }, undefined, "new-turn")).rejects.toThrow(/Restart/);
+      await expect(value.agentRpc("unrelated", spec(), "tools/call", { name: "echo" })).resolves.toBeTruthy();
+      await vi.waitFor(() => expect(closeBrowser).toHaveBeenCalledWith("stopped", browser));
+      closing.resolve(false);
+      await vi.waitFor(() => expect(value.agentRpc("stopped", browser, "tools/call", { name: "restart_browser" })).rejects.toThrow(/could not be closed/));
+      expect(value.interrupted("stopped")).toBe(true);
+    } finally {
+      closing.resolve(false);
+      await value.closeAll();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
   it("does not turn a failed navigation or failed observation into success", async () => {
     const value = runtime();
     await expect(value.agentRpc("refused", spec(), "tools/call", {
@@ -541,7 +721,7 @@ describe("server-owned browser MCP runtime", () => {
 
     `;
     const value = runtime({ idleMs: 40 });
-    const launch = { command: process.execPath, args: ["-e", fake], env: {} };
+    const launch = { command: process.execPath, args: ["-e", fake], env: fixtureEnv() };
     const first = await value.agentRpc("idle", launch, "tools/list", {}) as { browserPid: number; transportPid: number };
     try {
       expect(() => process.kill(first.browserPid, 0)).not.toThrow();
