@@ -70,7 +70,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "b4ce22893c754494016ac6e7cd03b019fe2cd63c858a59fdda2bf838ddf05368"
+      "sha256": "9f91f303c635511fb4d72dca286b0147a9fa03aae212314cd3553153d63662d9"
     },
     {
       "path": "UBRN-SOURCE-NOTICE.txt",
@@ -82,7 +82,7 @@
     },
     {
       "path": "source/build-node-runtime.mjs",
-      "sha256": "db02ec1345edbf6090f0093ddae3bd41d624d2984af58bcdce3a66cfcad373dc"
+      "sha256": "14372ec2d03f54edda1dea12fce02ceb664b2d355efa503b3c58d8a7f6b63575"
     },
     {
       "path": "source/grokoff-resolver-patch.mjs",

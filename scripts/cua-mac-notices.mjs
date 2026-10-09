@@ -9,7 +9,7 @@ export const MAC_CUA_VERSION = "0.28.2";
 export const MAC_CUA_UBJS_VERSION = "0.31.0-3";
 export const MAC_CUA_NATIVE_NOTICE_SHA256 = "66a466cc022b4bf4a41f678e4d31d9b82098cc55cc364d6e9295366dfd02cef2";
 // A packaged record cannot appoint itself as its own trust anchor.
-export const MAC_CUA_SOURCE_MANIFEST_SHA256 = "4552cf811e75f5a21a9ed8e884955e4af0e36e1047faa3847555949f4ad430f1";
+export const MAC_CUA_SOURCE_MANIFEST_SHA256 = "f3e75fc479ae167743d1a7d9993564f7eba3d8b56b55871aaaa2a5ce49dccabe";
 export const MAC_CUA_SOURCE_DIRECTORY = fileURLToPath(new URL("../third_party/cua-macos/", import.meta.url));
 export const MAC_CUA_BUNDLE_NOTICE = `/* GrokOff Mac CUA ${MAC_CUA_VERSION}: includes @ubjs/core and @ubjs/node ${MAC_CUA_UBJS_VERSION} under MPL-2.0.
  * Covered source and modifications retain MPL-2.0; the Cua SDK retains MIT.

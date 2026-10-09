@@ -217,3 +217,13 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+### GrokOff retained Mac CUA source script (2026-10-09)
+
+The delivered MPL-2.0 runtime build transformation now accepts an explicit
+`--source-root` for the pinned UBRN development package instead of looking for
+an absent adjacent Cua TypeScript project. Its RustBuffer transformations and
+Cargo build behavior remain unchanged. The source record and README retain
+the pins and document prerequisites; this is not a completed native rebuild
+or full SBOM claim. Disposable source controls use a stand-in Cargo against
+the actual pinned archive and make no native compilation or provider call.
