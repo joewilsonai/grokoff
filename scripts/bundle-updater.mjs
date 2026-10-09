@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): retain the fork notice when regenerating the vendored updater with patched packaging dependencies.
 // Bundle electron-updater into one self-contained file the packaged app can
 // require. This app ships ZERO node_modules at runtime (the harness + UI are
 // pre-compiled into Resources), so a main-process dependency has to be
@@ -30,6 +31,9 @@ await build({
   platform: "node",
   target: "node20",
   format: "cjs",
+  banner: {
+    js: "// GrokOff modification (2026-10-09): regenerated this imported OpenMausBot community bundle with patched packaging dependencies for the independent GrokOff fork.",
+  },
   external: ["electron"],
   outfile,
   logLevel: "info",
