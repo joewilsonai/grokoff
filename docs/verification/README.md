@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): add isolated provider refresh checks. -->
 # Verifying OpenMausBot
 
 OpenMausBot has one development control surface: `pnpm control:omb`. It is a
@@ -207,6 +208,10 @@ with an offline CLI and custom-domain validation without touching live accounts.
 
 The [engine library fixture](engines-ui.md) checks onboarding and Settings cards,
 responsive layouts, theme contrast, and status refreshes without losing drafts.
+
+The [provider refresh fixture](provider-refresh.md) checks failed, stalled and
+retried connection checks through the real Settings and store in a disposable
+Electron profile against synthetic loopback inventory.
 
 The [Claude account recipe](claude-account.md) checks sign-out, cancellation and
 retry against an offline Claude CLI confined to a disposable home.
