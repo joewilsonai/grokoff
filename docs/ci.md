@@ -148,3 +148,10 @@ Settings remounts and retries without creating another auth flow. The adopted
 provider-route tests retain official URL and cancellation checks; their hook
 shim does not prove a React lifecycle. These checks do not authenticate a real
 account or establish live provider compatibility.
+
+The complete 14-case `ModelPicker.interaction.test.ts` fixture also runs in
+`test:core`, including signed-out provider rails, reachable sign-in cards,
+local-model discovery and selection. Its Store mock supplies the required
+shared sign-in discovery state and retry method. The fixture controls hooks
+and renders the real picker; it does not prove mounted React effects, a native
+window, successful provider authentication or model quality.

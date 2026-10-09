@@ -164,6 +164,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/FullAccessWarning.tsx](src/components/FullAccessWarning.tsx) | inline change notice |
 | [src/components/LocalVmWorkspace.tsx](src/components/LocalVmWorkspace.tsx) | inline change notice |
 | [src/components/ModelPicker.simple.test.ts](src/components/ModelPicker.simple.test.ts) | inline change notice |
+| [src/components/ModelPicker.interaction.test.ts](src/components/ModelPicker.interaction.test.ts) | inline change notice |
 | [src/components/ModelPicker.test.ts](src/components/ModelPicker.test.ts) | inline change notice |
 | [src/components/ModelPicker.tsx](src/components/ModelPicker.tsx) | inline change notice |
 | [src/components/NoEngines.tsx](src/components/NoEngines.tsx) | inline change notice |
