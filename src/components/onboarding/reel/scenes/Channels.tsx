@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): local-edition identity, UI availability, or matching verification.
+// GrokOff modification (2026-10-09): local-edition identity and a neutral sample assistant label.
 // The "put bots in a room" scene. One authored moment: an @mention picks who
 // answers. Setup is the room header with its member stack, exactly as
 // GroupView draws it; the action is typing "@Res", the mention menu opening
@@ -15,7 +15,7 @@ import type { SceneProps } from "./types";
 const CHANNELS_MS = 6000;
 
 const MEMBERS: Array<{ name: string; title: string; color: MausColor }> = [
-  { name: "Maus", title: "Chief of staff", color: "green" },
+  { name: "Assistant", title: "Chief of staff", color: "green" },
   { name: "Researcher", title: "Finds and checks facts", color: "blue" },
   { name: "Writer", title: "Drafts and edits", color: "orange" },
 ];

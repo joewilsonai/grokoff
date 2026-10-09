@@ -214,3 +214,7 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+## First-run sample labels — 2026-10-09
+
+The illustrated onboarding scene in [Hands.tsx](src/components/onboarding/reel/scenes/Hands.tsx) uses “Assistant” and “Message Assistant” for its two visible example-bot labels. The illustrative phone header in [PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) also uses “Assistant”. The synthetic member name in [Channels.tsx](src/components/onboarding/reel/scenes/Channels.tsx) is also “Assistant”; it currently serves as a React key rather than displayed text. Internal avatar/type names, real bot names, provider terminology, scene behavior, and upstream attribution are retained. Existing scene, onboarding, and branding checks cover source behavior; this change does not claim a new native-app walkthrough.
