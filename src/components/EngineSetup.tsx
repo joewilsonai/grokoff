@@ -194,7 +194,7 @@ function ServerEngineInstall({ instance, mode, command }: { instance: InstanceIn
       await api(`/api/instances/${encodeURIComponent(instance.instanceId)}/install`, { method: "POST" });
       setDone(true);
       // The install has happened even if the status refresh fails.
-      await refreshInstances().catch(() => {});
+      await refreshInstances({ fresh: true }).catch(() => {});
       await refreshModels(instance.instanceId).catch(() => {});
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -311,14 +311,14 @@ function ManagedEngineSetup({ instance, signInOnly }: { instance: InstanceInfo; 
     } finally {
       // Keep the latest setup reason without replacing the install error if
       // the status refresh also fails.
-      await refreshInstances().catch(() => {});
+      await refreshInstances({ fresh: true }).catch(() => {});
     }
   });
 
   const signIn = () => run("signin", async () => {
     const { auth } = await api(`/api/instances/${encodeURIComponent(instance.instanceId)}/auth/start`, { method: "POST" });
     if (auth.phase === "succeeded") {
-      await refreshInstances();
+      await refreshInstances({ fresh: true });
       await refreshModels(instance.instanceId);
       return;
     }
@@ -335,12 +335,12 @@ function ManagedEngineSetup({ instance, signInOnly }: { instance: InstanceInfo; 
       body: JSON.stringify({ flowId: flow.flowId, callbackUrl }),
     });
     setCallbackUrl("");
-    await refreshInstances();
+    await refreshInstances({ fresh: true });
     await refreshModels(instance.instanceId);
   });
 
   const check = () => run("check", async () => {
-    await refreshInstances();
+    await refreshInstances({ reportFailure: true });
     await refreshModels(instance.instanceId);
   });
 

@@ -26,8 +26,8 @@ vi.mock("react", async (original) => ({
     fixture.effects.push(effect);
   },
 }));
-const store = vi.hoisted(() => ({ instances: [] as unknown[], dispatch: vi.fn(), api: vi.fn() }));
-vi.mock("@/state/store", () => ({ api: store.api, useStore: () => ({ state: { instances: store.instances }, dispatch: store.dispatch }) }));
+const store = vi.hoisted(() => ({ instances: [] as unknown[], dispatch: vi.fn(), refreshInstances: vi.fn() }));
+vi.mock("@/state/store", () => ({ useStore: () => ({ state: { instances: store.instances }, dispatch: store.dispatch, refreshInstances: store.refreshInstances }) }));
 // The row has its own tests; here only whether the beat offers it.
 vi.mock("./OrganisationRow", () => ({ OrganisationRow: () => null }));
 import { EnginesBeat } from "./EnginesBeat";
@@ -69,6 +69,7 @@ function render(extra: { hosted?: boolean; onOpenOrganisation?: () => void } = {
 beforeEach(() => {
   fixture.values = [];
   store.dispatch.mockReset();
+  store.refreshInstances.mockReset().mockResolvedValue(undefined);
   store.instances = [personal("claude", false), personal("codex", false)];
   vi.stubGlobal("window", {});
   setLocale("en");
@@ -116,7 +117,7 @@ describe("organisation sign-in in the engines beat", () => {
     expect(html).toContain("claude");
     expect(html).toContain("codex");
     // the guide reacts as it does when everything personal is ready
-    store.api.mockResolvedValue({ instances: store.instances });
+    store.refreshInstances.mockResolvedValue(undefined);
     props.setMascot.mockClear();
     for (const effect of fixture.effects) effect();
     expect(props.setMascot).toHaveBeenLastCalledWith("proud");
@@ -128,5 +129,12 @@ describe("organisation sign-in in the engines beat", () => {
     const html = render().html;
     expect(html).toContain("1 to set up");
     expect(html).not.toContain("Everything is ready");
+  });
+
+  it("collects fresh inventory after a confirmed organisation connection", async () => {
+    vi.stubGlobal("window", { ogb: { organization: bridge } });
+    render().row!.props.onConnected!();
+    await Promise.resolve();
+    expect(store.refreshInstances).toHaveBeenCalledWith({ reportFailure: true, fresh: true });
   });
 });

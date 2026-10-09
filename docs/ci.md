@@ -53,6 +53,9 @@ fixture teardown when a worker exits while a descendant retains its pipes,
 and real Markdown math rendering with resource/trust regressions for the direct
 and transitive KaTeX entry points. Mermaid math output and font/layout checks
 use the separate disposable [math renderer fixture](verification/math-renderer.md).
+Explicit provider checks also cover retained inventory on failure, bounded
+inventory/model-discovery timeout and retry, concurrent startup and onboarding
+checks, save/discovery overlap and confirmed sign-out state.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

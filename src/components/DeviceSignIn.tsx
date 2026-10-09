@@ -3,6 +3,7 @@
 // grok.com account (a one-time code entered at the provider's page), and the
 // ChatGPT plan (a browser page, no code). The same card on the desktop, a
 // self-hosted server and My Cloud.
+// GrokOff modification (2026-10-09): refresh inventory after confirmed sign-in.
 import { useEffect, useState } from "react";
 import { Check, Copy, ExternalLink, Loader2, LogIn, X } from "lucide-react";
 import { api, ApiError, useStore } from "@/state/store";
@@ -139,7 +140,7 @@ export function DeviceSignIn({ instanceId, browserPkce = false, provider = "code
   const failed = t(browserPkce ? "engineSetup.chatgpt.failed" : copy.failed);
 
   const refresh = async () => {
-    await refreshInstances();
+    await refreshInstances({ fresh: true });
     await refreshModels(instanceId);
   };
 
@@ -159,7 +160,7 @@ export function DeviceSignIn({ instanceId, browserPkce = false, provider = "code
           setAuth(next);
           setError(null);
           if (next.phase === "succeeded") {
-            await refreshInstances();
+            await refreshInstances({ fresh: true });
             await refreshModels(instanceId);
           }
         })

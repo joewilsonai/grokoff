@@ -2167,6 +2167,8 @@
   "engines.library.billingSubscription": "Subscription",
   "engines.library.billingMetered": "Usage-based billing",
   "engines.library.subscriptionLimits": "Uses your signed-in account's limits. Model-specific charges and extra usage follow your provider's billing settings.",
+  "engines.library.refreshFailed": "Couldn't check your connections. Showing the last known status. Try again.",
+  "model.discoveryTimedOut": "Model discovery timed out. Try again.",
   "remote.pairing.tailscale.title": "Tailscale pairing",
   "remote.pairing.tailscale.subtitle": "Private pairing through the tailnet shared by the host and the device being paired.",
   "remote.pairing.wifi.title": "Direct Wi-Fi pairing",
