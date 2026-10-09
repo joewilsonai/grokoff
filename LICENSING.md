@@ -23,6 +23,14 @@ mismatched runtime notices. See [`third_party/electron/`](third_party/electron/)
 This check covers those notice files; the complete native component inventory
 and binary release acceptance remain separate work.
 
+<!-- GrokOff modification (2026-10-09): retain original notices for five observed JavaScript components. -->
+The Mac package also retains the original MIT license text for the observed
+React/React DOM, Ajv, Croner and electron-updater versions, with exact installed
+input and copied-file checks. See
+[`third_party/javascript-runtime/`](third_party/javascript-runtime/). This is
+an explicitly partial JavaScript inventory; other bundled and transitive
+components still require review.
+
 ## Names and artwork
 
 GrokOff is independent of xAI, OpenMausBot, Cursor, and their maintainers. Its GO entry mark is original artwork created for this fork. Upstream names retained in attribution, historical documentation, or compatibility code do not imply affiliation.
