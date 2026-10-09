@@ -199,6 +199,11 @@ The [routines fixture](routines.md) checks confirmed proposals, manual and
 scheduled runs, central run logs, List/Calendar views, and bot-scoped routines
 using the real renderer and an isolated fake-engine server.
 
+The [opt-in routine lifecycle acceptance](routines.md#automated-renderer-lifecycle)
+automates manual creation, pause/resume, an unchanged interval edit, one manual
+run, result/execution navigation and persistence after a renderer reload. It
+requires explicit installed headless-browser binaries and retains private evidence.
+
 The [interval restrictions recipe](interval-restrictions.md) checks weekday and
 time-window limits on scheduled routines in that same disposable fixture.
 
