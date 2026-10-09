@@ -1,9 +1,35 @@
+<!-- GrokOff modification (2026-10-09): first-edit and source restart acceptance. -->
+
 # Memory: recall, upkeep and the tidy-up
 
 Automatic recall, the topic index and until dates only read memory. Memory
 upkeep (background capture into MEMORY.md and topic files, About me learned
 from the person's words, and the nightly tidy-up) is on unless a bot's switch
 is off, and every memory write is a journaled, undoable row. See [the memory guide](../memory.md).
+
+## Explicit edits before the first chat and after restart
+
+```sh
+pnpm exec vitest run server/memory-first-edit.test.ts server/memory-continuity.e2e.test.ts
+```
+
+The first check opens an uninitialized bot's empty memory and saves using that
+file's hash. Workspace initialization must not create a false conflict. A real
+intervening edit still returns 409 without overwriting the newer text.
+
+The HTTP check creates an isolated fake-engine workspace, makes an explicit
+preference edit and a correction, creates an aliased topic, and stops its server
+process. A different owned server PID reopens the same temporary data. It must
+restore exact file bytes/hashes and the journal, supply the corrected preference
+to the fake CLI's actual system prompt, and recall the topic in a new chat.
+Undo restores the earlier preference; deleting the topic removes it from a
+subsequent chat's recall. Readiness checks pin the replacement's PID before
+mutations. Cleanup waits for owned processes to exit before removing their homes.
+
+This verifies source-server persistence and prompt delivery. It does not launch
+or restart the personal app, import another application's memory, or prove a
+packaged memory editor or a real model's recall quality. The fixture disables
+background upkeep and uses synthetic preferences; its writes are disposable.
 
 ## Exercise the real path
 

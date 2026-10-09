@@ -56,6 +56,10 @@ use the separate disposable [math renderer fixture](verification/math-renderer.m
 Explicit provider checks also cover retained inventory on failure, bounded
 inventory/model-discovery timeout and retry, concurrent startup and onboarding
 checks, save/discovery overlap and confirmed sign-out state.
+Memory coverage includes first edits before a bot has run, hash conflicts,
+workspace containment, capture/recall and journal undo, plus explicit edits and
+topic recall after an owned server restart. Memory model steps use scripted
+fake replies; these checks do not establish model judgment or packaged UI behavior.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
