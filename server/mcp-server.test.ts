@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): preserve interrupted receipts and existing MCP redaction/bounds controls.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // scripts/mcp-server.ts snapshots process.env at import time — scrub ambient
@@ -141,6 +142,40 @@ describe("MCP JSON-RPC protocol", () => {
 });
 
 describe("MCP tool execution", () => {
+  it.each(["get_bot_messages", "get_channel_messages", "wait_for_conversation"])("preserves interrupted unknown outcomes through %s without exposing raw tool data", async name => {
+    const rawMessages = [
+      { id: "stop", role: "bot", kind: "activity", tool: { name: "Bash", interrupted: true, input: "private-input", output: "private-output" } },
+      { id: "pending", role: "bot", kind: "activity", tool: { name: "Bash" } },
+      { id: "passed", role: "bot", kind: "activity", tool: { name: "Bash", ok: true, interrupted: true } },
+      { id: "failed", role: "bot", kind: "activity", tool: { name: "Bash", ok: false, interrupted: true } },
+      { id: "malformed", role: "bot", kind: "activity", tool: { name: "Bash", interrupted: "true" } },
+    ];
+    const fetcher = vi.fn(async (path: string) => {
+      if (path === "/api/bots?messages=0") return {
+        bots: [{ id: "bot-1", threadId: "task-1", busy: false, activity: "idle" }],
+        groups: [{ id: "channel-1", threadId: "task-1", working: false }],
+      };
+      if (path === "/api/threads/task-1/messages?limit=30" || path === "/api/threads/task-1/messages?limit=10") {
+        return { messages: rawMessages, hasMore: true };
+      }
+      throw new Error(`unexpected fixture path ${path}`);
+    });
+    const args = name === "get_bot_messages" ? { bot_id: "bot-1" }
+      : name === "get_channel_messages" ? { channel_id: "channel-1" }
+      : { target_type: "bot", target_id: "bot-1", task_id: "task-1" };
+    const result = JSON.parse(JSON.stringify(await handleToolCall(name, args, fetcher))) as {
+      messages: Array<{ tool: Record<string, unknown> }>; status?: string; hasMore: boolean;
+    };
+    expect(result.messages[0]?.tool).toEqual({ name: "Bash", interrupted: true });
+    expect(result.messages[1]?.tool).toEqual({ name: "Bash" });
+    expect(result.messages[2]?.tool).toMatchObject({ ok: true, interrupted: true });
+    expect(result.messages[3]?.tool).toMatchObject({ ok: false, interrupted: true });
+    expect(result.messages[4]?.tool).not.toHaveProperty("interrupted");
+    expect(JSON.stringify(result)).not.toContain("private-");
+    expect(result.hasMore).toBe(true);
+    if (name === "wait_for_conversation") expect(result.status).toBe("settled");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it("lists bots without fetching transcripts", async () => {
     const fetcher = vi.fn(async (path: string) => {
       expect(path).toBe("/api/bots?messages=0");

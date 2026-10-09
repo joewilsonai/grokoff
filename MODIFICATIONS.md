@@ -79,6 +79,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
 | [scripts/bundle-updater.mjs](scripts/bundle-updater.mjs) | inline change notice (vendored updater security rebuild) |
 | [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (Mac CUA and Electron notice gates) |
+| [scripts/mcp-server.ts](scripts/mcp-server.ts) | inline change notice |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
@@ -124,6 +125,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/local-computer.test.ts](server/local-computer.test.ts) | inline change notice |
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
 | [server/memory-store.ts](server/memory-store.ts) | inline change notice |
+| [server/mcp-server.test.ts](server/mcp-server.test.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
 | [server/request-auth.ts](server/request-auth.ts) | inline change notice |
 | [server/room-recovery.e2e.test.ts](server/room-recovery.e2e.test.ts) | inline change notice (hermetic restart and replacement-PID check) |
@@ -223,6 +225,8 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/analytics.test.ts](src/lib/analytics.test.ts) | inline change notice |
 | [src/lib/analytics.ts](src/lib/analytics.ts) | inline change notice |
 | [src/lib/app-links.ts](src/lib/app-links.ts) | inline change notice |
+| [src/lib/verify-steps.ts](src/lib/verify-steps.ts) | inline change notice |
+| [src/lib/verify-steps.test.ts](src/lib/verify-steps.test.ts) | inline change notice |
 | [src/lib/brand.ts](src/lib/brand.ts) | inline change notice |
 | [src/lib/call-capability.ts](src/lib/call-capability.ts) | inline change notice |
 | [src/lib/cloud-plan.ts](src/lib/cloud-plan.ts) | inline change notice |
@@ -252,6 +256,10 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
 | [src/styles.css](src/styles.css) | inline change notice |
+| [src/components/VerifyCard.tsx](src/components/VerifyCard.tsx) | inline change notice |
+| [src/components/ToolActivity.tsx](src/components/ToolActivity.tsx) | inline change notice |
+| [src/components/RunLog.tsx](src/components/RunLog.tsx) | inline change notice |
+| [src/lib/taskTimeline.ts](src/lib/taskTimeline.ts) | inline change notice |
 | [src/state/store.tsx](src/state/store.tsx) | inline change notice |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
@@ -318,3 +326,28 @@ the actual pinned archive and make no native compilation or provider call.
 ## First-run sample labels — 2026-10-09
 
 The illustrated onboarding scene in [Hands.tsx](src/components/onboarding/reel/scenes/Hands.tsx) uses “Assistant” and “Message Assistant” for its two visible example-bot labels. The illustrative phone header in [PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) also uses “Assistant”. The synthetic member name in [Channels.tsx](src/components/onboarding/reel/scenes/Channels.tsx) is also “Assistant”; it currently serves as a React key rather than displayed text. Internal avatar/type names, real bot names, provider terminology, scene behavior, and upstream attribution are retained. Existing scene, onboarding, and branding checks cover source behavior; this change does not claim a new native-app walkthrough.
+## Interrupted tool receipts (2026-10-09)
+
+`server/index.ts` settles only unfinished provider tool receipts of an explicitly
+interrupted or cancelled turn. The provider completion reason and `ok` are
+retained; unknown exits and historical unfinished receipts are not inferred to
+be cancelled. The optional `tool.interrupted` wire field preserves an unknown
+execution outcome: it does not fabricate success, failure, output or rollback.
+Provider completion checks the stored receipt's turn ownership before replacing
+its outcome or removing its pending item entry. Tool details and the run log show
+Interrupted with guidance to check what happened before repeating the action.
+Completed and failed receipts retain their recorded outcomes; old records remain
+readable without the new field.
+
+The maintained core adopts owned HTTP/fake-CLI Stop and server-restart coverage,
+real ACP cancellation and unknown-exit controls, real disposable Store ownership
+controls, actual React disclosure/run-log
+interaction, and the existing complete tool-detail/run-log/timeline test files.
+The recipe is [interrupted tools](docs/verification/interrupted-tools.md). No real
+browser action, provider account, user workspace or native app is exercised.
+
+Interrupted command-run cards and bounded MCP transcript/wait projections retain
+the same optional interruption marker. Run cards remove the live spinner and
+verified badge for unknown interrupted outcomes; skill drafts preserve these as
+notes to check, exclude them from the passing recipe and never replay them.
+Existing MCP redaction, ownership checks and transcript bounds are retained.

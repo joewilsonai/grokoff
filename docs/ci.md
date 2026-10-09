@@ -3,6 +3,7 @@
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): actual fork checks, first-run isolation and Settings/tour interaction coverage. -->
 <!-- GrokOff modification (2026-10-08): replace upstream CI and release instructions with the fork's actual checks. -->
 <!-- GrokOff modification (2026-10-09): document isolated engine-install and browser cleanup coverage. -->
+<!-- GrokOff modification (2026-10-09): retain fork CI guidance and adopt isolated interrupted-tool coverage. -->
 # GrokOff source checks
 
 GrokOff is a source Mac alpha. [CI](../.github/workflows/ci.yml) runs two Ubuntu
@@ -200,3 +201,12 @@ and synthetic diagnostics inputs. They cover compatibility, ownership/recovery
 and redaction as well as the changed expectations; they do not launch Electron,
 read a real profile or prove the appearance of a native dialog. The selected
 `test:core` list remains its own narrower CI boundary.
+## Interrupted tool receipts
+
+The maintained core also runs the complete tool-receipt, HTTP Stop/restart,
+timeline, tool-detail, run-log, verification-card, command-run and MCP test files listed in
+[the interrupted-tools recipe](verification/interrupted-tools.md). The HTTP
+fixtures use owned temporary homes/servers and scripted Claude/ACP CLI events;
+React and Store controls have no live provider or browser transport. These
+checks prove saved status and ownership, not whether a real website action
+completed or was rolled back.

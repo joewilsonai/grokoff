@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): preserve interrupted, outcome-unknown commands in run cards and skill drafts.
 // A bot's run in the current ask, read off its tool chips. Every shell
 // command the bot ran is a step; the ones through a control CLI (`pnpm
 // control:omb doctor`, a `control-<app>.mjs` script) are the verified ones,
@@ -16,7 +17,7 @@ export type RunStep = {
    * the program that did the work, with its subcommand for the few whose
    * subcommand is the story (`git push`, `gh release`, `npm publish`). */
   label: string;
-  status: "running" | "passed" | "failed";
+  status: "running" | "passed" | "failed" | "interrupted";
   /** `--dry-run` anywhere in the invocation: the step proves nothing. */
   dryRun: boolean;
   /** The step ran through a control CLI, so its outcome is a verification. */
@@ -272,7 +273,8 @@ export function runSteps(messages: Message[]): RunStep[] {
     const parsed = command ? parseRunCommand(command) : undefined;
     if (!command || !parsed) continue;
     const ok = m.tool?.ok;
-    steps.push({ id: m.id, command, ...parsed, status: ok === undefined ? "running" : ok ? "passed" : "failed" });
+    steps.push({ id: m.id, command, ...parsed,
+      status: ok === undefined ? m.tool?.interrupted === true ? "interrupted" : "running" : ok ? "passed" : "failed" });
   }
   return steps;
 }
@@ -294,13 +296,14 @@ export function runSummary(steps: RunStep[]): {
   passed: number;
   failed: number;
   running: number;
+  interrupted: number;
   dryRuns: number;
   label: string;
 } {
-  const counts = { total: steps.length, verified: 0, passed: 0, failed: 0, running: 0, dryRuns: 0 };
+  const counts = { total: steps.length, verified: 0, passed: 0, failed: 0, running: 0, interrupted: 0, dryRuns: 0 };
   for (const step of steps) {
-    if (step.verified) counts.verified += 1;
-    if (step.dryRun && step.status !== "running") counts.dryRuns += 1;
+    if (step.verified && step.status !== "interrupted") counts.verified += 1;
+    if (step.dryRun && step.status !== "running" && step.status !== "interrupted") counts.dryRuns += 1;
     else counts[step.status] += 1;
   }
   const label = [
@@ -308,6 +311,7 @@ export function runSummary(steps: RunStep[]): {
     counts.verified > 0 && t("chat.verify.verifiedCount", { count: counts.verified }),
     counts.failed > 0 && t("chat.verify.failed", { count: counts.failed }),
     counts.running > 0 && t("chat.verify.running", { count: counts.running }),
+    counts.interrupted > 0 && t("chat.verify.interrupted", { count: counts.interrupted }),
     counts.dryRuns === 1 ? t("chat.verify.dryRunOne") : counts.dryRuns > 1 && t("chat.verify.dryRunMany", { count: counts.dryRuns }),
   ].filter(Boolean).join(" · ");
   return { ...counts, label };
@@ -332,10 +336,10 @@ export function runSkill(messages: Message[], steps: RunStep[]): RunSkill {
   return card.answered || card.dismissed || card.expired ? null : "pending";
 }
 
-const MARK = { passed: "✓", failed: "✗", running: "…" } as const;
+const MARK = { passed: "✓", failed: "✗", running: "…", interrupted: "[interrupted, outcome unknown]" } as const;
 
 const stepLine = (step: RunStep) =>
-  `${step.dryRun ? "[dry run]" : MARK[step.status]} ${step.label} — ${step.command}${step.verified ? " (verified)" : ""}`;
+  `${step.dryRun && step.status !== "interrupted" ? "[dry run]" : MARK[step.status]} ${step.label} — ${step.command}${step.verified && step.status !== "interrupted" ? " (verified)" : ""}`;
 
 /** The text Save as skill puts into the composer for the person to send,
  * carrying what they asked for so the skill knows its goal. Two shapes. A
@@ -348,16 +352,18 @@ const stepLine = (step: RunStep) =>
  * command. Either way a dry run is marked as one and never reads as passing,
  * and the text ends with a blank line so the caret lands below the steps. */
 export function skillPrompt(steps: RunStep[], ask?: string): string {
+  const interrupted = steps.some(step => step.status === "interrupted");
+  const interruptedRule = "Do not re-run any step. Use only passing, non-dry-run steps as the recipe with their exact commands and note failed steps as gotchas. Exclude interrupted steps from the recipe: their outcomes are unknown. Keep them as notes to check before any repeat; stopping does not prove side effects were undone.";
   const lines = steps.some((step) => step.verified)
     ? [
       "Create a verification skill from the run below.",
       ...(ask ? [`Goal: ${ask}`] : []),
-      "Do not re-run these steps; their results are in this thread. Use the passing ones as the recipe with their exact commands and note the failed ones as gotchas.",
+      interrupted ? interruptedRule : "Do not re-run these steps; their results are in this thread. Use the passing ones as the recipe with their exact commands and note the failed ones as gotchas.",
     ]
     : [
       SAVE_RUN_AS_SKILL_LINE,
       `Goal: ${ask ?? "the run below"}`,
-      "Keep the exact commands and note the failed ones as gotchas. Do not re-run anything.",
+      interrupted ? interruptedRule : "Keep the exact commands and note the failed ones as gotchas. Do not re-run anything.",
     ];
   return [...lines, "", ...steps.map(stepLine), "", ""].join("\n");
 }

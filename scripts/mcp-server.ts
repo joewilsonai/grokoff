@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// GrokOff modification (2026-10-09): preserve the boolean interrupted receipt marker in bounded MCP transcripts.
 // Model Context Protocol (MCP) Server for OpenMausBot
 // Standard JSON-RPC 2.0 stdio transport for external agent orchestration (Hermes, Claude Desktop, Cursor, etc.).
 import readline from "node:readline";
@@ -635,6 +636,7 @@ function projectMessage(message: Record<string, any>) {
   const tool = isRecord(message.tool)
     ? { name: message.tool.name, ok: message.tool.ok, spoken: message.tool.spoken, setup: message.tool.setup,
         ...(message.tool.terminal === true ? { terminal: true } : {}),
+        ...(message.tool.interrupted === true ? { interrupted: true } : {}),
       }
     : undefined;
   const connector = isRecord(message.connector)

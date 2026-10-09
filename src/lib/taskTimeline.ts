@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): project recorded interruption without inventing a tool outcome.
 import { failedTurnCause } from "../../shared/failed-turn.js";
 import { redactSecretsInText } from "../../shared/redact.js";
 
@@ -8,7 +9,7 @@ export interface TimelineMessage {
   role: "bot" | "user";
   kind: "text" | "options" | "activity" | "screen" | "connector" | "secret" | "routine.run" | "goal.run" | "digest" | "compaction";
   text?: string;
-  tool?: { name: string; summary?: string; ok?: boolean };
+  tool?: { name: string; summary?: string; ok?: boolean; interrupted?: boolean };
   png?: string;
   at: number;
 }
@@ -17,7 +18,7 @@ export interface TimelineEvent {
   id: string;
   at: number;
   label: string;
-  state: "running" | "complete" | "failed" | "observed";
+  state: "running" | "complete" | "failed" | "observed" | "interrupted";
   kind: "task" | "tool" | "screen" | "result";
   /** Recorded command preview, not reconstructed input or tool output. */
   command?: string;
@@ -49,7 +50,7 @@ export function timelineEvents(messages: TimelineMessage[]): TimelineEvent[] {
         ...(message.tool.summary ? { command: redactSecretsInText(message.tool.summary) } : {}),
         // An activity is appended at tool start and patched with its outcome.
         // Until that patch arrives, do not imply that the action succeeded.
-        state: failed ? "failed" : message.tool.ok === true ? "complete" : "running",
+        state: message.tool.ok === undefined && message.tool.interrupted ? "interrupted" : failed ? "failed" : message.tool.ok === true ? "complete" : "running",
         kind: "tool",
       });
     } else if (message.kind === "screen") {
