@@ -62,11 +62,14 @@ This inventory describes source changes; it does not claim that every inherited 
 | [electron/resources/speech-helper-Info.plist](electron/resources/speech-helper-Info.plist) | inline change notice |
 | [electron/save-file.mjs](electron/save-file.mjs) | inline change notice |
 | [electron/save-file.node-test.mjs](electron/save-file.node-test.mjs) | inline change notice |
+| [electron/secure-credential-state.test.mjs](electron/secure-credential-state.test.mjs) | inline change notice |
+| [electron/secure-credentials.test.mjs](electron/secure-credentials.test.mjs) | inline change notice |
 | [electron/speech.mjs](electron/speech.mjs) | inline change notice |
 | [electron/startup-screen.mjs](electron/startup-screen.mjs) | inline change notice |
 | [electron/updater.mjs](electron/updater.mjs) | inline change notice |
 | [electron/updater.test.mjs](electron/updater.test.mjs) | inline change notice |
 | [electron/vendor/electron-updater.cjs](electron/vendor/electron-updater.cjs) | inline change notice |
+| [electron/workspace-credentials.test.mjs](electron/workspace-credentials.test.mjs) | inline change notice |
 | [index.html](index.html) | inline change notice |
 | [package.json](package.json) | [package.json.license](package.json.license) |
 | [pnpm-lock.yaml](pnpm-lock.yaml) | [pnpm-lock.yaml.license](pnpm-lock.yaml.license) |
