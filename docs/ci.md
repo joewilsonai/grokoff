@@ -70,6 +70,12 @@ execution/results continuity, delegation cancellation, cron tools and webhook
 retry identities across process restart. Existing renderer checks cover run
 status/report cards and historical results navigation. See the
 [test map and fixture boundaries](verification/routines-ci.md).
+Bot continuity coverage includes explicit setup, per-thread and bot-default
+model scope, group dispatch and saved file locations, independent turn Stop,
+and signed-out/missing-engine picker recovery. Picker handler checks use a
+hook fixture; they do not drive a native account or operating-system menu.
+The inert local-computer lease case runs on macOS and is skipped by Linux CI;
+its descriptor stays in the disposable GrokOff home and starts no UI driver.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
