@@ -101,3 +101,8 @@ do not prove real cloud accounts,
 external providers, phone recovery or OS-specific file-picker appearance. Saved
 credentials are deliberately not transferred. No live mutation is part of this
 recipe.
+
+The maintained evidence-reporter failure cases allow 150 seconds: a destination
+failure occurs after two bounded initial/restart launches, followed by exact
+owned-process cleanup. This test budget does not shorten startup checks or
+allow cleanup to remove data before process exit is confirmed.
