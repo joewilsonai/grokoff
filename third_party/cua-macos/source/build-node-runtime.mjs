@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 /**
+ * GrokOff modification (2026-10-09): accept an explicit pinned source root
+ * when this retained build script is run from its delivered source record.
+ *
  * Build the pinned UBRN N-API runtime with a copy-based RustBuffer boundary.
  *
  * Electron 20+ rejects external ArrayBuffers. UBRN 0.31.0-3 uses them as a
@@ -28,21 +31,19 @@ import { basename, dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
-const driverRoot = resolve(scriptDirectory, "..")
-const typescriptRoot = join(driverRoot, "typescript")
-const upstreamRoot = join(
-  typescriptRoot,
-  "node_modules",
-  "uniffi-bindgen-react-native",
-)
+const sourceIndex = process.argv.indexOf("--source-root")
+if (sourceIndex < 0 || !process.argv[sourceIndex + 1] || process.argv[sourceIndex + 1].startsWith("--")) {
+  throw new Error("usage: build-node-runtime.mjs --source-root <uniffi-bindgen-react-native package> --output <path> [--target <triple>]")
+}
+const upstreamRoot = resolve(process.argv[sourceIndex + 1])
 const outputIndex = process.argv.indexOf("--output")
-if (outputIndex < 0 || !process.argv[outputIndex + 1]) {
-  throw new Error("usage: build-node-runtime.mjs --output <path> [--target <triple>]")
+if (outputIndex < 0 || !process.argv[outputIndex + 1] || process.argv[outputIndex + 1].startsWith("--")) {
+  throw new Error("usage: build-node-runtime.mjs --source-root <uniffi-bindgen-react-native package> --output <path> [--target <triple>]")
 }
 const output = resolve(process.argv[outputIndex + 1])
 const targetIndex = process.argv.indexOf("--target")
 const target = targetIndex < 0 ? undefined : process.argv[targetIndex + 1]
-if (targetIndex >= 0 && !target) throw new Error("missing --target value")
+if (targetIndex >= 0 && (!target || target.startsWith("--"))) throw new Error("missing --target value")
 
 function cargoEnvironment() {
   const environment = { ...process.env }
@@ -62,15 +63,22 @@ function cargoEnvironment() {
   return environment
 }
 
-const manifest = JSON.parse(readFileSync(join(typescriptRoot, "package.json"), "utf8"))
-const expectedVersion = manifest.devDependencies?.["uniffi-bindgen-react-native"]
+const sourceRecord = JSON.parse(readFileSync(join(scriptDirectory, "..", "manifest.json"), "utf8"))
+const expectedPackage = sourceRecord.components.find(component => component.name === "uniffi-bindgen-react-native")
+if (!expectedPackage) throw new Error("missing pinned UBRN component in the delivered source record")
 const upstreamManifestPath = join(upstreamRoot, "package.json")
 if (!existsSync(upstreamManifestPath)) {
-  throw new Error("missing pinned UBRN source; run npm ci in libs/cua-driver/typescript")
+  throw new Error("missing pinned UBRN package.json; --source-root must point to the extracted or installed development package")
 }
-const actualVersion = JSON.parse(readFileSync(upstreamManifestPath, "utf8")).version
-if (actualVersion !== expectedVersion) {
-  throw new Error(`UBRN source mismatch: expected ${expectedVersion}, found ${actualVersion}`)
+const upstreamManifest = JSON.parse(readFileSync(upstreamManifestPath, "utf8"))
+const actualVersion = upstreamManifest.version
+if (upstreamManifest.name !== expectedPackage.name || actualVersion !== expectedPackage.version) {
+  throw new Error(`UBRN source mismatch: expected ${expectedPackage.name}@${expectedPackage.version}, found ${upstreamManifest.name}@${actualVersion}`)
+}
+for (const runtime of ["core", "napi"]) {
+  if (!existsSync(join(upstreamRoot, "runtimes", runtime))) {
+    throw new Error(`missing pinned UBRN runtimes/${runtime}; use the complete development source package`)
+  }
 }
 
 function replaceOnce(source, needle, replacement, description) {

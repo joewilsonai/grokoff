@@ -24,6 +24,27 @@ from the immutable versioned URLs above; the included source transformations
 describe the modifications in the shipped code. Covered source files and their
 modifications remain under MPL-2.0.
 
+## Running the retained runtime build script
+
+GrokOff's retained script accepts the complete extracted or installed
+`uniffi-bindgen-react-native@0.31.0-3` development package explicitly; it does
+not require an absent Cua TypeScript project beside this source record. Verify
+the downloaded archive against `archiveSha256` in `manifest.json`, extract it,
+and provide the resulting package directory:
+
+```sh
+node third_party/cua-macos/source/build-node-runtime.mjs \
+  --source-root /path/to/extracted/package \
+  --output /path/to/cua_driver_node_runtime.node
+```
+
+Rust/Cargo and the target toolchain must already be available. Optional
+`--target <triple>` selects a cross-compilation target. The script checks the
+package name/version and required runtime directories, copies and transforms
+only temporary source, then invokes Cargo. It neither installs dependencies
+nor establishes a reproducible build or complete native SBOM; Cargo can fetch
+its dependencies during an actual build.
+
 ## Changes included in the shipped code
 
 Cua modifies the N-API runtime's RustBuffer allocation/free and return paths

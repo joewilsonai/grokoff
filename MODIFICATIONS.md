@@ -304,3 +304,13 @@ files and corresponding existing tests carry inline GrokOff change notices:
 | [electron/data-dir-lease.node-test.mjs](electron/data-dir-lease.node-test.mjs) | inline change notice |
 | [electron/diagnostics.mjs](electron/diagnostics.mjs) | inline change notice |
 | [electron/diagnostics.test.mjs](electron/diagnostics.test.mjs) | inline change notice |
+
+### GrokOff retained Mac CUA source script (2026-10-09)
+
+The delivered MPL-2.0 runtime build transformation now accepts an explicit
+`--source-root` for the pinned UBRN development package instead of looking for
+an absent adjacent Cua TypeScript project. Its RustBuffer transformations and
+Cargo build behavior remain unchanged. The source record and README retain
+the pins and document prerequisites; this is not a completed native rebuild
+or full SBOM claim. Disposable source controls use a stand-in Cargo against
+the actual pinned archive and make no native compilation or provider call.
