@@ -2,7 +2,8 @@
 
 GrokOff can open a shared `.md` report inside the conversation. The book button
 beside a report link or attachment opens headings, tables, code and web source
-links; Download keeps a copy. Escape closes the reader and restores focus.
+links; Download keeps a copy. The local Mac app can also [save the loaded report
+as PDF](report-pdf.md). Escape closes the reader and restores focus.
 
 The reader uses the original message's file grant. Report contents cannot grant
 access to additional local files, execute HTML, or automatically fetch images.
