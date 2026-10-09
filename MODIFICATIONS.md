@@ -15,6 +15,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [LICENSING.md](LICENSING.md) | inline change notice |
 | [README.md](README.md) | inline change notice |
 | [SECURITY.md](SECURITY.md) | inline change notice |
+| [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (retain Electron runtime notices) |
 | [build/icon-1024.png](build/icon-1024.png) | [build/icon-1024.png.license](build/icon-1024.png.license) |
 | [build/icon.icns](build/icon.icns) | [build/icon.icns.license](build/icon.icns.license) |
 | [build/icon.iconset/icon_128x128.png](build/icon.iconset/icon_128x128.png) | [build/icon.iconset/icon_128x128.png.license](build/icon.iconset/icon_128x128.png.license) |
