@@ -213,6 +213,9 @@ The [provider refresh fixture](provider-refresh.md) checks failed, stalled and
 retried connection checks through the real Settings and store in a disposable
 Electron profile against synthetic loopback inventory.
 
+The [first-run refresh fixture](first-run-refresh.md) uses the same isolated
+runner for local setup and remote-host fallback errors, deadlines and retries.
+
 The [Claude account recipe](claude-account.md) checks sign-out, cancellation and
 retry against an offline Claude CLI confined to a disposable home.
 

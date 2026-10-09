@@ -43,6 +43,8 @@ independent application identity, and lazy phone-secret/cancellation behavior.
 It also covers explicit provider connection checks, retained inventory on
 failure, bounded inventory/model-discovery timeout and retry, concurrent startup
 and onboarding checks, save/discovery overlap and confirmed sign-out state.
+First-run local and remote fallback checks preserve setup inventory, report
+explicit failures, unlock retries and keep completed focus failures quiet.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

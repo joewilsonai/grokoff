@@ -1,4 +1,4 @@
-// Real Settings and StoreProvider against synthetic loopback inventory only.
+// Real Settings or NoEngines and StoreProvider against synthetic inventory only.
 // No harness server, provider processes, credentials or user profile is used.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -14,7 +14,8 @@ import tailwindcss from "@tailwindcss/vite";
 import type { InstanceInfo } from "../src/state/store.tsx";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const output = join(root, ".local", `provider-refresh-${Date.now()}`);
+const noEngines = process.argv.includes("--no-engines");
+const output = join(root, ".local", `${noEngines ? "first-run" : "provider"}-refresh-${Date.now()}`);
 mkdirSync(output, { recursive: true });
 const scratch = mkdtempSync(join(tmpdir(), "grokoff-provider-refresh-"));
 for (const directory of ["home", "user-data"]) mkdirSync(join(scratch, directory));
@@ -31,6 +32,12 @@ const instances: InstanceInfo[] = [
     models: { default: "gpt-6.1-sol", options: [] }, authentication: { method: "device-code", signOut: true },
   },
 ];
+if (noEngines) {
+  for (const instance of instances) {
+    instance.snapshot = { state: "unavailable" };
+    instance.install = { command: { darwin: `fixture-install-${instance.instanceId}` }, signInCommand: instance.instanceId === "codex" ? "codex login" : "claude auth login" };
+  }
+}
 let mode: "ready" | "failed" | "pending" = "ready";
 let revision = 0;
 let abortedChecks = 0;
@@ -67,15 +74,23 @@ ui = await createServer({
     load(id) {
       if (id === "\0virtual:provider-refresh") return `
         import React from 'react'; import { createRoot } from 'react-dom/client';
-        import { StoreProvider } from '/src/state/store.tsx';
+        import { StoreProvider, useStore } from '/src/state/store.tsx';
         import { EnginesSettings } from '/src/components/EnginesSettings.tsx';
+        import { NoEngines } from '/src/components/NoEngines.tsx';
         import { DesktopCapabilitiesProvider } from '/src/components/DesktopCapabilities.tsx';
         import { applySkin } from '/src/lib/skins.ts'; import { setLocale } from '/src/lib/i18n.ts';
         import '/src/styles.css'; setLocale('en'); applySkin('midnight');
         localStorage.setItem('omb-analytics-opt-out', '1');
         performance.setResourceTimingBufferSize(4096);
+        const noEngines = ${noEngines};
+        if (noEngines) window.ogb = { platform: 'darwin', remoteClient: { active: new URLSearchParams(location.search).get('remote') === 'true' } };
+        function FirstRun() {
+          const { state } = useStore();
+          window.__fixtureInventory = state.instances;
+          return React.createElement(NoEngines);
+        }
         const root = createRoot(document.getElementById('root'));
-        root.render(React.createElement(StoreProvider, null, React.createElement(DesktopCapabilitiesProvider, null, React.createElement(EnginesSettings))));
+        root.render(React.createElement(StoreProvider, null, React.createElement(DesktopCapabilitiesProvider, null, React.createElement(noEngines ? FirstRun : EnginesSettings))));
         if (import.meta.hot) import.meta.hot.dispose(() => root.unmount());`;
     },
     configureServer(server) {
@@ -101,7 +116,7 @@ ui = await createServer({
             inventoryStats.started += 1;
             if (mode === "failed") { res.once("finish", () => { inventoryStats.failed += 1; }); return json({ error: "Fixture inventory unavailable" }, 503); }
             if (mode === "pending") { res.once("close", () => { abortedChecks += 1; inventoryStats.pendingClosed += 1; }); return; }
-            return json({ instances: instances.map((instance) => revision ? { ...instance, snapshot: { ...instance.snapshot, account: { email: `${instance.instanceId}-new@example.test` } } } : instance) });
+            return json({ instances: instances.map((instance) => revision ? { ...instance, snapshot: { ...instance.snapshot, ...(noEngines ? { version: "fixture-new" } : { account: { email: `${instance.instanceId}-new@example.test` } }) } } : instance) });
           }
           if (path === "/api/events") {
             res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
@@ -133,7 +148,7 @@ ui = await createServer({
   const url = `http://127.0.0.1:${address.port}/__provider-refresh.html`;
   const electron = createRequire(import.meta.url)("electron");
   assert.equal(cancelled, false, "fixture startup cancelled");
-  child = spawn(electron, [join(root, "scripts/testing/provider-refresh-desktop.mjs"), url, output, scratch], {
+  child = spawn(electron, [join(root, "scripts/testing/provider-refresh-desktop.mjs"), url, output, scratch, noEngines ? "no-engines" : "settings"], {
     env: { PATH: process.env.PATH, HOME: join(scratch, "home"), XDG_CONFIG_HOME: join(scratch, "home"), TMPDIR: scratch, TMP: scratch, TEMP: scratch, DISPLAY: process.env.DISPLAY, SystemRoot: process.env.SystemRoot },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -146,7 +161,7 @@ ui = await createServer({
   }).finally(() => clearTimeout(timeout));
   assert.equal(code, 0, `Provider refresh fixture failed; inspect ${join(output, "electron.log")}`);
   assert.equal(apiRequests.every((request) => request.method === "GET"), true, "provider/account mutations attempted");
-  assert.ok(abortedChecks >= 1, "hung fetch closed after its deadline");
+  assert.ok(abortedChecks >= (noEngines ? 2 : 1), "hung fetch closed after its deadline in each tested layout");
   passed = true;
   const renderer = JSON.parse(readFileSync(join(output, "renderer-receipt.json"), "utf8"));
   writeFileSync(join(output, "receipt.json"), JSON.stringify({ passed, renderer, apiRequests, abortedChecks, inventoryStats, pid, scratch }, null, 2));

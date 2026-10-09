@@ -19,10 +19,15 @@ export function NoEngines() {
   const { state, dispatch, refreshInstances } = useStore();
   const remoteClient = window.ogb?.remoteClient?.active === true;
   const [rechecking, setRechecking] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const recheck = async () => {
+    if (rechecking) return;
     setRechecking(true);
+    setRefreshFailed(false);
     try {
-      await refreshInstances();
+      await refreshInstances({ reportFailure: true });
+    } catch {
+      setRefreshFailed(true);
     } finally {
       setRechecking(false);
     }
@@ -39,6 +44,7 @@ export function NoEngines() {
           <button onClick={() => void recheck()} disabled={rechecking} className="mt-5 rounded-lg bg-raised px-3 py-2 text-[13px] text-ink hover:bg-raised-hover disabled:opacity-60">
             {rechecking ? "Checking…" : "Check again"}
           </button>
+          {refreshFailed && <p role="alert" className="mt-2 text-[13px] text-danger">{t("engines.library.refreshFailed")}</p>}
         </div>
       </main>
     );
@@ -119,6 +125,7 @@ export function NoEngines() {
           {rechecking ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {rechecking ? t("common.checking") : t("common.checkAgain")}
         </button>
+        {refreshFailed && <p role="alert" className="mt-2 text-[13px] text-danger">{t("engines.library.refreshFailed")}</p>}
       </div>
     </main>
   );
