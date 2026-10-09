@@ -40,6 +40,12 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, and lazy phone-secret/cancellation behavior.
+It also adopts representative existing routine and webhook regressions:
+scheduling/admission and saved receipts, queued/due startup recovery, fresh
+execution/results continuity, delegation cancellation, cron tools and webhook
+retry identities across process restart. Existing renderer checks cover run
+status/report cards and historical results navigation. See the
+[test map and fixture boundaries](verification/routines-ci.md).
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
@@ -50,9 +56,9 @@ maintainer adoption work. It currently includes tests for excluded enterprise
 source and removed upstream Docker/release workflows, and it is not the
 contributor or PR gate. Adopt those fixtures deliberately when their features
 enter the fork's supported scope; do not restore hosted deployment automation
-merely to make historical workflow assertions pass. The broader conversation,
-routines, integrations and desktop suites also need a maintained fork baseline
-before CI can claim their coverage.
+merely to make historical workflow assertions pass. Broader conversation,
+integration and desktop suites, plus additional routine fixtures, still need a
+maintained fork baseline before CI can claim their coverage.
 
 Portable CI does not prove macOS Accessibility or Screen Recording, voice,
 real browser control, live provider account behavior, Intel Mac support, or a
