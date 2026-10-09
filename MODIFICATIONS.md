@@ -356,3 +356,14 @@ the same optional interruption marker. Run cards remove the live spinner and
 verified badge for unknown interrupted outcomes; skill drafts preserve these as
 notes to check, exclude them from the passing recipe and never replay them.
 Existing MCP redaction, ownership checks and transcript bounds are retained.
+
+
+## Custom CLI draft ownership (2026-10-09)
+
+The inherited [EnginesSettings](src/components/EnginesSettings.tsx) now keeps
+manual and detected-path edits when asynchronous CLI discovery completes, and
+cancels lookup requests when the picker unmounts. Its inline modification notice
+identifies this change. The fork-created
+[provider interaction fixture](src/components/EngineRefresh.interaction.test.ts)
+and [verification notes](docs/verification/provider-refresh.md) cover delayed
+responses, untouched initialization, failure, close/reopen and StrictMode.

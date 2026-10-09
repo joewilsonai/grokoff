@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): document delayed custom CLI discovery ownership checks. -->
 # Provider connection checks
 
 Run the real Settings section and StoreProvider in an isolated Electron window:
@@ -73,3 +74,17 @@ the actual confirmation control and synthetic mutation response; stale model
 success or failure cannot restore the account. These tests open no provider
 page, run no CLI and access no credentials. Static URL tests and the older
 hook-shim route tests establish narrower rendering/route behavior.
+
+
+The portable Settings tests also hold **Set CLI…** candidate discovery while a
+person edits the manual path, selects a detected binary, or clears the draft.
+Discovery updates the available options without replacing those choices. A
+chosen binary stays visible even when the new list omits it. The
+real probe and PATCH requests must carry the retained replacement path. An
+untouched saved override still initializes normally; a failed lookup leaves
+manual entry usable. Closing the picker aborts its owned lookup, and a late
+response cannot affect the reopened picker. StrictMode setup replay starts a
+fresh request after its canceled attempt.
+
+These are actual React/store controls with in-memory API responses. They do
+not launch a CLI, access credentials, or establish packaged desktop behavior.
