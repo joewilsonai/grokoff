@@ -1,4 +1,5 @@
 // GrokOff modification (2026-10-09): require Mac CUA notices in actual packaged resources.
+// GrokOff modification (2026-10-09): verify retained Electron runtime notices.
 import { chmod, lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { LICENSE_FILES } from "./cua-linux-release.mjs";
@@ -9,6 +10,7 @@ import {
 import { verifyBrowserBundle } from "./prepare-browser.mjs";
 import { LIPO_ARCH, isMachO, writeThinMachO } from "./mac-thin.mjs";
 import { verifyMacCuaResources } from "./cua-mac-notices.mjs";
+import { verifyGrokOffElectronNotices } from "./electron-runtime-notices.mjs";
 
 async function requireRealDirectory(directory, mode = 0o755) {
   const details = await lstat(directory);
@@ -105,6 +107,7 @@ export default async function afterPack(context) {
     // Real builders only warn about missing copy inputs; fail before signing.
     if (hasCua || context.packager) verifyMacCuaResources(resources);
   }
+  await verifyGrokOffElectronNotices(context, resources);
   await validateCloudflared(resources, context.electronPlatformName, Boolean(context.packager));
   const browserRoot = path.join(resources, "browser-engine");
   const hasBrowser = await lstat(browserRoot).then(() => true, (error) => {
