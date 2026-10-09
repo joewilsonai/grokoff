@@ -66,6 +66,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
+| [scripts/smoke-packaged-server.mjs](scripts/smoke-packaged-server.mjs) | inline change notice (sealed packaged-smoke CLI discovery) |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
