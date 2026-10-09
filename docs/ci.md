@@ -39,7 +39,10 @@ Do not aim those checks at your running personal workspace.
 authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
-independent application identity, and lazy phone-secret/cancellation behavior.
+independent application identity, lazy phone-secret/cancellation behavior, and
+[routine snapshot hydration recovery](verification/routine-snapshot.md). The
+routine tests mount the actual StoreProvider with sealed in-memory HTTP/SSE and
+virtual clocks; they do not run a scheduler, native app or live provider.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
