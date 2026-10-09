@@ -227,7 +227,8 @@ The [first-run refresh fixture](first-run-refresh.md) uses the same isolated
 runner for local setup and remote-host fallback errors, deadlines and retries.
 
 The [Claude account recipe](claude-account.md) checks sign-out, cancellation and
-retry against an offline Claude CLI confined to a disposable home.
+retry against an offline Claude CLI confined to a disposable home, plus
+pasted-code completion and discovery recovery with a synthetic provider session.
 
 The [provider recovery recipe](provider-recovery.md) verifies real Grok image
 transport and Claude authentication against loopback APIs, plus scoped thread

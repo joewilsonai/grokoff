@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // Sidebar rows re-render only when their own bot or thread changes. A store
 // event for one bot renders that bot's row and no other; a renamed thread
@@ -80,7 +81,7 @@ const dispatch = vi.fn();
 let root: Root;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function draw() {
-  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {} };
+  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
   flushSync(() => root.render(createElement(BotEditorStore, { value, children: createElement(Sidebar, { open: true, onClose: () => {} }) })));
   await settle();
 }

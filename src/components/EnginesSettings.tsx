@@ -18,6 +18,7 @@ import { AddClaudeAccount, ClaudeAccountSettings } from "./ClaudeAccountSettings
 import { AddProviderAccount, CodexAccountSettings } from "./CodexAccountSettings";
 import { DEVICE_SIGN_IN_COPY, deviceSignInProvider } from "./DeviceSignIn";
 import { AntigravityFreeSpace } from "./AntigravityFreeSpace";
+import { SignInModelRecovery } from "./SignInModelRecovery";
 
 interface ProbeResult {
   ok: boolean;
@@ -267,6 +268,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     <EngineCard instance={instance}>
       {policyNote}
       {!engineReady(instance) && <EngineSetup instance={instance} intent={instance.access === "custom" ? "inject" : "cloud"} unframed />}
+      <SignInModelRecovery instance={instance} className="mt-3" />
       {engineReady(instance) && <ApiKeyEngineManage instance={instance} className="mt-3" />}
       {instance.snapshot.update && <EngineUpdateNotice update={instance.snapshot.update} instance={instance} className="mt-3" />}
       {instance.snapshot.warning && <EngineWarningNotice warning={instance.snapshot.warning} className="mt-3" />}

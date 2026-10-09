@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // Calling a bot from a Cloud, the way a person does it, in a real page.
 //
@@ -137,7 +138,7 @@ const APP_REFUSED = "The app didn't let this page use the microphone. Open it in
 
 function Page({ config, children }: { config: AppState["config"]; children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, { ...initialState, config, bots: [ada] });
-  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {} };
+  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
   return createElement(BotEditorStore, { value, children });
 }
 
@@ -358,7 +359,7 @@ describe("calling a bot off the Mac", () => {
     expect(globalThis.navigator.mediaDevices).toBeUndefined();
     chat(SERVER);
     press(callButton());
-    await vi.waitFor(() => expect(text()).toContain("Live calls need a microphone, and this window can't use one. Open OpenMausBot at a secure https address to make the call."));
+    await vi.waitFor(() => expect(text()).toContain("Live calls need a microphone, and this window can't use one. Open GrokOff at a secure https address to make the call."));
     expect(text()).not.toContain("WebRTC");
     expect(text()).not.toContain(KEY_FORM);
     expect(requests.filter((request) => request.method !== "GET")).toEqual([]);

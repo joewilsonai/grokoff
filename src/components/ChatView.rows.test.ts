@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // The open chat's rows re-render only when their own message changes. A
 // store event elsewhere (another bot's frame, a field of this bot that no
@@ -90,7 +91,7 @@ const dispatch = vi.fn();
 let root: Root;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function draw() {
-  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {} };
+  const value = { state, dispatch, flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
   const children = createElement(ChatView, { bot: state.bots.find((bot) => bot.id === "pepper")! });
   flushSync(() => root.render(createElement(BotEditorStore, { value, children })));
   await settle();

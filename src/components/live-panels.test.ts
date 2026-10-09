@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep isolated Store fixtures compatible with sign-in recovery.
 // @vitest-environment happy-dom
 // The Inspector and Activity panels follow the app's one live stream. They
 // open no stream of their own: runtime events reach them from the stream the
@@ -45,7 +46,7 @@ let root: Root;
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0)); };
 async function mount(panel: typeof InspectorPanel | typeof ActivityPanel) {
   const state: AppState = { ...initialState, bots: [bot], selectedId: bot.id };
-  const value = { state, dispatch: vi.fn(), flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {} };
+  const value = { state, dispatch: vi.fn(), flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
   const container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);

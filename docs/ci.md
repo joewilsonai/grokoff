@@ -91,6 +91,9 @@ and verifies the replacement server PID. See the
 Encrypted workspace archive, policy and restore checks use a backup workflow that
 uses two owned real servers and a fake CLI, including a replacement server
 restart and continued conversation; it does not exercise the native backup UI.
+Claude's pasted-code completion also checks a consumed owner flow, discovery
+failure/retry surviving focus in its actual Settings card and onboarding row,
+shared recovery after leaving that gate, and late-response isolation.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow
