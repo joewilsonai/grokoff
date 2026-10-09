@@ -61,6 +61,44 @@ The final startup JSON includes the server `url`, `previewUrl`, `pepperId`,
 `misoId`, `scheduledRoutineId`, `manualRoutineId`, `resultsThreadId`,
 `resultsFolderId`, temporary `dataDir`, and persistent `logPath`.
 
+## Automated renderer lifecycle
+
+This opt-in source acceptance drives the real App and StoreProvider in headless
+Chrome against an owned disposable fake-engine server. Supply the reviewed
+installed agent-browser and Chrome executables explicitly; the fixture does
+not download a browser or discover a personal browser profile.
+
+```sh
+OMB_UI_E2E=1 \
+OMB_AGENT_BROWSER_PATH="/absolute/path/to/reviewed/agent-browser" \
+AGENT_BROWSER_EXECUTABLE_PATH="/absolute/path/to/reviewed/chrome-headless-shell" \
+OMB_ROUTINES_UI_EVIDENCE_DIR="$PWD/.local/routines-ui-evidence" \
+pnpm exec vitest run scripts/testing/routines-lifecycle-ui.e2e.test.ts
+```
+
+The single bounded workflow uses **Routines → New routine**, carries the title
+and instructions through **More options**, saves an hourly interval, pauses and
+resumes it, then edits its instructions while preserving the interval anchor
+and next occurrence. **Run now** must produce one completed manual receipt.
+**Open results thread → Open run → Back to results** must navigate between the
+saved result and the exact execution conversation. A renderer reload must keep
+the terminal receipt, one definition and one run in both the API and saved file.
+
+The hourly occurrence stays in the future throughout the bounded test; only
+the explicit manual run executes. Browser clicks use the actual renderer
+controls; native input/change events fill fields as in the cron recipe. The
+fixture records its exact loopback URL/server PID, temporary home, isolated
+browser namespace/socket directory, action list, final records and a receipt
+screenshot in private evidence. Cleanup closes that browser session, Vite and
+the owned server, then checks that the temporary data is gone.
+
+This test is skipped unless `OMB_UI_E2E=1` and is separate from `test:core`.
+It verifies manual creation through the source renderer; it does not confirm
+an agent-proposed approval card, assess live-model scheduling, exercise a
+scheduled occurrence, prove Mac sleep/restart behavior or run packaged Electron.
+The interactive checks below and the scheduler/proposal fixtures cover those
+separate paths. Keep raw JSON, screenshots and logs private.
+
 ## Real UI checks
 
 1. In Pepper's source chat, inspect the pending routine card. Confirm it once;
@@ -69,11 +107,11 @@ The final startup JSON includes the server `url`, `previewUrl`, `pepperId`,
    Open that routine and run it. Its lifecycle receipt lands in Pepper's main
    thread (her oldest open conversation), not the source chat or a new
    "· Results" thread, and leads to the isolated execution thread.
-2. Open **Automations → Schedule**. Toggle **List / Calendar**. The list must
+2. Open **Routines**. Toggle **List / Week / Day**. The list must
    show paused and finished schedules as well as active ones; changing views
    must not change a routine or start a run. Filter by Pepper and Miso and
    confirm that routine ownership stays correct.
-3. Use **New → Scheduled task** to create a distinctly named Pepper routine.
+3. Use **New routine** to create a distinctly named Pepper routine.
    Check its saved schedule and prompt, edit it, then pause and resume it.
    **Run now** should create one run and show its eventual saved result.
    For the agent-created interval, compare `/api/routines` before and after a
