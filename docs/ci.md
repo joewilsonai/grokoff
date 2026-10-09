@@ -40,6 +40,12 @@ authorization, Claude/Codex driver contracts and subscription billing guards,
 Grok API behavior and model catalog, startup/default model selection, model
 names and selection, pairing links, disabled analytics and hosted offers,
 independent application identity, and lazy phone-secret/cancellation behavior.
+Bot continuity coverage includes explicit setup, per-thread and bot-default
+model scope, group dispatch and saved file locations, independent turn Stop,
+and signed-out/missing-engine picker recovery. Picker handler checks use a
+hook fixture; they do not drive a native account or operating-system menu.
+The inert local-computer lease case runs on macOS and is skipped by Linux CI;
+its descriptor stays in the disposable GrokOff home and starts no UI driver.
 Provider transports use fake CLIs or stubbed fetch responses. The exact file
 list is in `package.json`; it is not the entire inherited test suite. The
 inherited CI retry runner can retry only listed known flakes; the workflow

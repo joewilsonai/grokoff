@@ -33,6 +33,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [companion/src/state.ts](companion/src/state.ts) | inline change notice |
 | [deploy/.env.example](deploy/.env.example) | inline change notice |
 | [deploy/podman/.env.example](deploy/podman/.env.example) | inline change notice |
+| [docs/verification/bot-continuity.md](docs/verification/bot-continuity.md) | inline change notice |
 | [docs/ci.md](docs/ci.md) | inline change notice |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
@@ -97,6 +98,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/drivers/codex.ts](server/drivers/codex.ts) | inline change notice |
 | [server/index.test.ts](server/index.test.ts) | inline change notice |
 | [server/index.ts](server/index.ts) | inline change notice |
+| [server/independent-threads-api.test.ts](server/independent-threads-api.test.ts) | inline change notice |
 | [server/local-computer.test.ts](server/local-computer.test.ts) | inline change notice |
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
