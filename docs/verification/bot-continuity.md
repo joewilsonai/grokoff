@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): document maintained fork continuity coverage and inert Mac lease fixture. -->
 # Bot setup, model scope, and file continuity
 
 ```sh
@@ -121,3 +122,23 @@ or prove every provider behaves identically. The verified regression is the
 unrequested coaching sent by OMB; live results confirm ordinary work, explicit
 setup and cross-folder reading on the tested Claude model. Group model routing
 and UI persistence use the offline provider. No real bots or files were moved.
+
+## Maintained GrokOff regression coverage — October 9, 2026
+
+`pnpm test:core` now includes the four server files in this recipe, plus
+`src/lib/engine-rail.test.ts` and
+`src/components/ModelPicker.interaction.test.ts`. These cover explicit setup,
+model changes scoped to a thread or its bot default, direct/group dispatch,
+preserved shared files, independent Stop and unavailable-account recovery.
+Replies and tool choices remain scripted. The picker handler fixture bypasses
+effects and browser layout; it does not establish real DOM interaction.
+
+The Mac-only computer lease test writes an inert descriptor under its owned
+`Library/Application Support/GrokOff` folder. Its unused executable/socket
+paths stay inside that fixture and no CUA process or user desktop is driven.
+The inherited OpenMausBot path and missing host bundle identity prevented that
+test from reaching the lease checks. Its descriptor now uses the fork's
+namespace and `app.grokoff.desktop` identity, preserving the runtime
+validation instead of accepting an upstream descriptor.
+Linux CI explicitly skips this one Mac case, while a local Mac run can verify
+that one sibling's Stop does not release another sibling's computer authority.
