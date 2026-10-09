@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// GrokOff: actual memory editor lifecycle with deferred in-memory reads.
+// GrokOff: actual memory editor lifecycle and Save reconciliation with deferred in-memory responses.
 // Transport, Store dispatch and desktop capabilities are sealed synthetic seams;
 // no provider, server, filesystem, account, native UI or background model calls.
 import { act, createElement, StrictMode } from "react";
@@ -335,4 +335,264 @@ it("keeps current metadata when a rejected Save reports a conflict during reacti
   expect(container.textContent).toContain("/synthetic/conflict-metadata");
   expect(editor().value).toBe("Draft before held reactivation");
   expect(button("Reload").disabled).toBe(false);
+});
+
+
+it("keeps typing during a held Save dirty and uses the saved hash for the next Save", async () => {
+  await render();
+  await type("Submitted text");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await type("Newer typing during Save");
+  await act(async () => held.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted text", "first-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Newer typing during Save");
+  expect(button("Save").disabled).toBe(false);
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Newer typing during Save", "first-save-hash");
+  expect(button("Save").disabled).toBe(true);
+});
+
+it("leaves a later selected document and its draft/hash untouched after a held Save", async () => {
+  await render();
+  await type("Submitted index");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await click("b.md");
+  await type("Newer B draft");
+  await act(async () => held.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted index", "saved-index-hash"), overview: overview() }));
+  await tick();
+  expect(editor().getAttribute("aria-label")).toBe("Memory file memory/b.md");
+  expect(editor().value).toBe("Newer B draft");
+  expect(button("Save").disabled).toBe(false);
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/b.md", "Newer B draft", "hash:memory/b.md");
+});
+
+it("allows a selection started after Save to finish after the Save succeeds", async () => {
+  await render();
+  await type("Submitted index");
+  const saved = deferred<SaveResult>();
+  const selected = deferred<MemoryDoc>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  fixture.doc.mockReturnValueOnce(selected.promise);
+  await click("b.md");
+  await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted index", "saved-index-hash"), overview: overview() }));
+  await tick();
+  await act(async () => selected.resolve(doc("memory/b.md", "Selected B", "b-current-hash")));
+  await tick();
+  expect(editor().value).toBe("Selected B");
+  expect(editor().getAttribute("aria-label")).toBe("Memory file memory/b.md");
+});
+
+it("preserves a newer same-path read hash instead of rewinding it to a held Save receipt", async () => {
+  await render();
+  await click("a.md");
+  await type("Submitted A");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  fixture.doc.mockResolvedValueOnce(doc("memory/a.md", "More recent disk A", "newer-a-hash"));
+  await click("a.md");
+  await type("Draft on newer A");
+  await act(async () => held.resolve({ ok: true, doc: doc("memory/a.md", "Submitted A", "older-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Draft on newer A");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Draft on newer A", "newer-a-hash");
+});
+
+it.each(["conflict", "error"] as const)("does not project an old Save %s onto a later selected file", async outcome => {
+  await render();
+  await type("Submitted index");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await click("b.md");
+  await type("Keep B draft");
+  await act(async () => {
+    if (outcome === "conflict") held.resolve({ ok: false, conflict: true, current: "Old index conflict", currentHash: "index-conflict-hash" });
+    else held.reject(new Error("Old index Save failure"));
+  });
+  await tick();
+  expect(editor().value).toBe("Keep B draft");
+  expect(container.textContent).not.toContain("Old index Save failure");
+  expect([...container.querySelectorAll("button")].some(el => el.textContent?.trim() === "Reload")).toBe(false);
+});
+
+
+it("does not rewind a same-path revision loaded and then restored while Save is pending", async () => {
+  fixture.journal.mockResolvedValue([{ ...row, path: "memory/a.md" }]);
+  fixture.revert.mockResolvedValue({ ...doc("memory/a.md", "Restored A", "revert-hash"), overview: overview() });
+  await render();
+  await click("a.md");
+  await type("Submitted A");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  fixture.doc.mockResolvedValueOnce(doc("memory/a.md", "Newer A", "newer-a-hash"));
+  await click("a.md");
+  await click("Undo");
+  expect(editor().value).toBe("Restored A");
+  await type("Draft on restored revision");
+  await act(async () => held.resolve({ ok: true, doc: doc("memory/a.md", "Submitted A", "older-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Draft on restored revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Draft on restored revision", "revert-hash");
+});
+
+it("keeps newer typing through a current held Save conflict and retains it on Reload", async () => {
+  await render();
+  await type("Submitted index");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await type("Current conflict draft");
+  await act(async () => held.resolve({ ok: false, conflict: true, current: "Concurrent disk text", currentHash: "disk-hash" }));
+  await tick();
+  expect(editor().value).toBe("Current conflict draft");
+  await click("Reload");
+  expect(editor().value).toBe("Concurrent disk text");
+  expect(container.querySelector("pre")?.textContent).toBe("Current conflict draft");
+});
+
+it("does not replace newer refreshed journal metadata with a delayed Save journal", async () => {
+  await render();
+  await type("Saved text");
+  const heldJournal = deferred<MemoryJournalRow[]>();
+  fixture.journal.mockReturnValueOnce(heldJournal.promise);
+  await click("Save");
+  await render(false);
+  fixture.journal.mockResolvedValueOnce([{ ...row, id: "current", path: "memory/b.md" }]);
+  await render();
+  expect(container.textContent).toContain("the b topic");
+  await act(async () => heldJournal.resolve([]));
+  await tick();
+  expect(container.textContent).not.toContain("No changes recorded yet.");
+  expect(button("Undo").disabled).toBe(false);
+});
+
+
+it("does not clear a retained unsaved draft when an old Save settles after navigation", async () => {
+  await render();
+  await type("Retained conflict draft");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Disk text", currentHash: "disk-hash" });
+  await click("Save");
+  await click("Reload");
+  expect(container.querySelector("pre")?.textContent).toBe("Retained conflict draft");
+  await type("Submitted after Reload");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await click("b.md");
+  await type("Keep B text");
+  await act(async () => held.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted after Reload", "saved-index"), overview: overview() }));
+  await tick();
+  expect(container.querySelector("pre")?.textContent).toBe("Retained conflict draft");
+  expect(editor().value).toBe("Keep B text");
+});
+
+
+it.each(["hidden", "reopened"] as const)("advances a preserved draft's saved hash when the panel is %s", async visibility => {
+  await render();
+  await type("Submitted before hiding");
+  const held = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(held.promise);
+  await click("Save");
+  await type("Newer preserved draft");
+  await render(false);
+  if (visibility === "reopened") await render();
+  await act(async () => held.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted before hiding", "hidden-save-hash"), overview: overview() }));
+  await tick();
+  if (visibility === "hidden") await render();
+  expect(editor().value).toBe("Newer preserved draft");
+  expect(button("Save").disabled).toBe(false);
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Newer preserved draft", "hidden-save-hash");
+});
+
+
+it("advances the saved hash when typing cancels a later pending selection", async () => {
+  await render();
+  await type("Submitted A");
+  const saved = deferred<SaveResult>();
+  const selected = deferred<MemoryDoc>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  fixture.doc.mockReturnValueOnce(selected.promise);
+  await click("b.md");
+  await type("Still editing A");
+  await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted A", "saved-a-hash"), overview: overview() }));
+  await tick();
+  await act(async () => selected.resolve(doc("memory/b.md", "Cancelled B")));
+  await tick();
+  expect(editor().value).toBe("Still editing A");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Still editing A", "saved-a-hash");
+});
+
+it("lets newer reactivation metadata and its selected document finish after an old Save", async () => {
+  await render();
+  await type("Submitted index");
+  const saved = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  await click("b.md");
+  await render(false);
+  const metadata = deferred<MemoryOverview>();
+  fixture.overview.mockReturnValueOnce(metadata.promise);
+  fixture.doc.mockResolvedValueOnce(doc("memory/b.md", "Fresh reactivated B", "fresh-b-hash"));
+  await render();
+  await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted index", "saved-index"), overview: overview() }));
+  await tick();
+  await act(async () => metadata.resolve(overview("/synthetic/reactivated-b")));
+  await tick();
+  expect(editor().value).toBe("Fresh reactivated B");
+  expect(container.textContent).toContain("/synthetic/reactivated-b");
+});
+
+it.each(["conflict", "error"] as const)("keeps a current Save %s visible after typing cancels pending navigation", async outcome => {
+  await render();
+  await type("Submitted A");
+  const saved = deferred<SaveResult>();
+  const selected = deferred<MemoryDoc>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  fixture.doc.mockReturnValueOnce(selected.promise);
+  await click("b.md");
+  await type("Current A draft");
+  await act(async () => {
+    if (outcome === "conflict") saved.resolve({ ok: false, conflict: true, current: "Concurrent A", currentHash: "concurrent-a-hash" });
+    else saved.reject(new Error("Current A Save failure"));
+  });
+  await tick();
+  if (outcome === "conflict") expect(button("Reload").disabled).toBe(false);
+  else expect(container.textContent).toContain("Current A Save failure");
+  await act(async () => selected.resolve(doc("memory/b.md", "Cancelled B")));
+  await tick();
+  expect(editor().value).toBe("Current A draft");
+});
+
+
+it("keeps a dirty draft unconfirmed when same-file Undo succeeds before its held Save receipt", async () => {
+  fixture.journal.mockResolvedValue([row]);
+  await render();
+  await type("Submitted draft before Undo");
+  const saved = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  await click("Undo");
+  expect(editor().value).toBe("Submitted draft before Undo");
+  await act(async () => saved.resolve({ ok: true, doc: doc("MEMORY.md", "Submitted draft before Undo", "obsolete-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor().value).toBe("Submitted draft before Undo");
+  expect(button("Save").disabled).toBe(false);
+  await click("Save");
+  // Undo deliberately leaves dirty drafts on their original optimistic hash;
+  // the server's existing conflict contract decides the next write.
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "MEMORY.md", "Submitted draft before Undo", "hash:MEMORY.md");
 });
