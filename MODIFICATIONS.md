@@ -8,6 +8,7 @@ This inventory describes source changes; it does not claim that every inherited 
 
 | Modified imported file | Change notice |
 | --- | --- |
+| [.gitattributes](.gitattributes) | inline change notice (Mac CUA pinned source/license bytes) |
 | [.gitignore](.gitignore) | inline change notice |
 | [AGENTS.md](AGENTS.md) | inline change notice |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | inline change notice |
@@ -65,8 +66,10 @@ This inventory describes source changes; it does not claim that every inherited 
 | [pnpm-workspace.yaml](pnpm-workspace.yaml) | inline change notice |
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
+| [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (Mac CUA notice gate) |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
+| [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
 | [server/brand.ts](server/brand.ts) | inline change notice |
@@ -214,3 +217,13 @@ This inventory describes source changes; it does not claim that every inherited 
 ## New publication-support files
 
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+### GrokOff retained Mac CUA source script (2026-10-09)
+
+The delivered MPL-2.0 runtime build transformation now accepts an explicit
+`--source-root` for the pinned UBRN development package instead of looking for
+an absent adjacent Cua TypeScript project. Its RustBuffer transformations and
+Cargo build behavior remain unchanged. The source record and README retain
+the pins and document prerequisites; this is not a completed native rebuild
+or full SBOM claim. Disposable source controls use a stand-in Cargo against
+the actual pinned archive and make no native compilation or provider call.

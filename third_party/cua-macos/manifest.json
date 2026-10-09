@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "kind": "mac-cua-notice-source-record-not-sbom",
+  "cua": {
+    "version": "0.28.2",
+    "releaseTag": "cua-driver-rs-v0.28.2",
+    "sourceCommit": "fc188250b4ca8549b8e61f937fdb1fb560770e86",
+    "universalArchiveSha256": "386db225a3080714a0f9f935525e61efaf46709587ef8b94dd2df81aeb2f6daa"
+  },
+  "components": [
+    {
+      "name": "@trycua/cua-driver",
+      "version": "0.28.2",
+      "license": "MIT"
+    },
+    {
+      "name": "@trycua/cua-driver-darwin-arm64",
+      "version": "0.28.2",
+      "license": "MIT AND MPL-2.0"
+    },
+    {
+      "name": "@trycua/cua-driver-darwin-x64",
+      "version": "0.28.2",
+      "license": "MIT AND MPL-2.0"
+    },
+    {
+      "name": "@ubjs/core",
+      "version": "0.31.0-3",
+      "license": "MPL-2.0",
+      "sourceCommit": "49bc59194d183a05855ed4104c18eb92fb465e02",
+      "sourceUrl": "https://github.com/jhugman/uniffi-bindgen-react-native/tree/49bc59194d183a05855ed4104c18eb92fb465e02/typescript/src",
+      "archiveUrl": "https://registry.npmjs.org/@ubjs/core/-/core-0.31.0-3.tgz",
+      "archiveIntegrity": "sha512-39XrJgUZ2VVb561sSnkXPhczNoeBsNiSRArecsV0JE7CJq69ajFkcn9/tBAUS2NpgHkLIDU+z6Ks2+1wXnboxg=="
+    },
+    {
+      "name": "@ubjs/node",
+      "version": "0.31.0-3",
+      "license": "MPL-2.0",
+      "sourceCommit": "dcb5c4ab2350d57f6d26f5fa81a99c77ed86d449",
+      "sourceUrl": "https://github.com/jhugman/uniffi-bindgen-react-native/tree/dcb5c4ab2350d57f6d26f5fa81a99c77ed86d449/runtimes/napi",
+      "archiveUrl": "https://registry.npmjs.org/@ubjs/node/-/node-0.31.0-3.tgz",
+      "archiveIntegrity": "sha512-qNMpi2LICNwxGXZyRF8fSDBSpbezyZbEsydrbiMPJOmtOWr4tmZIEl7jkWGHVGShoBvHfFo4eHp5B4UVP928Cg==",
+      "grokoffModifiedPreferredSource": "source/ubjs-node-resolve-lib.ts",
+      "grokoffTransform": "source/grokoff-resolver-patch.mjs"
+    },
+    {
+      "name": "uniffi-bindgen-react-native",
+      "version": "0.31.0-3",
+      "license": "MPL-2.0",
+      "sourceCommit": "dcb5c4ab2350d57f6d26f5fa81a99c77ed86d449",
+      "archiveUrl": "https://registry.npmjs.org/uniffi-bindgen-react-native/-/uniffi-bindgen-react-native-0.31.0-3.tgz",
+      "archiveIntegrity": "sha512-br7giBJRr/j00rdMXhOZGMGuDWMAVUcxC9O3lco0KRqzEAxUz00+gegPW5tKamvKbrnj7NB682XUCYrcagtxFA==",
+      "archiveSha256": "fc26ac2ac4d3a7010b988d5b8621a33a26881be0413d9c73088f2231ca086640",
+      "cuaTransform": "source/build-node-runtime.mjs"
+    }
+  ],
+  "licenseTextSource": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MPL-2.0.txt",
+    "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+  },
+  "fullNativeSbom": "pending",
+  "files": [
+    {
+      "path": "Cua-MIT-LICENSE.txt",
+      "sha256": "c0779290c1d4783169aa3dbfb55feb505e563ef8a004bbf55298ceffcfbda8d9"
+    },
+    {
+      "path": "MPL-2.0-LICENSE.txt",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+    },
+    {
+      "path": "README.md",
+      "sha256": "9f91f303c635511fb4d72dca286b0147a9fa03aae212314cd3553153d63662d9"
+    },
+    {
+      "path": "UBRN-SOURCE-NOTICE.txt",
+      "sha256": "d1cc4c0ada218e8a336dc8c3d8bb7d5b1c8dedfa31f5b25c9ea1759d21b8b62d"
+    },
+    {
+      "path": "node-runtime-NOTICE.md",
+      "sha256": "66a466cc022b4bf4a41f678e4d31d9b82098cc55cc364d6e9295366dfd02cef2"
+    },
+    {
+      "path": "source/build-node-runtime.mjs",
+      "sha256": "14372ec2d03f54edda1dea12fce02ceb664b2d355efa503b3c58d8a7f6b63575"
+    },
+    {
+      "path": "source/grokoff-resolver-patch.mjs",
+      "sha256": "56c3982ff513c9154f38638d9c3e734b67ceef96b60e9a110189045c97e04d42"
+    },
+    {
+      "path": "source/ubjs-node-resolve-lib.ts",
+      "sha256": "e97bb04c7c903bb3efca73ef16b6eaf2f799e54bb33991d15529ba8e3c6cadfe"
+    }
+  ]
+}

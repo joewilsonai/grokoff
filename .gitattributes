@@ -28,3 +28,8 @@ third_party/opencode/LICENSE text eol=lf
 # joins and every layering, healthcheck and trust check fails for a reason
 # that has nothing to do with the image. Docker itself reads LF everywhere.
 Dockerfile text eol=lf
+
+# GrokOff modification (2026-10-09): preserve pinned Mac CUA source/license bytes.
+third_party/cua-macos/** text eol=lf
+# Preserve the verbatim SPDX text, including its reviewed trailing space.
+third_party/cua-macos/MPL-2.0-LICENSE.txt -whitespace
