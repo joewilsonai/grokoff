@@ -260,3 +260,16 @@ quiet unmount cancellation, retained history, queued normal/routine updates,
 current-live protection, retry, and valid/invalid response envelope handling.
 These source tests run no native app, real server, scheduler or live provider;
 they preserve omitted-attempts compatibility and do not impose command deadlines.
+
+## Browser access recovery regression
+
+<!-- GrokOff modification (2026-10-09): document maintained isolated access-check coverage. -->
+
+`test:core` also runs the complete `BrowserPanel.access.test.ts` file. Actual
+React interaction checks distinguish failed access discovery from a confirmed
+non-admin session, exercise explicit Retry, and cover a 30-second deadline,
+late replies and unmount cancellation. In-memory transports include the real
+`api` helper with held response headers and bodies. Synthetic EventSource
+instances record viewer creation and closure; no browser engine, account,
+installation or live provider is used. This is source-renderer coverage, not
+packaged Mac or real browser-control acceptance. See the [recipe](verification/browser-live.md#browser-access-check-recovery).

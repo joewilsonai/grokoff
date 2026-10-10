@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): bounded, cancellable browser access checks with explicit retry after failure.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, EllipsisVertical, Globe, Hand, Loader2, Maximize2, Minimize2, Plus, RotateCw, UserRound, X } from "lucide-react";
 import { browserUnavailableReason } from "@/lib/feature-flags";
@@ -330,7 +331,31 @@ export function BrowserPanel({ bot }: { bot: Bot }) {
   const [requested, setRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [admin, setAdmin] = useState<boolean | null>(null);
-  useEffect(() => { let active = true; void api("/api/auth/session").then((session) => { if (active) setAdmin(session.scopes.includes("admin")); }).catch(() => { if (active) setAdmin(false); }); return () => { active = false; }; }, []);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [accessAttempt, setAccessAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    setAdmin(null); setAccessError(null);
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error("Browser access check timed out. Check your connection and retry."));
+        controller.abort();
+      }, 30_000);
+    });
+    void Promise.race([api<unknown>("/api/auth/session", { signal: controller.signal }), deadline]).then((session) => {
+      if (!active) return;
+      if (!session || typeof session !== "object" || !("scopes" in session)
+        || !Array.isArray(session.scopes) || !session.scopes.every((scope) => typeof scope === "string")) {
+        throw new Error("The browser access check returned an invalid response. Retry the check.");
+      }
+      setAdmin(session.scopes.includes("admin"));
+    }).catch((cause: unknown) => {
+      if (active) setAccessError(cause instanceof Error && cause.message.trim() ? cause.message : "Check your connection and retry.");
+    }).finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
+  }, [accessAttempt]);
   const installing = requested || engine?.installing === true;
   const install = async () => {
     setError(null); setRequested(true);
@@ -340,8 +365,12 @@ export function BrowserPanel({ bot }: { bot: Bot }) {
   };
   if (admin === false) return <div className="p-5 text-[13px] text-ink-secondary">Only admins of this installation can view or control saved browser sessions.</div>;
   if (bot.browser === false) return <div className="p-5 text-[13px] text-ink-secondary">Enable the browser in this bot’s profile to use it.</div>;
+  if (accessError) return <div className="flex flex-col items-start gap-3 p-5">
+    <p role="alert" className="text-[13px] text-danger">Could not check browser access. {accessError}</p>
+    <button type="button" onClick={() => { setAdmin(null); setAccessError(null); setAccessAttempt((attempt) => attempt + 1); }} className="rounded-lg bg-accent px-3 py-1.5 text-[13px] font-medium text-accent-ink">Retry</button>
+  </div>;
   if (engine?.kind === "engine" && !installing && !engine.installError) return admin === null
-    ? <div className="p-5 text-[13px] text-ink-secondary">Loading browser…</div>
+    ? <div role="status" className="p-5 text-[13px] text-ink-secondary">Checking browser access…</div>
     : <LiveBrowser key={bot.id} bot={bot} />;
   return <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-3 rounded-xl bg-card p-5">
     <div className="text-[15px] font-medium text-ink">{engine?.kind === "engine" ? "Browser installation incomplete" : "Browser engine not installed"}</div>
