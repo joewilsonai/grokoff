@@ -367,3 +367,13 @@ identifies this change. The fork-created
 [provider interaction fixture](src/components/EngineRefresh.interaction.test.ts)
 and [verification notes](docs/verification/provider-refresh.md) cover delayed
 responses, untouched initialization, failure, close/reopen and StrictMode.
+
+
+## Report reader development lifecycle (2026-10-09)
+
+The fork-created report reader no longer treats its effect-cleanup modal close
+as a user dismissal. Explicit Close and the native cancel event still dismiss
+the reader. Actual React StrictMode regressions retain open state through replay
+and verify cancellation, focus return, ignored late responses and reopen. The
+[report recipe](docs/verification/browser-report.md) distinguishes these source
+DOM checks from packaged production and native desktop acceptance.
