@@ -2,6 +2,7 @@
 // to other files. Only the original stored message authorizes the initial read.
 // GrokOff modification (2026-10-09): bound preview attempts with manual recovery.
 // GrokOff modification (2026-10-09): export only the loaded report to an inert Mac PDF surface.
+// GrokOff modification (2026-10-09): effect cleanup must not dismiss a replayed reader.
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Markdown, { type Components } from "react-markdown";
@@ -128,7 +129,9 @@ function ReportDialog({ path, name, message, returnFocus, onClose }: {
     element.showModal();
     return () => { element.close(); if (returnFocus?.isConnected) returnFocus.focus(); };
   }, [returnFocus]);
-  return createPortal(<dialog ref={dialog} aria-labelledby={titleId} onCancel={onClose} onClose={onClose}
+  // Explicit Close and the native cancel event own dismissal. Cleanup closes
+  // the modal too; its close event must not dismiss StrictMode's replayed reader.
+  return createPortal(<dialog ref={dialog} aria-labelledby={titleId} onCancel={onClose}
     onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }}
     className="m-auto flex max-h-[92dvh] w-[min(96vw,960px)] max-w-none flex-col overflow-hidden rounded-2xl border border-hairline bg-panel p-0 text-ink shadow-2xl backdrop:bg-black/55">
     <header className="flex shrink-0 items-center gap-2 border-b border-hairline/40 px-4 py-3">
