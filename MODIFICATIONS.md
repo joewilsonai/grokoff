@@ -274,6 +274,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/ApiKeys.test.ts](src/components/ApiKeys.test.ts) | inline change notice |
 | [src/components/CallView.journeys.test.ts](src/components/CallView.journeys.test.ts) | inline change notice |
 | [src/components/ChatView.rows.test.ts](src/components/ChatView.rows.test.ts) | inline change notice |
+| [src/components/ChatView.tsx](src/components/ChatView.tsx) | inline change notice; keep the report reader outside windowed message rows |
 | [src/components/ComputerPanel.lazy.test.ts](src/components/ComputerPanel.lazy.test.ts) | inline change notice |
 | [src/components/ComputerPanel.live.test.ts](src/components/ComputerPanel.live.test.ts) | inline change notice |
 | [src/components/live-panels.test.ts](src/components/live-panels.test.ts) | inline change notice |

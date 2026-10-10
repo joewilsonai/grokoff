@@ -3,13 +3,15 @@
 // GrokOff modification (2026-10-09): bound preview attempts with manual recovery.
 // GrokOff modification (2026-10-09): export only the loaded report to an inert Mac PDF surface.
 // GrokOff modification (2026-10-09): effect cleanup must not dismiss a replayed reader.
-import { useEffect, useId, useRef, useState } from "react";
+// GrokOff modification (2026-10-10): a chat reader outlives its virtualized row.
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, Download, LoaderCircle, X } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { useReportPdf } from "@/lib/report-pdf";
+import type { Message } from "@/state/store";
 import { requestMessageFile, useLocalFileSave, type MessageAttachmentContext } from "./AttachmentPreview";
 
 export const REPORT_PREVIEW_MAX_BYTES = 1024 * 1024;
@@ -103,15 +105,53 @@ export function ReportMarkdown({ text }: { text: string }) {
   </article>;
 }
 
+type ReportRequest = { path: string; name: string; message: MessageAttachmentContext; returnFocus: HTMLElement | null };
+const ReportReaderContext = createContext<((request: ReportRequest) => void) | null>(null);
+
+/** Retain only the selected stored source's authority, not transient row
+ * fields or its object identity. The server still authorizes every read. */
+function reportSourceKey(message: Message): string {
+  return JSON.stringify([message.role, message.kind, message.text ?? "", message.from?.botId ?? null,
+    message.attachments?.map((attachment) => [attachment.kind, attachment.path, attachment.kind === "file" ? attachment.name : null]) ?? []]);
+}
+
+/** A chat's full current branch owns the modal; its bounded row window does
+ * not. Keep the context callback stable so appends do not redraw every link. */
+export function ReportReaderHost({ ownerId, threadId, messages, children }: {
+  ownerId: string; threadId: string; messages: readonly Message[]; children: ReactNode;
+}) {
+  const authority = useRef({ ownerId, threadId, messages });
+  authority.current = { ownerId, threadId, messages };
+  const [opened, setOpened] = useState<(ReportRequest & { owner: string; sourceKey: string }) | null>(null);
+  const open = useCallback((request: ReportRequest) => {
+    const current = authority.current;
+    const source = current.messages.find((message) => message.id === request.message.messageId);
+    if (request.message.threadId !== current.threadId || !source) return;
+    setOpened({ ...request, message: { ...request.message }, owner: JSON.stringify([current.ownerId, current.threadId]), sourceKey: reportSourceKey(source) });
+  }, []);
+  const source = opened ? messages.find((message) => message.id === opened.message.messageId) : undefined;
+  const shown = opened?.owner === JSON.stringify([ownerId, threadId]) && source && reportSourceKey(source) === opened.sourceKey ? opened : null;
+  // Omit invalid authority on this render; clearing its state also prevents
+  // returning to a previously selected branch from reopening an old reader.
+  useEffect(() => { if (opened && !shown) setOpened(null); }, [opened, shown]);
+  return <ReportReaderContext.Provider value={open}>
+    {children}
+    {shown && <ReportDialog key={JSON.stringify([shown.owner, shown.message.messageId, shown.path, shown.name])}
+      path={shown.path} name={shown.name} message={shown.message} returnFocus={shown.returnFocus} onClose={() => setOpened(null)} />}
+  </ReportReaderContext.Provider>;
+}
+
 export function ReportFileButton({ path, name, message }: { path: string; name: string; message: MessageAttachmentContext }) {
+  const openReport = useContext(ReportReaderContext);
   const identity = JSON.stringify([message.threadId, message.messageId, path]);
   const [opened, setOpened] = useState<string | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => { setOpened(null); }, [identity]);
   if (!isMarkdownReport(path)) return null;
   return <>
-    <button ref={trigger} type="button" className="table-action" title={t("report.open", { name })} aria-label={t("report.open", { name })} onClick={() => setOpened(identity)}><BookOpen size={14} /></button>
-    {opened === identity && <ReportDialog key={identity} path={path} name={name} message={message} returnFocus={trigger.current} onClose={() => setOpened(null)} />}
+    <button ref={trigger} type="button" className="table-action" title={t("report.open", { name })} aria-label={t("report.open", { name })}
+      onClick={() => openReport ? openReport({ path, name, message, returnFocus: trigger.current }) : setOpened(identity)}><BookOpen size={14} /></button>
+    {!openReport && opened === identity && <ReportDialog key={identity} path={path} name={name} message={message} returnFocus={trigger.current} onClose={() => setOpened(null)} />}
   </>;
 }
 
