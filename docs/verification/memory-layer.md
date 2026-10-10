@@ -177,8 +177,8 @@ clean open document is still reread after Tidy up. Delete closes the editor
 only when the deleted file is the one on screen: a different file opened since
 the click stays open with its draft, and a read of the deleted file that was
 still loading is cancelled. Confirming Delete still discards a draft that was
-already unsaved at the click; text typed after the click stays, and saving it
-meets the existing expected-hash conflict because the file is gone.
+already unsaved at the click; text typed after the click stays, and a later
+Save still uses the existing expected-hash check against the deleted file.
 
 Both actions refresh overview and journal through the same current-metadata
 path as Save and Undo, so a delayed Delete or Tidy up journal cannot replace
@@ -187,31 +187,30 @@ responses cover this; eight of them fail on the previous component. They are
 not native app, filesystem, provider or model-call acceptance, and the Tidy up
 request and its server behavior are unchanged.
 
-Delete also ends a pending Save's ownership of the deleted document, and Tidy
-up ends it for a dirty document whose saved bytes may have been rewritten.
-A Save response from before either mutation cannot mark that preserved draft
-clean. This also holds when Settings is reopened with the same dirty document
-before starting housekeeping or before its response arrives,
-including a file selected after the mutation started. A revision loaded by a
-newer activation keeps its own Save ownership. Tidy invalidates the old receipt
-once when its request succeeds: a fresh reread and Save while its metadata is
-still loading remain current.
-A Delete or Tidy up response from a previous Settings activation leaves the
-current editor, pending selection, notice and error alone, including when
-Settings is reopened while Tidy up is refreshing metadata. Additional held
-response controls cover these completion orders and draft retention through
-reactivation. These seven additional controls fail before the ownership guards
-and pass afterward; they use the same sealed in-memory transports. Two further
-controls repeat the Save/Delete ordering across reactivation and keep a newly
-loaded revision's successful Save and saved hash current. Seven further controls
-cover Save/Tidy, retained selections across reactivation for both mutations, and
-the fresh Save during the metadata wait. Five fail before the loaded-activation
-guards; the two positive controls pass before and after. These 28 interactions
-are joined by two controls that reopen a dirty document before starting Delete
-or Tidy up and reopen it again while their responses wait. Both fail with an
-equality-only activation guard and pass when earlier loaded activations are
-protected too. A further control holds a pre-Tidy file read while the successful
-Tidy's journal refresh fails. Tidy starts the fresh file read independently of
-metadata, so the stale response cannot replace its text or hash and the metadata
-error stays visible. This control fails before that ordering correction. All
-31 remain source-DOM checks with in-memory transports, not native Tidy acceptance.
+A Save that overlaps Delete of its file or Tidy up waits for those mutation
+requests to settle, then reads the actual current file before reconciling its
+receipt. Only matching path, hash, text and existence can mark the submitted
+revision clean. Reopening Settings alone is not proof of freshness: the file
+may have been loaded before housekeeping committed. A valid Save made after
+housekeeping keeps its saved hash; a stale receipt leaves the draft dirty.
+A failed verification read or another mutation during verification also leaves
+the draft unsaved. Delete of a different file does not hold up this Save.
+The API completion ends the barrier, so a fresh reread and Save while journal
+metadata is still loading remain current. Failed mutation requests release the
+barrier too; the file read determines whether the Save receipt is still valid.
+
+A Delete or Tidy up response from a previous Settings activation leaves that
+view's editor, pending selection, notice and error alone. Its disk effect still
+participates in an overlapping Save's independent verification. Successful Tidy
+starts the pending selection or clean document reread before awaiting metadata,
+so a failed journal refresh cannot let a delayed pre-Tidy response replace the
+fresh text or hash. That metadata error remains visible.
+
+The 37 maintained held-response controls cover newer typing, pending selection,
+metadata completion orders, reopening before or after housekeeping starts,
+a newly activated view loading before the disk changes, both mutation/Save
+response orders, and valid later Save receipts. Additional verification controls
+cover read failure, navigation during the read and deleting a saved empty file
+whose text and hash match the missing file but whose existence differs.
+These remain source-DOM checks with sealed in-memory transports, separate from
+native app, filesystem transaction, provider or model-driven Tidy acceptance.

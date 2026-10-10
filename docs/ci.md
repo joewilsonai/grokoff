@@ -195,6 +195,8 @@ or Tidy up, including later selections retained through reopening Settings and
 a valid Save from a fresh reread during Tidy up's metadata refresh.
 It also checks that a failed metadata refresh cannot let a pre-Tidy document
 response replace the freshly tidied text or hash.
+Overlapping Save receipts wait for the relevant Delete/Tidy API completion and
+are checked against actual current file identity, including after reactivation.
 It mounts the actual React component with held in-memory memory responses and
 sealed transport, and checks newer selection/typing, activation lifetime,
 current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, overlapping Save/Undo metadata completion orders, obsolete metadata/error rejection, current metadata failure/recovery without clearing later file errors, current conflict Reload/Undo, dirty-section

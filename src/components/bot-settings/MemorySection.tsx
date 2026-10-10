@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-10): Delete/Tidy up end older Save ownership for retained documents without dropping drafts or receipts from newer loaded activations.
+// GrokOff modification (2026-10-10): verify overlapping Save receipts against disk after Delete/Tidy settle; refresh tidied files independently of metadata failures.
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
 // GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
 // Memory: what this bot believes, as a panel a person can read, fix, and
@@ -77,6 +77,11 @@ interface SectionError {
   metadata?: number;
 }
 
+interface PendingMemoryMutation {
+  path?: string;
+  settled: Promise<void>;
+}
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** On an OMB Cloud home: this bot's memory changed in a conversation the
@@ -134,9 +139,23 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   // typing can cancel navigation while keeping the current draft and hash.
   const selectionGeneration = useRef(0);
   const documentGeneration = useRef(0);
-  // Dirty documents survive Settings reactivation. Remember the activation
-  // that loaded them, including a selection made after a mutation started.
-  const documentActivation = useRef(0);
+  // A reopened editor can still have loaded before housekeeping changed disk.
+  // Save waits for overlapping file mutations, then verifies its actual bytes.
+  const mutationRevisions = useRef(new Map<string | undefined, number>());
+  const mutationRevisionFor = (path: string) => (mutationRevisions.current.get(path) ?? 0) + (mutationRevisions.current.get(undefined) ?? 0);
+  const pendingMutations = useRef(new Set<PendingMemoryMutation>());
+  const mutationsFor = (path: string) => [...pendingMutations.current].filter(mutation => mutation.path === undefined || mutation.path === path);
+  const beginMutation = (path?: string) => {
+    let settle!: () => void;
+    const mutation = { path, settled: new Promise<void>(resolve => { settle = resolve; }) };
+    pendingMutations.current.add(mutation);
+    mutationRevisions.current.set(path, (mutationRevisions.current.get(path) ?? 0) + 1);
+    return () => {
+      if (!pendingMutations.current.delete(mutation)) return;
+      mutationRevisions.current.set(path, (mutationRevisions.current.get(path) ?? 0) + 1);
+      settle();
+    };
+  };
   const pendingRead = useRef<number | null>(null);
   // The path a pending navigation is loading, valid only while that read is
   // still the pending one. Delete and Tidy hand the editor to that newest choice.
@@ -203,7 +222,6 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
         if (!ownsRead(generation)) return;
         pendingRead.current = null;
         documentGeneration.current += 1;
-        documentActivation.current = activationGeneration.current;
         setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
       }
     } catch (e) {
@@ -243,7 +261,6 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       if (!ownsRead(generation)) return;
       pendingRead.current = null;
       documentGeneration.current += 1;
-      documentActivation.current = activationGeneration.current;
       setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: path.startsWith("memory/log/") });
       return generation;
     } catch (e) {
@@ -261,6 +278,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     const revision = draftRevision.current;
     const document = documentGeneration.current;
     const activation = activationGeneration.current;
+    const mutation = mutationRevisionFor(submitted.path);
+    const overlapping = mutationsFor(submitted.path);
     const ownsSave = () => mounted.current
       && documentGeneration.current === document
       && currentEditing.current?.path === submitted.path
@@ -272,23 +291,42 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       const result = await saveMemoryDoc(bot.id, submitted.path, submitted.text, expectedHash);
+      let receiptCurrent = true;
+      let disk: Awaited<ReturnType<typeof fetchMemoryDoc>> | undefined;
+      if (ownsSave() && (overlapping.length > 0 || mutationRevisionFor(submitted.path) !== mutation)) {
+        // Either response can arrive first. Only the mutation API completion
+        // ends this barrier; metadata loading does not hold a valid Save up.
+        await Promise.all([...overlapping, ...mutationsFor(submitted.path)].map(pending => pending.settled));
+        if (ownsSave()) {
+          const verification = mutationRevisionFor(submitted.path);
+          receiptCurrent = mutationsFor(submitted.path).length === 0;
+          if (receiptCurrent) {
+            disk = await fetchMemoryDoc(bot.id, submitted.path);
+            receiptCurrent = mutationRevisionFor(submitted.path) === verification
+              && mutationsFor(submitted.path).length === 0
+              && disk.path === submitted.path
+              && (!result.ok || (disk.hash === result.doc.hash && disk.text === result.doc.text && disk.exists === result.doc.exists));
+          }
+        }
+      }
+      const reconciledMutation = mutationRevisionFor(submitted.path);
       if (!result.ok) {
-        if (ownsSaveControls()) {
+        if (receiptCurrent && ownsSaveControls()) {
           invalidateEditorReads();
-          setConflict({ path: submitted.path, current: result.current, currentHash: result.currentHash });
+          setConflict({ path: submitted.path, current: disk?.text ?? result.current, currentHash: disk?.hash ?? result.currentHash });
         }
         return;
       }
       // The write happened even if the person navigated away. Only its
       // still-current editor may be reconciled; later reads must keep running.
-      if (ownsSave()) {
+      if (receiptCurrent && ownsSave()) {
         if (ownsSaveControls()) {
           invalidateEditorReads();
           setConflict(null);
           setSavedDraft(null);
         }
         setEditing(current => {
-          if (documentGeneration.current !== document || !current || current.path !== submitted.path || current.hash !== submitted.hash) return current;
+          if (mutationRevisionFor(submitted.path) !== reconciledMutation || documentGeneration.current !== document || !current || current.path !== submitted.path || current.hash !== submitted.hash) return current;
           return draftRevision.current !== revision
             ? { ...current, hash: result.doc.hash }
             : { ...current, text: result.doc.text, hash: result.doc.hash, dirty: false };
@@ -325,17 +363,11 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     // after that click is newer than the request and stays in the editor.
     const revision = draftRevision.current;
     let metadata: number | undefined;
+    const finishMutation = beginMutation(file.path);
     setError(null);
     try {
       await deleteMemoryDoc(bot.id, file.path);
-      // A Save may already have committed while its response is still pending.
-      // A retained document keeps its loaded activation across reactivation,
-      // even if loaded before this visit or selected after Delete started.
-      // End its older Save ownership
-      // before the view guard; a later activation's loaded revision keeps its
-      // own Save receipt.
-      if (mounted.current && currentEditing.current?.path === file.path
-        && documentActivation.current <= activation) documentGeneration.current += 1;
+      finishMutation();
       if (!ownsMutationView(activation)) return;
       // Act on the editor as it is now, never the one captured at the click:
       // a file opened since stays open, and only a read of the deleted file
@@ -352,6 +384,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       if (metadata === undefined) {
         if (ownsMutationView(activation)) setError(errorText(e));
       } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
+    } finally {
+      finishMutation();
     }
   };
 
@@ -431,18 +465,13 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const tidyNow = async () => {
     const activation = activationGeneration.current;
     let metadata: number | undefined;
+    const finishMutation = beginMutation();
     setTidying(true);
     setError(null);
     setNotice(null);
     try {
       const { report } = await tidyMemoryNow(bot.id);
-      // Tidy may have rewritten the saved bytes while their Save response was
-      // held. Keep this retained draft dirty rather than accepting that older
-      // hash as current. A new activation's loaded revision owns its receipts.
-      // Do this once at mutation success, before metadata: a Save from a fresh
-      // reread during the metadata wait is a newer write and must stay valid.
-      if (mounted.current && currentEditing.current?.dirty
-        && documentActivation.current <= activation) documentGeneration.current += 1;
+      finishMutation();
       if (!ownsMutationView(activation)) return;
       // The disk mutation already succeeded. Supersede pre-Tidy reads now,
       // independently of journal/upkeep refresh success. Later selections
@@ -465,6 +494,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
         if (ownsMutationView(activation)) setError(errorText(e));
       } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     } finally {
+      finishMutation();
       if (mounted.current) setTidying(false);
     }
   };
