@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): keep room report readers above transcript row eviction.
 // A room: several bots + you in one shared thread. The sidebar and call view
 // carry the personality; avatars inside the room stay still so a busy group
 // does not become a wall of competing motion. Plain messages go to the room's
@@ -30,6 +31,7 @@ import { StatusActivityRow } from "@/components/StatusActivityRow";
 import { normalizeState } from "@/lib/mascot";
 import { defaultResponderName, effectiveDefaultResponder, groupResponseHint, jevRoomRoutingOn } from "@/lib/group-routing";
 import { ChatMarkdown } from "./ChatMarkdown";
+import { ReportReaderHost } from "./ReportFilePreview";
 import { CopyButton, FailedTurnRow, MessageBoundary } from "./ChatView";
 import { MessageActions, messageActionClass } from "./MessageActions";
 import { RawMarkdownView, RawToggleAction } from "./RawMarkdownToggle";
@@ -1232,6 +1234,7 @@ export function GroupView({ group }: { group: Group }) {
   });
 
   return (
+    <ReportReaderHost ownerId={group.id} threadId={group.threadId} messages={group.messages}>
     <main className="relative flex h-full min-w-0 flex-1 flex-col bg-app">
       <GroupCallOverlay group={group} members={members} />
       {membersOpen && !remoteClient && !group.dm && (
@@ -1554,5 +1557,6 @@ export function GroupView({ group }: { group: Group }) {
       </div>
       </GlassScrollFrame>
     </main>
+    </ReportReaderHost>
   );
 }

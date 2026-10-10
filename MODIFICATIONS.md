@@ -396,3 +396,15 @@ modification notices, the package sidecar and the
 Maintained [inert Node controls](scripts/testing/browser-report-cleanup.node-test.mjs)
 exercise real disposable children/directories and the recipe's actual finally
 and startup paths without native apps, servers, providers or personal data.
+
+
+## Room report reader continuity (2026-10-10)
+
+The inherited [room view](src/components/GroupView.tsx) uses the existing report
+reader host above its windowed transcript, keyed by room and selected thread.
+The current loaded room transcript retains file authority while an older row
+leaves the window. The existing maintained
+[continuity fixture](src/components/ChatView.report-continuity.interaction.test.ts)
+adds real room row-eviction cases for pending reads and PDF jobs. The inline
+change notice and [recipe notes](docs/verification/browser-report.md) describe
+this source behavior and its separate native acceptance limits.

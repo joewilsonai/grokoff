@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 // GrokOff: a real ChatView/branch/window/Markdown/report reader, with only
 // in-memory file and desktop transports. No server, provider or native calls.
+// GrokOff modification (2026-10-10): also exercise real room row eviction.
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Action, AppState, Bot, InstanceInfo, Message } from "@/state/store";
+import type { Action, AppState, Bot, Group, InstanceInfo, Message } from "@/state/store";
 
 // These are the existing ChatView.rows fixture seams. Do not replace the
 // transcript, viewport, Markdown, report reader, store reducer or PDF hook.
@@ -17,11 +18,13 @@ vi.mock("@/lib/cloud-guest", () => ({ useCanWriteIn: () => true }));
 vi.mock("@/components/ModelPicker", () => ({ ModelPicker: () => null }));
 
 const { ChatView } = await import("@/components/ChatView");
+const { GroupView } = await import("@/components/GroupView");
 const { BotEditorStore, initialState, reducer } = await import("@/state/store");
 const { setLocale } = await import("@/lib/i18n");
 
 type PdfRequest = Parameters<NonNullable<NonNullable<Window["ogb"]>["exportReportPdf"]>>[0];
 const THREAD = "report-continuity-thread";
+const ROOM_THREAD = "room-report-continuity-thread";
 const PATH = "/owned/Continuity.md";
 const NEXT_PATH = "/owned/Replaced.md";
 const deferred = <T,>() => {
@@ -58,7 +61,9 @@ const button = (label: string, scope: ParentNode = document) => {
 const dialog = () => document.querySelector<HTMLDialogElement>("dialog");
 async function draw() {
   const value = { state, dispatch: vi.fn(), flushBotPatches: async () => null, refreshInstances: async () => {}, refreshModels: async () => {}, refreshSignInModels: async () => {}, signInModelDiscovery: {} };
-  await act(async () => root.render(createElement(BotEditorStore, { value, children: createElement(ChatView, { bot: state.bots[0]! }) })));
+  const group = state.groups.find((candidate) => candidate.id === state.selectedId);
+  const view = group ? createElement(GroupView, { group }) : createElement(ChatView, { bot: state.bots[0]! });
+  await act(async () => root.render(createElement(BotEditorStore, { value, children: view })));
   await tick();
 }
 async function apply(action: Action) {
@@ -74,7 +79,8 @@ async function open(entry: "markdown" | "attachment" = "markdown") {
   await tick();
   expect(dialog()?.open).toBe(true);
   expect(reads).toHaveLength(1);
-  expect(reads[0]).toMatchObject({ threadId: THREAD, messageId: "m0", path: PATH });
+  const threadId = state.groups.find((group) => group.id === state.selectedId)?.threadId ?? THREAD;
+  expect(reads[0]).toMatchObject({ threadId, messageId: "m0", path: PATH });
 }
 async function exportHeld(entry: "markdown" | "attachment" = "markdown") {
   readMode = "success";
@@ -95,6 +101,33 @@ async function advanceWindow() {
   expect(state.bots[0]!.messages).toHaveLength(121);
   expect(state.bots[0]!.activeLeafId).toBe("m120");
   // This asserts real eviction, rather than manually unmounting the reader.
+  expect(container.querySelector('[data-mid="m0"]')).toBeNull();
+  expect(container.querySelector('[data-mid="m120"]')).not.toBeNull();
+  expect(container.querySelectorAll("[data-mid]")).toHaveLength(120);
+}
+async function selectRoom() {
+  const member = state.bots[0]!;
+  const group: Group = { id: "report-room", threadId: ROOM_THREAD, name: "Report room", memberIds: [member.id],
+    defaultResponder: { kind: "everyone" }, bulletin: "", unread: false, createdAt: 1, setupCompletedAt: 1,
+    messages: transcript().map((message) => message.role === "bot"
+      ? { ...message, from: { botId: member.id, name: member.name, color: member.color } } : message),
+  };
+  state = { ...state, selectedId: group.id, groups: [group],
+    config: { ...state.config!, rooms: { turnTimeoutMinutes: 5 } } as AppState["config"],
+  };
+  expect(group.threadId).not.toBe(member.threadId);
+  await draw();
+}
+async function advanceRoomWindow() {
+  expect(state.groups[0]!.messages).toHaveLength(120);
+  expect(container.querySelectorAll("[data-mid]")).toHaveLength(120);
+  expect(container.querySelector('[data-mid="m0"]')).not.toBeNull();
+  const member = state.bots[0]!;
+  await apply({ type: "messageAdded", threadId: ROOM_THREAD,
+    message: { ...textMessage(120, "m119"), from: { botId: member.id, name: member.name, color: member.color } },
+  });
+  expect(state.groups[0]!.messages).toHaveLength(121);
+  expect(state.bots[0]!.messages).toHaveLength(120);
   expect(container.querySelector('[data-mid="m0"]')).toBeNull();
   expect(container.querySelector('[data-mid="m120"]')).not.toBeNull();
   expect(container.querySelectorAll("[data-mid]")).toHaveLength(120);
@@ -132,7 +165,7 @@ beforeEach(async () => {
     // The real chat also reads the local session kind once. This explicitly
     // sealed response cannot reach a server or discover an account.
     if (url === "/api/auth/session" && (init?.method ?? "GET") === "GET") return Response.json({ kind: "loopback" });
-    const match = /^\/api\/threads\/(report-continuity-thread|other-report-thread)\/messages\/(m0)\/file$/.exec(url);
+    const match = /^\/api\/threads\/(report-continuity-thread|other-report-thread|room-report-continuity-thread)\/messages\/(m0)\/file$/.exec(url);
     const body = JSON.parse(String(init?.body ?? "null")) as { path?: string } | null;
     if (!match || init?.method !== "POST" || ![PATH, NEXT_PATH].includes(body?.path ?? "") || !(init?.signal instanceof AbortSignal)) {
       unknownRequests.push(url);
@@ -182,6 +215,31 @@ it("keeps the exact pending PDF alive across row eviction and shows its real res
   await advanceWindow();
   expect(cancelPdf).not.toHaveBeenCalled();
   expect(dialog()?.open).toBe(true);
+  pdfJobs[0]!.pending.resolve("saved"); await tick();
+  expect(dialog()?.textContent).toContain("PDF saved.");
+  expect(pdfJobs).toHaveLength(1);
+  expect(reads).toHaveLength(1);
+});
+
+it("keeps a room's exact reader and held read alive across real 120-message row eviction", async () => {
+  await selectRoom();
+  await open();
+  const currentDialog = dialog();
+  await advanceRoomWindow();
+  expect(reads[0]!.signal.aborted).toBe(false);
+  expect(dialog()).toBe(currentDialog);
+  reads[0]!.pending.resolve(response()); await tick();
+  expect(dialog()?.querySelector("h1")?.textContent).toBe("Current report");
+  expect(reads).toHaveLength(1);
+});
+
+it("keeps a room's exact pending PDF alive across real row eviction and completes it", async () => {
+  await selectRoom();
+  await exportHeld();
+  const currentDialog = dialog();
+  await advanceRoomWindow();
+  expect(cancelPdf).not.toHaveBeenCalled();
+  expect(dialog()).toBe(currentDialog);
   pdfJobs[0]!.pending.resolve("saved"); await tick();
   expect(dialog()?.textContent).toContain("PDF saved.");
   expect(pdfJobs).toHaveLength(1);

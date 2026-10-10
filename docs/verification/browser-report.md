@@ -1,6 +1,6 @@
 # Browser research and readable reports
 
-<!-- GrokOff modification (2026-10-10): document measured recipe cleanup and its direct-owner scope. -->
+<!-- GrokOff modification (2026-10-10): document measured recipe cleanup and stable room report readers. -->
 
 GrokOff can open a shared `.md` report inside the conversation. The book button
 beside a report link or attachment opens headings, tables, code and web source
@@ -80,19 +80,22 @@ production or native Chromium failure or a new desktop acceptance run.
 
 ### Reader continuity as messages leave the visible window
 
-The reader belongs to the active conversation rather than its report's mounted
-message row. Appending messages can evict that row without closing a pending
-read or cancelling its PDF export. Switching bots or threads closes the reader,
+In one-to-one chats and rooms, the reader belongs to the active conversation
+rather than its report's mounted message row. Appending messages can evict that
+row without closing a pending read or cancelling its PDF export. Switching bots,
+rooms or threads closes the reader,
 as does selecting a branch that excludes its source, removing or changing the
 source message, or changing its stored file grant. Unrelated message updates
 retain it. Server checks still authorize every
 file read; keeping a dialog open does not grant new access.
 
-`pnpm test:core` maintains the real ChatView continuity suite and the complete
-message-row render suite. The 13 continuity cases use disposable DOM fixtures,
-held synthetic reads and controlled PDF promises to exercise actual row
-eviction, authority changes, unchanged message replacements and attachment
-grants. These checks establish source behavior; native focus, appearance and
+`pnpm test:core` maintains the real ChatView/GroupView continuity suite and the
+complete message-row render suite. The one-to-one controls and room read/PDF
+controls use disposable DOM fixtures, held synthetic reads and controlled PDF
+promises to exercise actual row eviction, authority changes, unchanged message
+replacements and attachment grants. Rooms use the full currently loaded selected
+thread transcript as authority; messages from inactive tasks are outside that
+authority. These checks establish source behavior; native focus, appearance and
 PDF export on a new packaged build require separate acceptance.
 
 ### Measured recipe cleanup
