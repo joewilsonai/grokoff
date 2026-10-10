@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-10): obsolete Delete/Tidy up activations leave the editor alone; Delete ends pending Save ownership without dropping newer drafts.
+// GrokOff modification (2026-10-10): Delete/Tidy up end older Save ownership for retained documents without dropping drafts or receipts from newer loaded activations.
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
 // GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
 // Memory: what this bot believes, as a panel a person can read, fix, and
@@ -134,6 +134,9 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   // typing can cancel navigation while keeping the current draft and hash.
   const selectionGeneration = useRef(0);
   const documentGeneration = useRef(0);
+  // Dirty documents survive Settings reactivation. Remember the activation
+  // that loaded them, including a selection made after a mutation started.
+  const documentActivation = useRef(0);
   const pendingRead = useRef<number | null>(null);
   // The path a pending navigation is loading, valid only while that read is
   // still the pending one. Delete and Tidy hand the editor to that newest choice.
@@ -200,6 +203,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
         if (!ownsRead(generation)) return;
         pendingRead.current = null;
         documentGeneration.current += 1;
+        documentActivation.current = activationGeneration.current;
         setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
       }
     } catch (e) {
@@ -239,6 +243,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       if (!ownsRead(generation)) return;
       pendingRead.current = null;
       documentGeneration.current += 1;
+      documentActivation.current = activationGeneration.current;
       setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: path.startsWith("memory/log/") });
       return generation;
     } catch (e) {
@@ -319,17 +324,17 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     // Confirming Delete discards a draft that was already unsaved. Typing
     // after that click is newer than the request and stays in the editor.
     const revision = draftRevision.current;
-    const document = documentGeneration.current;
     let metadata: number | undefined;
     setError(null);
     try {
       await deleteMemoryDoc(bot.id, file.path);
       // A Save may already have committed while its response is still pending.
-      // A retained dirty document keeps its generation across reactivation:
-      // end its old Save ownership even when this activation can no longer
-      // touch the editor. A newly loaded revision owns its own Save receipt.
+      // A retained document keeps its loaded activation across reactivation,
+      // even if selected after Delete started. End its older Save ownership
+      // before the view guard; a later activation's loaded revision keeps its
+      // own Save receipt.
       if (mounted.current && currentEditing.current?.path === file.path
-        && (ownsMutationView(activation) || documentGeneration.current === document)) documentGeneration.current += 1;
+        && documentActivation.current === activation) documentGeneration.current += 1;
       if (!ownsMutationView(activation)) return;
       // Act on the editor as it is now, never the one captured at the click:
       // a file opened since stays open, and only a read of the deleted file
@@ -430,6 +435,13 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setNotice(null);
     try {
       const { report } = await tidyMemoryNow(bot.id);
+      // Tidy may have rewritten the saved bytes while their Save response was
+      // held. Keep this retained draft dirty rather than accepting that older
+      // hash as current. A new activation's loaded revision owns its receipts.
+      // Do this once at mutation success, before metadata: a Save from a fresh
+      // reread during the metadata wait is a newer write and must stay valid.
+      if (mounted.current && currentEditing.current?.dirty
+        && documentActivation.current === activation) documentGeneration.current += 1;
       if (!ownsMutationView(activation)) return;
       if (ownsMutationView(activation)) {
         metadata = ++metadataGeneration.current;

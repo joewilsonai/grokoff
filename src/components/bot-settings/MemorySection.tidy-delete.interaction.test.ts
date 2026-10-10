@@ -452,3 +452,208 @@ it("lets a newer activation's freshly loaded revision finish its Save after old 
   await click("Save");
   expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Next edit of the current revision", "fresh-saved-hash");
 });
+
+// GrokOff modification (2026-10-10): actual held Save/Tidy ordering controls; preserve a fresh activation revision.
+const changedByTidy = (): TidyResult => ({ report: { ...report, expired: 1 }, overview: overview() });
+
+it("keeps a draft dirty when its earlier Save receipt arrives after Tidy rewrites disk", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  const heldSave = deferred<SaveResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await click("Tidy up now");
+  await type("Draft saved before Tidy rewrote disk");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Draft saved before Tidy rewrote disk", "hash:memory/a.md");
+  // Save has committed, then Tidy expires a line. Only the responses are held.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied disk after expiring a note", "tidied-disk-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Draft saved before Tidy rewrote disk", "committed-before-tidy"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Draft saved before Tidy rewrote disk");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Draft saved before Tidy rewrote disk");
+  expect(button("Save").disabled).toBe(false);
+});
+
+it("keeps a retained dirty draft through Tidy and held Save across reactivation", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  const heldSave = deferred<SaveResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await click("Tidy up now");
+  await type("Retained Tidy three-way draft");
+  await click("Save");
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Retained Tidy three-way draft");
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied disk while hidden", "tidied-hidden-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Retained Tidy three-way draft", "committed-before-tidy"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Retained Tidy three-way draft");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Retained Tidy three-way draft");
+  expect(button("Save").disabled).toBe(false);
+});
+
+it("lets a newer activation's distinct loaded revision finish its Save after an old Tidy response", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  // Tidy's disk rewrite already happened; only its response is delayed. The
+  // next activation loads that distinct revision and Save commits after it.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Fresh tidied revision", "fresh-tidied-hash"));
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Fresh tidied revision");
+  const heldSave = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await type("New activation Save after disk Tidy");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "New activation Save after disk Tidy", "fresh-tidied-hash");
+  await act(async () => heldTidy.resolve({ report: { ...report, organized: 1 }, overview: overview() }));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "New activation Save after disk Tidy", "fresh-saved-hash"), overview: overview() }));
+  await tick();
+  expect(editor()?.value).toBe("New activation Save after disk Tidy");
+  expect(button("Save").disabled).toBe(true);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "New activation Save after disk Tidy", "fresh-saved-hash"));
+  await render(false);
+  await render();
+  await type("Next edit after current Save");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Next edit after current Save", "fresh-saved-hash");
+});
+
+it("keeps a newly selected file dirty when its Save receipt predates the current Tidy rewrite", async () => {
+  await render();
+  const heldTidy = deferred<TidyResult>();
+  const heldSave = deferred<SaveResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await click("Tidy up now");
+  await click("a.md");
+  await type("Selected after Tidy started, saved before rewrite");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Selected after Tidy started, saved before rewrite", "hash:memory/a.md");
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied newly selected file on disk", "tidied-selected-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Selected after Tidy started, saved before rewrite", "committed-before-tidy"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Selected after Tidy started, saved before rewrite");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.getAttribute("aria-label")).toBe("Memory file memory/a.md");
+  expect(editor()?.value).toBe("Selected after Tidy started, saved before rewrite");
+  expect(button("Save").disabled).toBe(false);
+});
+
+it("keeps a fresh same-activation Save started after Tidy success while metadata waits", async () => {
+  await render();
+  const heldTidy = deferred<TidyResult>();
+  const heldMetadata = deferred<MemoryJournalRow[]>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.journal.mockReturnValueOnce(heldMetadata.promise);
+  await click("Tidy up now");
+  // Disk changed before the Tidy response. Only journal metadata is delayed
+  // now; this explicit reread and Save own the later tidied revision.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Fresh disk after Tidy success", "post-tidy-read-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  expect(button("Tidying…").disabled).toBe(true);
+  await click("a.md");
+  expect(editor()?.value).toBe("Fresh disk after Tidy success");
+  const heldSave = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await type("Valid Save begun after Tidy committed");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Valid Save begun after Tidy committed", "post-tidy-read-hash");
+  await act(async () => heldMetadata.resolve([]));
+  await tick();
+  expect(editor()?.value).toBe("Valid Save begun after Tidy committed");
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Valid Save begun after Tidy committed", "valid-post-tidy-save-hash"), overview: overview() }));
+  await tick();
+  expect(editor()?.value).toBe("Valid Save begun after Tidy committed");
+  expect(button("Save").disabled).toBe(true);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Valid Save begun after Tidy committed", "valid-post-tidy-save-hash"));
+  await render(false);
+  await render();
+  await type("Next edit after post-Tidy Save");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Next edit after post-Tidy Save", "valid-post-tidy-save-hash");
+});
+
+
+it("keeps a post-Tidy selection's dirty Save obsolete across a later activation", async () => {
+  await render();
+  const heldTidy = deferred<TidyResult>();
+  const heldSave = deferred<SaveResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await click("Tidy up now");
+  await click("a.md");
+  await type("New selection retained across activation during Tidy");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "New selection retained across activation during Tidy", "hash:memory/a.md");
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("New selection retained across activation during Tidy");
+  // This Save committed first. Tidy then rewrote the file; its editor was
+  // loaded after the Tidy click but under that original activation.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied retained selection on disk", "tidied-retained-selection-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "New selection retained across activation during Tidy", "committed-before-tidy"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("New selection retained across activation during Tidy");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("New selection retained across activation during Tidy");
+  expect(button("Save").disabled).toBe(false);
+});
+
+
+it("keeps a later-loaded deleted file's draft dirty through Save and reactivation", async () => {
+  await render();
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  const heldSave = deferred<SaveResult>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await clickDelete("a.md");
+  await click("a.md");
+  await type("Loaded after Delete click, retained while Save waits");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Loaded after Delete click, retained while Save waits", "hash:memory/a.md");
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Loaded after Delete click, retained while Save waits");
+  // Save committed before Delete; the deleted disk is now empty. Its editor
+  // was loaded after Delete was clicked, but under Delete's old activation.
+  fixture.doc.mockImplementation(async (_id, path) => ({ path, text: "", hash: "deleted-empty", exists: false }));
+  await act(async () => heldDelete.resolve({ overview: overview() }));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Loaded after Delete click, retained while Save waits", "committed-before-delete"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Loaded after Delete click, retained while Save waits");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Loaded after Delete click, retained while Save waits");
+  expect(button("Save").disabled).toBe(false);
+});

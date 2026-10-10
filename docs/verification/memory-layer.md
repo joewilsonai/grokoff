@@ -187,10 +187,14 @@ responses cover this; eight of them fail on the previous component. They are
 not native app, filesystem, provider or model-call acceptance, and the Tidy up
 request and its server behavior are unchanged.
 
-Delete also ends a pending Save's ownership of the deleted document, so a
-Save response from before the deletion cannot mark the preserved draft clean.
-This also holds when Settings is reopened with the same dirty document before
-the responses arrive; a newly loaded revision keeps its own Save ownership.
+Delete also ends a pending Save's ownership of the deleted document, and Tidy
+up ends it for a dirty document whose saved bytes may have been rewritten.
+A Save response from before either mutation cannot mark that preserved draft
+clean. This also holds when Settings is reopened with the same dirty document,
+including a file selected after the mutation started. A revision loaded by a
+newer activation keeps its own Save ownership. Tidy invalidates the old receipt
+once when its request succeeds: a fresh reread and Save while its metadata is
+still loading remain current.
 A Delete or Tidy up response from a previous Settings activation leaves the
 current editor, pending selection, notice and error alone, including when
 Settings is reopened while Tidy up is refreshing metadata. Additional held
@@ -198,4 +202,8 @@ response controls cover these completion orders and draft retention through
 reactivation. These seven additional controls fail before the ownership guards
 and pass afterward; they use the same sealed in-memory transports. Two further
 controls repeat the Save/Delete ordering across reactivation and keep a newly
-loaded revision's successful Save and saved hash current.
+loaded revision's successful Save and saved hash current. Seven further controls
+cover Save/Tidy, retained selections across reactivation for both mutations, and
+the fresh Save during the metadata wait. Five fail before the loaded-activation
+guards; the two positive controls pass before and after. These 28 interactions
+remain source-DOM checks with in-memory transports, not native Tidy acceptance.
