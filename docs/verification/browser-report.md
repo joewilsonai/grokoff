@@ -65,3 +65,12 @@ Live-provider observations and their limits are recorded separately in
 The separate [synthetic browser login check](browser-login.md) closes and replaces
 the native daemon before verifying an encrypted loopback cookie/localStorage
 restore. It complements this recipe without using real website accounts.
+
+### Source development modal lifecycle
+
+The actual report-button interaction suite also mounts the reader under the
+source entry's React StrictMode. Opening stays visible through effect replay;
+explicit Close and Escape cancel the current read, restore trigger focus, and
+ignore dismissed late responses before a fresh reopen. These synthetic DOM
+checks address the development lifecycle; they do not establish a packaged
+production or native Chromium failure or a new desktop acceptance run.

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // GrokOff: real report button/dialog state with synthetic message-file transport.
 // No server, provider, file system, credentials or native desktop calls.
-import { act, createElement } from "react";
+import { StrictMode, act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
 import { setLocale } from "@/lib/i18n";
@@ -163,4 +163,34 @@ it("clears the deadline after success or ordinary failure without automatic retr
   await advance(DEADLINE_MS);
   expect(dialog().querySelector('[role="alert"]')).toBeNull();
   expect(requests).toHaveLength(2);
+});
+
+// The source entry mounts App in StrictMode. Its effect replay must close only
+// the temporary modal instance, without treating that cleanup as user dismissal.
+it.each(["Close report", "Escape"])("keeps the StrictMode reader open until explicit %s", async (dismissal) => {
+  await act(async () => { root.render(createElement(StrictMode, null, createElement(ReportFileButton, { path, name: "Findings.md", message }))); });
+  await open();
+  expect(dialog()).not.toBeNull();
+  expect(dialog().open).toBe(true);
+  const currentRequest = requests.at(-1)!;
+  expect(currentRequest.signal.aborted).toBe(false);
+  expect(button("Open report: Findings.md")).toBeDefined();
+  act(() => {
+    if (dismissal === "Escape") dialog().dispatchEvent(new Event("cancel", { cancelable: true }));
+    else button("Close report").click();
+  });
+  await tick();
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(currentRequest.signal.aborted).toBe(true);
+  expect(document.activeElement).toBe(button("Open report: Findings.md"));
+  // Late bodies from replayed or dismissed attempts cannot reopen the reader.
+  for (const resolve of held) resolve(report("# Dismissed findings"));
+  await tick();
+  await advance(DEADLINE_MS);
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(document.querySelector('[role="alert"]')).toBeNull();
+  mode = "success";
+  await open();
+  expect(dialog().open).toBe(true);
+  expect(dialog().querySelector("h1")?.textContent).toBe("Recovered findings");
 });
