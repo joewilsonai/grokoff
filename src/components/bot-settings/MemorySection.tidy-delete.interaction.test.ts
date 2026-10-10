@@ -657,3 +657,67 @@ it("keeps a later-loaded deleted file's draft dirty through Save and reactivatio
   expect(editor()?.value).toBe("Loaded after Delete click, retained while Save waits");
   expect(button("Save").disabled).toBe(false);
 });
+
+// GrokOff modification (2026-10-10): later-activation housekeeping preserves an earlier loaded retained draft against obsolete Save receipts.
+
+it("keeps an earlier activation's retained draft dirty after later-activation Tidy and held Save", async () => {
+  await render();
+  await click("a.md");
+  await type("Dirty document loaded before reopening Settings");
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Dirty document loaded before reopening Settings");
+  const heldTidy = deferred<TidyResult>();
+  const heldSave = deferred<SaveResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await click("Tidy up now");
+  await type("Retained document saved before newer Tidy rewrote disk");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Retained document saved before newer Tidy rewrote disk", "hash:memory/a.md");
+  await render(false);
+  await render();
+  // The prior Save committed, then the newer activation's Tidy rewrote disk.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Later activation tidied disk", "later-activation-tidied-hash"));
+  await act(async () => heldTidy.resolve(changedByTidy()));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Retained document saved before newer Tidy rewrote disk", "committed-before-newer-tidy"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Retained document saved before newer Tidy rewrote disk");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Retained document saved before newer Tidy rewrote disk");
+  expect(button("Save").disabled).toBe(false);
+});
+
+it("keeps an earlier activation's retained draft dirty after later-activation Delete and held Save", async () => {
+  await render();
+  await click("a.md");
+  await type("Dirty document loaded before reopening Settings");
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Dirty document loaded before reopening Settings");
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  const heldSave = deferred<SaveResult>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await clickDelete("a.md");
+  // Typing after confirming Delete is newer and must not be discarded.
+  await type("Retained document typed after newer Delete click");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Retained document typed after newer Delete click", "hash:memory/a.md");
+  await render(false);
+  await render();
+  fixture.doc.mockImplementation(async (_id, path) => ({ path, text: "", hash: "later-activation-deleted-empty", exists: false }));
+  await act(async () => heldDelete.resolve({ overview: overview() }));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Retained document typed after newer Delete click", "committed-before-newer-delete"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Retained document typed after newer Delete click");
+  expect.soft(button("Save").disabled).toBe(false);
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Retained document typed after newer Delete click");
+  expect(button("Save").disabled).toBe(false);
+});

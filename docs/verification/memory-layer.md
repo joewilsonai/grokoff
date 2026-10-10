@@ -190,7 +190,8 @@ request and its server behavior are unchanged.
 Delete also ends a pending Save's ownership of the deleted document, and Tidy
 up ends it for a dirty document whose saved bytes may have been rewritten.
 A Save response from before either mutation cannot mark that preserved draft
-clean. This also holds when Settings is reopened with the same dirty document,
+clean. This also holds when Settings is reopened with the same dirty document
+before starting housekeeping or before its response arrives,
 including a file selected after the mutation started. A revision loaded by a
 newer activation keeps its own Save ownership. Tidy invalidates the old receipt
 once when its request succeeds: a fresh reread and Save while its metadata is
@@ -206,4 +207,8 @@ loaded revision's successful Save and saved hash current. Seven further controls
 cover Save/Tidy, retained selections across reactivation for both mutations, and
 the fresh Save during the metadata wait. Five fail before the loaded-activation
 guards; the two positive controls pass before and after. These 28 interactions
-remain source-DOM checks with in-memory transports, not native Tidy acceptance.
+are joined by two controls that reopen a dirty document before starting Delete
+or Tidy up and reopen it again while their responses wait. Both fail with an
+equality-only activation guard and pass when earlier loaded activations are
+protected too. All 30 remain source-DOM checks with in-memory transports, not
+native Tidy acceptance.

@@ -330,11 +330,12 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       await deleteMemoryDoc(bot.id, file.path);
       // A Save may already have committed while its response is still pending.
       // A retained document keeps its loaded activation across reactivation,
-      // even if selected after Delete started. End its older Save ownership
+      // even if loaded before this visit or selected after Delete started.
+      // End its older Save ownership
       // before the view guard; a later activation's loaded revision keeps its
       // own Save receipt.
       if (mounted.current && currentEditing.current?.path === file.path
-        && documentActivation.current === activation) documentGeneration.current += 1;
+        && documentActivation.current <= activation) documentGeneration.current += 1;
       if (!ownsMutationView(activation)) return;
       // Act on the editor as it is now, never the one captured at the click:
       // a file opened since stays open, and only a read of the deleted file
@@ -441,7 +442,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       // Do this once at mutation success, before metadata: a Save from a fresh
       // reread during the metadata wait is a newer write and must stay valid.
       if (mounted.current && currentEditing.current?.dirty
-        && documentActivation.current === activation) documentGeneration.current += 1;
+        && documentActivation.current <= activation) documentGeneration.current += 1;
       if (!ownsMutationView(activation)) return;
       if (ownsMutationView(activation)) {
         metadata = ++metadataGeneration.current;
