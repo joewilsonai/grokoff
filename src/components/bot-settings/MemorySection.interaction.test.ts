@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 // GrokOff: actual memory editor read/Save/Undo ownership and fresh mutation metadata with deferred in-memory responses.
+// GrokOff modification (2026-10-10): verify immediate refused-Save reporting and source-tagged draft/error retention across file changes.
 // Transport, Store dispatch and desktop capabilities are sealed synthetic seams;
 // no provider, server, filesystem, account, native UI or background model calls.
 import { act, createElement, StrictMode } from "react";
@@ -231,6 +232,7 @@ it("retains conflict reload and its saved draft after an older read finishes", a
   await click("a.md");
   fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Newer on disk", currentHash: "disk-hash" });
   await click("Save");
+  fixture.doc.mockResolvedValueOnce(doc("MEMORY.md", "Newer on disk", "disk-hash"));
   await click("Reload");
   await act(async () => held.resolve(doc("memory/a.md", "Before conflict")));
   await tick();
@@ -313,6 +315,7 @@ it("retains current reactivation metadata when conflict Reload changes only the 
   const held = deferred<MemoryOverview>();
   fixture.overview.mockReturnValueOnce(held.promise);
   await render();
+  fixture.doc.mockResolvedValueOnce(doc("MEMORY.md", "Conflict disk version", "reload-hash"));
   await click("Reload");
   await act(async () => held.resolve(overview("/synthetic/reloaded-metadata")));
   await tick();
@@ -419,8 +422,13 @@ it.each(["conflict", "error"] as const)("does not project an old Save %s onto a 
   });
   await tick();
   expect(editor().value).toBe("Keep B draft");
-  expect(container.textContent).not.toContain("Old index Save failure");
+  expect(container.querySelector("pre")?.textContent).toBe("Submitted index");
+  expect(container.querySelector("pre")?.parentElement?.textContent).toContain("MEMORY.md");
+  expect(container.querySelector("pre")?.parentElement?.textContent).toContain(outcome === "error" ? "Old index Save failure" : "Save refused");
   expect([...container.querySelectorAll("button")].some(el => el.textContent?.trim() === "Reload")).toBe(false);
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/b.md", "Keep B draft", "hash:memory/b.md");
+  expect(container.querySelector("pre")?.textContent).toBe("Submitted index");
 });
 
 
@@ -455,6 +463,7 @@ it("keeps newer typing through a current held Save conflict and retains it on Re
   await act(async () => held.resolve({ ok: false, conflict: true, current: "Concurrent disk text", currentHash: "disk-hash" }));
   await tick();
   expect(editor().value).toBe("Current conflict draft");
+  fixture.doc.mockResolvedValueOnce(doc("MEMORY.md", "Concurrent disk text", "disk-hash"));
   await click("Reload");
   expect(editor().value).toBe("Concurrent disk text");
   expect(container.querySelector("pre")?.textContent).toBe("Current conflict draft");
@@ -961,4 +970,72 @@ it("keeps a later current file-read error even when it matches the old metadata 
   expect(container.textContent).toContain("You removed 7 lines from the b topic");
   expect(container.textContent).toContain("Shared failure text");
   expect(editor().value).toBe("Saved index");
+});
+
+
+it.each(["success", "refusal", "error"] as const)("keeps A's source-tagged draft through an unrelated B Save %s", async outcome => {
+  await render();
+  await click("a.md");
+  await type("Original A words");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Disk A", currentHash: "disk-a" });
+  await click("Save");
+  // Reload is the established kept-draft path; B must not erase its content either.
+  await click("Reload");
+  await click("b.md");
+  await type("B submission");
+  if (outcome === "refusal") fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Disk B", currentHash: "disk-b" });
+  if (outcome === "error") fixture.save.mockRejectedValueOnce(new Error("Synthetic B Save failed"));
+  await click("Save");
+  const drafts = [...container.querySelectorAll("pre")];
+  expect(drafts.map(el => el.textContent)).toContain("Original A words");
+  expect(drafts.find(el => el.textContent === "Original A words")?.parentElement?.textContent).toContain("memory/a.md");
+  if (outcome !== "success") {
+    const keptB = drafts.find(el => el.textContent === "B submission");
+    expect(keptB?.parentElement?.textContent).toContain("memory/b.md");
+    expect(keptB?.parentElement?.textContent).toContain(outcome === "error" ? "Synthetic B Save failed" : "Save refused");
+    await click("Save");
+    const afterRetry = [...container.querySelectorAll("pre")].map(el => el.textContent);
+    expect(afterRetry).toContain("Original A words");
+    expect(afterRetry).not.toContain("B submission");
+  }
+  expect(editor().value).toBe("B submission");
+});
+
+it.each(["navigation", "typing"] as const)("keeps newer %s after a held conflict Reload settles", async intent => {
+  await render();
+  await click("a.md");
+  await type("A refusal to retain");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Earlier disk A", currentHash: "earlier-a" });
+  await click("Save");
+  const reloaded = deferred<MemoryDoc>();
+  fixture.doc.mockReturnValueOnce(reloaded.promise);
+  await click("Reload");
+  expect(editor().value).toBe("A refusal to retain");
+  if (intent === "navigation") await click("b.md");
+  await type("Newer current intent");
+  await act(async () => reloaded.resolve(doc("memory/a.md", "Late Reload text", "late-reload-hash")));
+  await tick();
+  expect(editor().value).toBe("Newer current intent");
+  expect(container.querySelector("pre")?.textContent).toBe("A refusal to retain");
+  await click("Save");
+  const path = intent === "navigation" ? "memory/b.md" : "memory/a.md";
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, path, "Newer current intent", `hash:${path}`);
+});
+
+it("retains the draft and reports a current Reload read failure, then allows a current read to recover", async () => {
+  await render();
+  await click("a.md");
+  await type("A draft kept despite Reload failure");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Earlier disk A", currentHash: "earlier-a" });
+  await click("Save");
+  fixture.doc.mockRejectedValueOnce(new Error("Current Reload read failure"));
+  await click("Reload");
+  expect(editor().value).toBe("A draft kept despite Reload failure");
+  expect(button("Save").disabled).toBe(false);
+  expect(container.textContent).toContain("Current Reload read failure");
+  expect(container.querySelector("pre")?.textContent).toBe("A draft kept despite Reload failure");
+  await click("a.md");
+  expect(editor().value).toBe("Saved memory/a.md");
+  expect(container.textContent).not.toContain("Current Reload read failure");
+  expect(container.querySelector("pre")?.textContent).toBe("A draft kept despite Reload failure");
 });

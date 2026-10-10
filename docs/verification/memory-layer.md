@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-10): document prompt Save refusals and source-tagged kept drafts across file navigation. -->
 <!-- GrokOff modification (2026-10-09): document current-editor Delete/Tidy up completion and its verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation and fresh overlapping mutation metadata without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
@@ -187,7 +188,7 @@ responses cover this; eight of them fail on the previous component. They are
 not native app, filesystem, provider or model-call acceptance, and the Tidy up
 request and its server behavior are unchanged.
 
-A Save that overlaps Delete of its file or Tidy up waits for those mutation
+A successful Save that overlaps Delete of its file or Tidy up waits for those mutation
 requests to settle, then reads the actual current file before reconciling its
 receipt. Only matching path, hash, text and existence can mark the submitted
 revision clean. Reopening Settings alone is not proof of freshness: the file
@@ -198,6 +199,23 @@ the draft unsaved. Delete of a different file does not hold up this Save.
 The API completion ends the barrier, so a fresh reread and Save while journal
 metadata is still loading remain current. Failed mutation requests release the
 barrier too; the file read determines whether the Save receipt is still valid.
+
+A refused Save does not wait for housekeeping: it wrote nothing and reports
+the refusal as soon as the response arrives. Its submitted text remains in a
+kept-draft pane labeled with the source path, including when another file is
+open or Delete has closed the editor. Failed Save requests retain their text
+and error the same way. A failure while verifying an acknowledged write is
+labeled separately, so it does not imply the write failed.
+
+The pane keeps the latest retained revision per path for this mounted Settings
+session. Saving another file cannot remove it; a successfully reconciled Save
+clears only its own path. Reload reads the current file through the guarded
+selection path, so a later Tidy cannot leave it using the earlier refusal
+snapshot. Reload and per-path Dismiss remain explicit actions.
+The deferred React fixtures cover refusal before and after navigation, held
+Delete/Tidy requests, independent A/B drafts and successful retry. They use
+in-memory transports and establish neither durable draft recovery nor native
+packaged acceptance.
 
 A Delete or Tidy up response from a previous Settings activation leaves that
 view's editor, pending selection, notice and error alone. Its disk effect still

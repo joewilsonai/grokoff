@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 // GrokOff: Tidy and Delete in the memory editor leave newer typing, navigation and metadata alone.
+// GrokOff modification (2026-10-10): verify immediate refused-Save reporting and source-tagged draft/error retention across file changes.
 // Same sealed synthetic seams as MemorySection.interaction.test.ts: deferred in-memory
 // responses; no provider, server, filesystem, account, native UI or background model calls.
 import { act, createElement } from "react";
@@ -919,4 +920,142 @@ it("keeps an empty saved draft dirty when Delete leaves identical empty bytes bu
   expect(editor()?.getAttribute("aria-label")).toBe("Memory file memory/a.md");
   expect(editor()?.value).toBe("");
   expect(button("Save").disabled).toBe(false);
+});
+
+
+it.each(["Tidy", "Delete"] as const)("surfaces a refused Save immediately while %s is still pending, then keeps its source draft after navigation", async kind => {
+  await render();
+  await click("a.md");
+  const housekeeping = deferred<TidyResult>();
+  if (kind === "Tidy") {
+    fixture.tidy.mockReturnValueOnce(housekeeping.promise);
+    await click("Tidy up now");
+  } else {
+    fixture.remove.mockReturnValueOnce(housekeeping.promise);
+    await clickDelete("a.md");
+  }
+  await type("Refused A submission");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Changed disk A", currentHash: "changed-a" });
+  await click("Save");
+  // The real refusal has arrived, but housekeeping has deliberately not settled.
+  expect(button("Reload").disabled).toBe(false);
+  expect(button("Save").disabled).toBe(false);
+  expect(container.querySelector("pre")?.textContent).toBe("Refused A submission");
+  expect(container.querySelector("pre")?.parentElement?.textContent).toContain("memory/a.md");
+  await click("b.md");
+  await type("Current B draft");
+  await act(async () => housekeeping.resolve(tidied()));
+  await tick();
+  expect(editor()?.value).toBe("Current B draft");
+  expect(container.querySelector("pre")?.textContent).toBe("Refused A submission");
+  expect([...container.querySelectorAll("button")].some(el => el.textContent?.trim() === "Reload")).toBe(false);
+});
+
+it.each(["Tidy", "Delete"] as const)("retains an A refusal received after selecting B while %s is pending", async kind => {
+  await render();
+  await click("a.md");
+  const housekeeping = deferred<TidyResult>();
+  if (kind === "Tidy") {
+    fixture.tidy.mockReturnValueOnce(housekeeping.promise);
+    await click("Tidy up now");
+  } else {
+    fixture.remove.mockReturnValueOnce(housekeeping.promise);
+    await clickDelete("a.md");
+  }
+  await type("Submitted A before leaving");
+  const saved = deferred<SaveResult>();
+  fixture.save.mockReturnValueOnce(saved.promise);
+  await click("Save");
+  await click("b.md");
+  await type("Later B intent");
+  await act(async () => saved.resolve({ ok: false, conflict: true, current: "Changed A", currentHash: "changed-a" }));
+  await tick();
+  expect(editor()?.value).toBe("Later B intent");
+  expect(button("Save").disabled).toBe(false);
+  expect(container.querySelector("pre")?.textContent).toBe("Submitted A before leaving");
+  expect(container.querySelector("pre")?.parentElement?.textContent).toContain("memory/a.md");
+  expect(container.querySelector("pre")?.parentElement?.textContent).toContain("Save refused");
+  expect([...container.querySelectorAll("button")].some(el => el.textContent?.trim() === "Reload")).toBe(false);
+  // A later successful B save still uses B's own hash and cannot erase A's kept text.
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/b.md", "Later B intent", "hash:memory/b.md");
+  expect(container.querySelector("pre")?.textContent).toBe("Submitted A before leaving");
+  await act(async () => housekeeping.resolve(tidied()));
+  await tick();
+  expect(container.querySelector("pre")?.textContent).toBe("Submitted A before leaving");
+});
+
+it("keeps a refused source draft visible after Delete removes its current editor", async () => {
+  await render();
+  await click("a.md");
+  await type("Refused words kept after deletion");
+  const deletion = deferred<{ overview: MemoryOverview }>();
+  fixture.remove.mockReturnValueOnce(deletion.promise);
+  await clickDelete("a.md");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Changed A", currentHash: "changed-a" });
+  await click("Save");
+  expect(button("Reload").disabled).toBe(false);
+  await act(async () => deletion.resolve({ overview: overview() }));
+  await tick();
+  expect(editor()).toBeNull();
+  const kept = container.querySelector("pre");
+  expect(kept?.textContent).toBe("Refused words kept after deletion");
+  expect(kept?.parentElement?.textContent).toContain("memory/a.md");
+  expect(kept?.parentElement?.textContent).toContain("Save refused");
+});
+
+it("Reload reads the latest tidied file after an immediate refusal and saves against its current hash", async () => {
+  await render();
+  await click("a.md");
+  const tidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(tidy.promise);
+  await click("Tidy up now");
+  await type("Refused pre-Tidy submission");
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Pre-Tidy conflict", currentHash: "pre-tidy" });
+  await click("Save");
+  expect(button("Reload").disabled).toBe(false);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Latest tidied disk", "latest-tidy-hash"));
+  await act(async () => tidy.resolve(tidied()));
+  await tick();
+  expect(editor()?.value).toBe("Refused pre-Tidy submission");
+  await click("Reload");
+  expect(editor()?.value).toBe("Latest tidied disk");
+  expect(button("Save").disabled).toBe(true);
+  expect(container.querySelector("pre")?.textContent).toBe("Refused pre-Tidy submission");
+  await type("Edit after fresh Reload");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Edit after fresh Reload", "latest-tidy-hash");
+});
+
+it.each(["Tidy", "Delete"] as const)("lets completed %s supersede an older pending Reload without a separate mutation wait", async kind => {
+  await render();
+  await click("a.md");
+  await type("Kept refusal draft");
+  const housekeeping = deferred<TidyResult>();
+  if (kind === "Tidy") {
+    fixture.tidy.mockReturnValueOnce(housekeeping.promise);
+    await click("Tidy up now");
+  } else {
+    fixture.remove.mockReturnValueOnce(housekeeping.promise);
+    await clickDelete("a.md");
+  }
+  fixture.save.mockResolvedValueOnce({ ok: false, conflict: true, current: "Earlier conflict", currentHash: "earlier-hash" });
+  await click("Save");
+  const reloaded = deferred<MemoryDoc>();
+  fixture.doc.mockReturnValueOnce(reloaded.promise);
+  await click("Reload");
+  expect(editor()?.value).toBe("Kept refusal draft");
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "After housekeeping", "after-housekeeping-hash"));
+  await act(async () => housekeeping.resolve(tidied()));
+  await tick();
+  await act(async () => reloaded.resolve(doc("memory/a.md", "Before housekeeping", "before-housekeeping-hash")));
+  await tick();
+  expect(container.querySelector("pre")?.textContent).toBe("Kept refusal draft");
+  if (kind === "Delete") expect(editor()).toBeNull();
+  else {
+    expect(editor()?.value).toBe("After housekeeping");
+    await type("Edit current tidied file");
+    await click("Save");
+    expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Edit current tidied file", "after-housekeeping-hash");
+  }
 });

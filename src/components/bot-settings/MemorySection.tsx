@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): show refused Saves immediately, keep failed drafts by source path and guard Reload of current disk content.
 // GrokOff modification (2026-10-10): verify overlapping Save receipts against disk after Delete/Tidy settle; refresh tidied files independently of metadata failures.
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
 // GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
@@ -64,6 +65,12 @@ interface Editing {
   readOnly: boolean;
 }
 
+interface SavedDraft {
+  path: string;
+  text: string;
+  error?: string;
+}
+
 interface Conflict {
   path: string;
   /** What is on disk now — the bot's version. */
@@ -116,7 +123,11 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const [journal, setJournal] = useState<MemoryJournalRow[] | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [conflict, setConflict] = useState<Conflict | null>(null);
-  const [savedDraft, setSavedDraft] = useState<string | null>(null);
+  const [savedDrafts, setSavedDrafts] = useState<SavedDraft[]>([]);
+  // One kept revision per file: a later refusal must not discard another file's words.
+  const keepDraft = (draft: SavedDraft) => setSavedDrafts(current => [
+    ...current.filter(kept => kept.path !== draft.path), draft,
+  ]);
   const [error, setSectionError] = useState<SectionError | null>(null);
   const setError = (message: string | null) => setSectionError(message === null ? null : { message });
   const [notice, setNotice] = useState<string | null>(null);
@@ -287,10 +298,24 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     const ownsSaveControls = () => ownsSave()
       && (pendingRead.current === null || selectionGeneration.current === selection);
     let journalGeneration: number | undefined;
+    let saveAcknowledged = false;
     setSaving(true);
     setError(null);
     try {
       const result = await saveMemoryDoc(bot.id, submitted.path, submitted.text, expectedHash);
+      if (!result.ok) {
+        // A refusal wrote nothing. Report it now, even while housekeeping is
+        // pending, and preserve the submitted words before navigation can hide them.
+        if (mounted.current) {
+          keepDraft({ path: submitted.path, text: submitted.text, error: "Save refused: the file changed before this edit could be saved." });
+          if (ownsSaveControls()) {
+            invalidateEditorReads();
+            setConflict({ path: submitted.path, current: result.current, currentHash: result.currentHash });
+          }
+        }
+        return;
+      }
+      saveAcknowledged = true;
       let receiptCurrent = true;
       let disk: Awaited<ReturnType<typeof fetchMemoryDoc>> | undefined;
       if (ownsSave() && (overlapping.length > 0 || mutationRevisionFor(submitted.path) !== mutation)) {
@@ -305,25 +330,18 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
             receiptCurrent = mutationRevisionFor(submitted.path) === verification
               && mutationsFor(submitted.path).length === 0
               && disk.path === submitted.path
-              && (!result.ok || (disk.hash === result.doc.hash && disk.text === result.doc.text && disk.exists === result.doc.exists));
+              && disk.hash === result.doc.hash && disk.text === result.doc.text && disk.exists === result.doc.exists;
           }
         }
       }
       const reconciledMutation = mutationRevisionFor(submitted.path);
-      if (!result.ok) {
-        if (receiptCurrent && ownsSaveControls()) {
-          invalidateEditorReads();
-          setConflict({ path: submitted.path, current: disk?.text ?? result.current, currentHash: disk?.hash ?? result.currentHash });
-        }
-        return;
-      }
       // The write happened even if the person navigated away. Only its
       // still-current editor may be reconciled; later reads must keep running.
       if (receiptCurrent && ownsSave()) {
         if (ownsSaveControls()) {
           invalidateEditorReads();
           setConflict(null);
-          setSavedDraft(null);
+          setSavedDrafts(current => current.filter(draft => draft.path !== submitted.path));
         }
         setEditing(current => {
           if (mutationRevisionFor(submitted.path) !== reconciledMutation || documentGeneration.current !== document || !current || current.path !== submitted.path || current.hash !== submitted.hash) return current;
@@ -338,7 +356,10 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       }
     } catch (e) {
       if (journalGeneration === undefined) {
-        if (ownsSaveControls()) setError(errorText(e));
+        if (mounted.current) {
+          keepDraft({ path: submitted.path, text: submitted.text, error: `${saveAcknowledged ? "Save was acknowledged, but checking the current file failed" : "Save failed"}: ${errorText(e)}` });
+          if (ownsSaveControls()) setError(errorText(e));
+        }
       } else if (ownsMetadata(journalGeneration)) setSectionError({ message: errorText(e), metadata: journalGeneration });
     } finally {
       setSaving(false);
@@ -347,13 +368,13 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
 
   /** Reload keeps the person's words: the draft moves under the editor
    * as read-only text so nothing typed is lost, and the editor shows the
-   * bot's version. */
+   * current disk version through the same guarded read as file navigation. */
   const reloadFromConflict = () => {
-    if (!conflict || !editing) return;
-    invalidateEditorReads();
-    setSavedDraft(editing.text);
-    setEditing({ ...editing, text: conflict.current, hash: conflict.currentHash, dirty: false });
-    setConflict(null);
+    if (!conflict || !editing || conflict.path !== editing.path) return;
+    keepDraft({ path: editing.path, text: editing.text });
+    // The refusal's snapshot may predate a completed Tidy/Delete or bot write.
+    // open() rejects this read if newer typing, selection or housekeeping owns it.
+    void open(editing.path);
   };
 
   const remove = async (file: MemoryFileInfo) => {
@@ -614,19 +635,21 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
               )}
             </div>
           )}
-          {savedDraft !== null && (
-            <div className="mt-3">
-              <div className="mb-1 text-[12px] text-ink-secondary">Your unsaved draft, kept so nothing is lost:</div>
-              <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap rounded-lg border border-hairline/40 bg-inset p-3 font-mono text-[12px] leading-relaxed text-ink">
-                {savedDraft}
-              </pre>
-              <button type="button" className={cn(quietButtonCls, "mt-1")} onClick={() => setSavedDraft(null)}>
-                Dismiss draft
-              </button>
-            </div>
-          )}
         </div>
       )}
+
+      {savedDrafts.map(draft => (
+        <div key={draft.path} className="rounded-xl bg-card p-4">
+          <div className="mb-1 text-[12px] text-ink-secondary">Your unsaved draft from <code>{draft.path}</code>, kept so nothing is lost:</div>
+          {draft.error && <p role="alert" className="mb-2 text-[12.5px] text-danger">{draft.error}</p>}
+          <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap rounded-lg border border-hairline/40 bg-inset p-3 font-mono text-[12px] leading-relaxed text-ink">
+            {draft.text}
+          </pre>
+          <button type="button" aria-label={`Dismiss draft for ${draft.path}`} className={cn(quietButtonCls, "mt-1")} onClick={() => setSavedDrafts(current => current.filter(kept => kept.path !== draft.path))}>
+            Dismiss draft
+          </button>
+        </div>
+      ))}
 
       {overview && (
         <div className="rounded-xl bg-card p-4">
