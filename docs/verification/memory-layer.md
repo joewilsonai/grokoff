@@ -189,9 +189,13 @@ request and its server behavior are unchanged.
 
 Delete also ends a pending Save's ownership of the deleted document, so a
 Save response from before the deletion cannot mark the preserved draft clean.
+This also holds when Settings is reopened with the same dirty document before
+the responses arrive; a newly loaded revision keeps its own Save ownership.
 A Delete or Tidy up response from a previous Settings activation leaves the
 current editor, pending selection, notice and error alone, including when
 Settings is reopened while Tidy up is refreshing metadata. Additional held
 response controls cover these completion orders and draft retention through
 reactivation. These seven additional controls fail before the ownership guards
-and pass afterward; they use the same sealed in-memory transports.
+and pass afterward; they use the same sealed in-memory transports. Two further
+controls repeat the Save/Delete ordering across reactivation and keep a newly
+loaded revision's successful Save and saved hash current.

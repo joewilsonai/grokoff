@@ -319,15 +319,18 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     // Confirming Delete discards a draft that was already unsaved. Typing
     // after that click is newer than the request and stays in the editor.
     const revision = draftRevision.current;
+    const document = documentGeneration.current;
     let metadata: number | undefined;
     setError(null);
     try {
       await deleteMemoryDoc(bot.id, file.path);
-      if (!ownsMutationView(activation)) return;
       // A Save may already have committed while its response is still pending.
-      // Deletion ends that document's Save ownership even when newer typing is
-      // kept, so the late receipt cannot mark the now-deleted draft clean.
-      if (currentEditing.current?.path === file.path) documentGeneration.current += 1;
+      // A retained dirty document keeps its generation across reactivation:
+      // end its old Save ownership even when this activation can no longer
+      // touch the editor. A newly loaded revision owns its own Save receipt.
+      if (mounted.current && currentEditing.current?.path === file.path
+        && (ownsMutationView(activation) || documentGeneration.current === document)) documentGeneration.current += 1;
+      if (!ownsMutationView(activation)) return;
       // Act on the editor as it is now, never the one captured at the click:
       // a file opened since stays open, and only a read of the deleted file
       // is cancelled.
