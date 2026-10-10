@@ -82,7 +82,7 @@ const type = async (value: string) => {
   });
   await tick();
 };
-const render = async (active = true) => { await act(async () => root.render(createElement(MemorySection, { bot, active, onToggle: fixture.dispatch }))); await tick(); };
+const render = async (active = true, selectedBot = bot) => { await act(async () => root.render(createElement(MemorySection, { bot: selectedBot, active, onToggle: fixture.dispatch }))); await tick(); };
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -335,22 +335,121 @@ it("does not cancel a newer activation's same-path read when an old Delete finis
   expect(editor()?.value).toBe("New activation read");
 });
 
-it("does not reread or publish an old Tidy result after the panel reactivates", async () => {
+// GrokOff modification (2026-10-10): successful Tidy refreshes the current reopened view, preserving its newer intent.
+it("refreshes a clean reopened editor, journal and upkeep after pending Tidy commits", async () => {
   await render();
+  await click("a.md");
   const heldTidy = deferred<TidyResult>();
   fixture.tidy.mockReturnValueOnce(heldTidy.promise);
   await click("Tidy up now");
   await render(false);
-  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Current activation", "current-activation-hash"));
   await render();
-  const docReads = fixture.doc.mock.calls.length;
-  expect(editor()?.value).toBe("Current activation");
-  await act(async () => heldTidy.resolve(tidied()));
+  expect(editor()?.value).toBe("Saved memory/a.md");
+  expect(fixture.doc.mock.calls.filter(([, path]) => path === "memory/a.md")).toHaveLength(2);
+  // Reopening read the old disk while Tidy was pending. Only now does the
+  // operation commit its new document, journal and upkeep status.
+  const committed = { ...report, at: 2, expired: 1 };
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied after reopen", "tidied-reopened-hash"));
+  fixture.overview.mockResolvedValue(overview("/synthetic/tidy-committed"));
+  fixture.journal.mockResolvedValue([{ ...row, id: "tidy-committed", path: "memory/a.md", actor: "upkeep", added: 0, removed: 1 }]);
+  fixture.upkeep.mockResolvedValue({ enabled: true, modelSteps: true, lastTidy: committed });
+  await act(async () => heldTidy.resolve({ report: committed, overview: overview() }));
   await tick();
-  expect.soft(fixture.doc).toHaveBeenCalledTimes(docReads);
-  expect.soft(container.textContent).not.toContain("Nothing to tidy.");
-  expect(editor()?.value).toBe("Current activation");
+  expect.soft(editor()?.value).toBe("Tidied after reopen");
+  expect.soft(container.textContent).toContain("Memory upkeep removed 1 line from the a topic");
+  expect.soft(container.textContent).toContain("/synthetic/tidy-committed");
+  expect.soft(container.textContent).toContain("Last tidy-up");
+  expect.soft(container.textContent).toContain("Archived 1 expired note.");
   expect(button("Tidy up now").disabled).toBe(false);
+  await type("Edit based on the tidied reopened revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/a.md", "Edit based on the tidied reopened revision", "tidied-reopened-hash");
+});
+
+it("refreshes Tidy metadata after reopen without replacing a newer dirty draft", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  await render(false);
+  await render();
+  await type("Newer reopened draft");
+  const docReads = fixture.doc.mock.calls.length;
+  const committed = { ...report, at: 2, expired: 1 };
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Tidied disk must not replace draft", "tidied-disk-hash"));
+  fixture.journal.mockResolvedValue([{ ...row, id: "tidy-after-draft", actor: "upkeep", added: 0, removed: 1 }]);
+  fixture.upkeep.mockResolvedValue({ enabled: true, modelSteps: true, lastTidy: committed });
+  await act(async () => heldTidy.resolve({ report: committed, overview: overview() }));
+  await tick();
+  expect(editor()?.value).toBe("Newer reopened draft");
+  expect(button("Save").disabled).toBe(false);
+  expect(fixture.doc).toHaveBeenCalledTimes(docReads);
+  expect.soft(container.textContent).toContain("Memory upkeep removed 1 line from the b topic");
+  expect.soft(container.textContent).toContain("Last tidy-up");
+  expect(container.textContent).toContain("Archived 1 expired note.");
+});
+
+it("reissues the newest reopened selection after Tidy and ignores its pre-commit read", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  await render(false);
+  await render();
+  const beforeTidy = deferred<MemoryDoc>();
+  fixture.doc.mockReturnValueOnce(beforeTidy.promise);
+  await click("b.md");
+  expect(fixture.doc).toHaveBeenLastCalledWith(bot.id, "memory/b.md");
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Fresh reopened selection after Tidy", "tidied-reopened-b-hash"));
+  await act(async () => heldTidy.resolve({ report: { ...report, expired: 1 }, overview: overview() }));
+  await tick();
+  expect.soft(fixture.doc.mock.calls.filter(([, path]) => path === "memory/b.md")).toHaveLength(2);
+  await act(async () => beforeTidy.resolve(doc("memory/b.md", "Stale reopened selection before Tidy", "stale-reopened-b-hash")));
+  await tick();
+  expect.soft(editor()?.getAttribute("aria-label")).toBe("Memory file memory/b.md");
+  expect.soft(editor()?.value).toBe("Fresh reopened selection after Tidy");
+  await type("Edit based on the tidied selected revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(bot.id, "memory/b.md", "Edit based on the tidied selected revision", "tidied-reopened-b-hash");
+});
+
+// GrokOff modification (2026-10-10): a successful Tidy cannot adopt a different bot's mounted editor.
+it("does not adopt a different bot after its prop changes during held Tidy", async () => {
+  await render();
+  await click("a.md");
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  const otherBot = { ...bot, id: "other-memory-fixture", threadId: "other-memory-thread", name: "Other fixture" };
+  fixture.doc.mockImplementation(async (id, path) => doc(path,
+    id === otherBot.id ? "Other bot current text" : "Old bot tidied text",
+    id === otherBot.id ? "other-bot-current-hash" : "old-bot-tidied-hash"));
+  fixture.overview.mockImplementation(async id => ({ ...overview(id === otherBot.id ? "/synthetic/other-bot" : "/synthetic/old-bot"), botId: id }));
+  fixture.journal.mockImplementation(async id => id === otherBot.id ? [{ ...row, id: "other-bot-change", botId: otherBot.id }] : []);
+  fixture.upkeep.mockImplementation(async id => ({ enabled: true, modelSteps: true,
+    ...(id === otherBot.id ? { lastTidy: { ...report, duplicates: 2 } } : {}),
+  }));
+  // The root and component are intentionally not keyed or unmounted: the
+  // component's bot.id invalidation must enforce its own ownership boundary.
+  await render(true, otherBot);
+  expect(editor()?.value).toBe("Other bot current text");
+  expect(container.textContent).toContain("/synthetic/other-bot");
+  const oldOwnerReads = () => [fixture.doc, fixture.overview, fixture.journal, fixture.upkeep]
+    .map(mock => mock.mock.calls.filter(([id]) => id === bot.id).length);
+  const before = oldOwnerReads();
+  await act(async () => heldTidy.resolve({ report: { ...report, expired: 1 }, overview: overview() }));
+  await tick();
+  expect.soft(oldOwnerReads()).toEqual(before);
+  expect.soft(editor()?.value).toBe("Other bot current text");
+  expect.soft(container.textContent).toContain("/synthetic/other-bot");
+  expect.soft(container.textContent).toContain("You added 1 line to the b topic");
+  expect.soft(container.textContent).toContain("merged 2 duplicates");
+  expect.soft(container.textContent).not.toContain("Archived 1 expired note.");
+  await type("Edit in the other bot");
+  await click("Save");
+  expect(fixture.save).toHaveBeenLastCalledWith(otherBot.id, "memory/a.md", "Edit in the other bot", "other-bot-current-hash");
 });
 
 it("does not resume old Tidy editor effects when activation expires during metadata refresh", async () => {

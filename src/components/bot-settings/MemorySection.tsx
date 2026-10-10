@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): successful Tidy refreshes its bot's current reopened view without replacing newer drafts.
 // GrokOff modification (2026-10-10): show refused Saves immediately, keep failed drafts by source path and guard Reload of current disk content.
 // GrokOff modification (2026-10-10): verify overlapping Save receipts against disk after Delete/Tidy settle; refresh tidied files independently of metadata failures.
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
@@ -175,6 +176,8 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const draftRevision = useRef(0);
   const currentEditing = useRef(editing);
   currentEditing.current = editing;
+  const currentBotId = useRef(bot.id);
+  currentBotId.current = bot.id;
   // Typing/selection replace document intent, but metadata stays current
   // until another refresh, deactivation or completed mutation supersedes it.
   const metadataGeneration = useRef(0);
@@ -484,7 +487,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   };
 
   const tidyNow = async () => {
-    const activation = activationGeneration.current;
+    let activation = activationGeneration.current;
     let metadata: number | undefined;
     const finishMutation = beginMutation();
     setTidying(true);
@@ -493,6 +496,10 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     try {
       const { report } = await tidyMemoryNow(bot.id);
       finishMutation();
+      // A successful Tidy also changes disk beneath its bot's reopened view.
+      // Never adopt another bot; failed replies keep their click-time owner.
+      if (currentBotId.current !== bot.id) return;
+      activation = activationGeneration.current;
       if (!ownsMutationView(activation)) return;
       // The disk mutation already succeeded. Supersede pre-Tidy reads now,
       // independently of journal/upkeep refresh success. Later selections

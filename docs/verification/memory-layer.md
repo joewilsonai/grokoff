@@ -1,5 +1,5 @@
 <!-- GrokOff modification (2026-10-10): document prompt Save refusals and source-tagged kept drafts across file navigation. -->
-<!-- GrokOff modification (2026-10-09): document current-editor Delete/Tidy up completion and its verification boundaries. -->
+<!-- GrokOff modification (2026-10-10): document current-editor Delete/Tidy up completion, successful Tidy refresh after Settings reopens, and verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation and fresh overlapping mutation metadata without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): first-edit and source restart acceptance. -->
@@ -157,8 +157,9 @@ mutation response cannot replace current server metadata. These reads leave
 current document selection, dirty drafts and successful Save hashes unchanged.
 
 Later metadata reads supersede earlier metadata results and errors. A later
-activation owns its own hydration, so an old mutation cannot start reads over
-that view. Current overview/journal failures remain visible. A subsequent successful
+activation owns its own hydration, so an old Save or Undo cannot start reads over
+that view. Successful Tidy completion has the explicit active-view refresh
+behavior described below. Current overview/journal failures remain visible. A subsequent successful
 metadata refresh clears only an older metadata failure, including one that
 arrived while the later mutation was pending; a newer file-read error remains
 visible even if its text matches the old failure. These are actual component interactions
@@ -217,14 +218,24 @@ Delete/Tidy requests, independent A/B drafts and successful retry. They use
 in-memory transports and establish neither durable draft recovery nor native
 packaged acceptance.
 
-A Delete or Tidy up response from a previous Settings activation leaves that
-view's editor, pending selection, notice and error alone. Its disk effect still
-participates in an overlapping Save's independent verification. Successful Tidy
-starts the pending selection or clean document reread before awaiting metadata,
-so a failed journal refresh cannot let a delayed pre-Tidy response replace the
-fresh text or hash. That metadata error remains visible.
+A delayed Delete response or failed Tidy request from a previous Settings
+activation leaves the reopened view alone. A successful Tidy response instead
+refreshes the current active view of the same mounted bot settings component:
+a clean document is reread with its committed hash, and overview, Changes and
+upkeep are refreshed. Reopened dirty text stays unsaved; a pending newer file
+selection is reissued, and its older read cannot replace the fresh result.
+Hidden or unmounted completion stays quiet; a later activation performs its
+normal hydration. Changing the bot identity also rejects the old completion,
+even if a caller reuses the mounted component. Completion does not retain ownership through another
+activation or supersede a later selection or draft.
 
-The 37 maintained held-response controls cover newer typing, pending selection,
+The disk effect still participates in an overlapping Save's independent
+verification. Successful Tidy starts the pending selection or clean document
+reread before awaiting metadata, so a failed journal refresh cannot let a
+delayed pre-Tidy response replace fresh text or hash. That metadata error
+remains visible.
+
+The maintained held-response controls cover newer typing, pending selection,
 metadata completion orders, reopening before or after housekeeping starts,
 a newly activated view loading before the disk changes, both mutation/Save
 response orders, and valid later Save receipts. Additional verification controls
@@ -232,3 +243,9 @@ cover read failure, navigation during the read and deleting a saved empty file
 whose text and hash match the missing file but whose existence differs.
 These remain source-DOM checks with sealed in-memory transports, separate from
 native app, filesystem transaction, provider or model-driven Tidy acceptance.
+
+The reopen regression holds Tidy while Settings hides and reactivates before
+the simulated commit. Deferred component controls then verify clean text and
+hash refresh, preservation of a reopened dirty draft, and the current pending
+selection. These are offline component results; no fresh packaged Tidy or
+live-provider acceptance is claimed by this correction.
