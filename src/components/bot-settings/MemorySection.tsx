@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): obsolete Delete/Tidy up activations leave the editor alone; Delete ends pending Save ownership without dropping newer drafts.
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
 // GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
 // Memory: what this bot believes, as a panel a person can read, fix, and
@@ -322,6 +323,11 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setError(null);
     try {
       await deleteMemoryDoc(bot.id, file.path);
+      if (!ownsMutationView(activation)) return;
+      // A Save may already have committed while its response is still pending.
+      // Deletion ends that document's Save ownership even when newer typing is
+      // kept, so the late receipt cannot mark the now-deleted draft clean.
+      if (currentEditing.current?.path === file.path) documentGeneration.current += 1;
       // Act on the editor as it is now, never the one captured at the click:
       // a file opened since stays open, and only a read of the deleted file
       // is cancelled.
@@ -335,7 +341,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       }
     } catch (e) {
       if (metadata === undefined) {
-        if (mounted.current) setError(errorText(e));
+        if (ownsMutationView(activation)) setError(errorText(e));
       } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     }
   };
@@ -421,21 +427,25 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     setNotice(null);
     try {
       const { report } = await tidyMemoryNow(bot.id);
+      if (!ownsMutationView(activation)) return;
       if (ownsMutationView(activation)) {
         metadata = ++metadataGeneration.current;
         const [, nextUpkeep] = await Promise.all([refreshMutationMetadata(metadata), fetchUpkeepStatus(bot.id)]);
         if (ownsMetadata(metadata)) setUpkeep(nextUpkeep);
       }
+      // Settings may have been reopened while metadata was loading. Its
+      // hydration and editor belong to the new activation.
+      if (!ownsMutationView(activation)) return;
       // Tidy rewrote files on disk. Reread what is on screen now: a selection
       // still loading wins, then the open document when it has no unsaved
       // typing. Text typed while Tidy ran stays, and so does a newer selection.
       const current = currentEditing.current;
       const reread = pendingPath() ?? (current && !current.dirty ? current.path : undefined);
       if (reread !== undefined) await open(reread);
-      if (mounted.current) setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
+      if (ownsMutationView(activation)) setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
     } catch (e) {
       if (metadata === undefined) {
-        if (mounted.current) setError(errorText(e));
+        if (ownsMutationView(activation)) setError(errorText(e));
       } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     } finally {
       if (mounted.current) setTidying(false);

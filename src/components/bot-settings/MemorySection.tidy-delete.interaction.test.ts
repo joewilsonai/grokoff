@@ -271,3 +271,128 @@ it("does not replace newer journal metadata with a delayed Delete journal", asyn
   expect(container.textContent).not.toContain("No changes recorded yet.");
   expect(button("Undo").disabled).toBe(false);
 });
+
+// GrokOff modification (2026-10-10): real editor controls for held Save/Delete
+// ordering and obsolete mutation callbacks after the mounted panel reactivates.
+it("keeps newer typing dirty when a Save receipt arrives after its file was deleted", async () => {
+  await render();
+  await click("a.md");
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  const heldSave = deferred<SaveResult>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  fixture.save.mockReturnValueOnce(heldSave.promise);
+  await clickDelete("a.md");
+  await type("Draft typed after Delete was confirmed");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Draft typed after Delete was confirmed", "hash:memory/a.md");
+  // The Save committed first, but its response is held until the later Delete
+  // completes. The deleted disk is now empty; its old Save receipt is obsolete.
+  await act(async () => heldDelete.resolve({ overview: overview() }));
+  await tick();
+  await act(async () => heldSave.resolve({ ok: true, doc: doc("memory/a.md", "Draft typed after Delete was confirmed", "committed-before-delete"), overview: overview() }));
+  await tick();
+  expect.soft(editor()?.value).toBe("Draft typed after Delete was confirmed");
+  expect.soft(button("Save").disabled).toBe(false);
+  fixture.doc.mockImplementation(async (_id, path) => ({ path, text: "", hash: "deleted-empty", exists: false }));
+  await render(false);
+  await render();
+  expect(editor()?.value).toBe("Draft typed after Delete was confirmed");
+  expect(button("Save").disabled).toBe(false);
+});
+
+it("does not close a clean same-path revision loaded by a newer activation after Delete", async () => {
+  await render();
+  await click("a.md");
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  await clickDelete("a.md");
+  await render(false);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "New activation revision", "new-activation-hash"));
+  await render();
+  expect(editor()?.value).toBe("New activation revision");
+  await act(async () => heldDelete.resolve({ overview: overview() }));
+  await tick();
+  expect(editor()?.value).toBe("New activation revision");
+  expect(editor()?.getAttribute("aria-label")).toBe("Memory file memory/a.md");
+});
+
+it("does not cancel a newer activation's same-path read when an old Delete finishes", async () => {
+  await render();
+  await click("a.md");
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  await clickDelete("a.md");
+  await render(false);
+  const newActivationRead = deferred<MemoryDoc>();
+  fixture.doc.mockReturnValueOnce(newActivationRead.promise);
+  await render();
+  expect(fixture.doc).toHaveBeenLastCalledWith(bot.id, "memory/a.md");
+  await act(async () => heldDelete.resolve({ overview: overview() }));
+  await tick();
+  await act(async () => newActivationRead.resolve(doc("memory/a.md", "New activation read", "new-read-hash")));
+  await tick();
+  expect(editor()?.value).toBe("New activation read");
+});
+
+it("does not reread or publish an old Tidy result after the panel reactivates", async () => {
+  await render();
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  await render(false);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Current activation", "current-activation-hash"));
+  await render();
+  const docReads = fixture.doc.mock.calls.length;
+  expect(editor()?.value).toBe("Current activation");
+  await act(async () => heldTidy.resolve(tidied()));
+  await tick();
+  expect.soft(fixture.doc).toHaveBeenCalledTimes(docReads);
+  expect.soft(container.textContent).not.toContain("Nothing to tidy.");
+  expect(editor()?.value).toBe("Current activation");
+  expect(button("Tidy up now").disabled).toBe(false);
+});
+
+it("does not resume old Tidy editor effects when activation expires during metadata refresh", async () => {
+  await render();
+  const heldJournal = deferred<MemoryJournalRow[]>();
+  fixture.journal.mockReturnValueOnce(heldJournal.promise);
+  await click("Tidy up now");
+  await render(false);
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Current metadata activation", "current-metadata-hash"));
+  await render();
+  const docReads = fixture.doc.mock.calls.length;
+  expect(editor()?.value).toBe("Current metadata activation");
+  await act(async () => heldJournal.resolve([]));
+  await tick();
+  expect.soft(fixture.doc).toHaveBeenCalledTimes(docReads);
+  expect.soft(container.textContent).not.toContain("Nothing to tidy.");
+  expect(editor()?.value).toBe("Current metadata activation");
+});
+
+it("keeps an old Delete failure out of a newer activation", async () => {
+  await render();
+  await click("a.md");
+  const heldDelete = deferred<{ overview: MemoryOverview }>();
+  fixture.remove.mockReturnValueOnce(heldDelete.promise);
+  await clickDelete("a.md");
+  await render(false);
+  await render();
+  await act(async () => heldDelete.reject(new Error("Old Delete activation failed")));
+  await tick();
+  expect(container.textContent).not.toContain("Old Delete activation failed");
+  expect(editor()?.value).toBe("Saved memory/a.md");
+});
+
+it("keeps an old Tidy failure out of a newer activation", async () => {
+  await render();
+  const heldTidy = deferred<TidyResult>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  await click("Tidy up now");
+  await render(false);
+  await render();
+  await act(async () => heldTidy.reject(new Error("Old Tidy activation failed")));
+  await tick();
+  expect(container.textContent).not.toContain("Old Tidy activation failed");
+  expect(editor()?.value).toBe("Saved MEMORY.md");
+  expect(button("Tidy up now").disabled).toBe(false);
+});

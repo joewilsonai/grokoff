@@ -189,7 +189,9 @@ units and cost captions. It uses pure helpers and catalog values; it does not
 contact providers or establish actual plan charges or native UI behavior.
 
 The maintained suite also includes the complete memory editor interaction file
-and its separate Delete/Tidy up ownership interaction file.
+and its separate Delete/Tidy up ownership interaction file. The latter also
+checks obsolete Settings activations and a pending Save response after Delete,
+including whether the preserved draft survives reopening Settings.
 It mounts the actual React component with held in-memory memory responses and
 sealed transport, and checks newer selection/typing, activation lifetime,
 current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, overlapping Save/Undo metadata completion orders, obsolete metadata/error rejection, current metadata failure/recovery without clearing later file errors, current conflict Reload/Undo, dirty-section

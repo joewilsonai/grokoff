@@ -186,3 +186,12 @@ newer metadata. Twelve actual component interactions with deferred in-memory
 responses cover this; eight of them fail on the previous component. They are
 not native app, filesystem, provider or model-call acceptance, and the Tidy up
 request and its server behavior are unchanged.
+
+Delete also ends a pending Save's ownership of the deleted document, so a
+Save response from before the deletion cannot mark the preserved draft clean.
+A Delete or Tidy up response from a previous Settings activation leaves the
+current editor, pending selection, notice and error alone, including when
+Settings is reopened while Tidy up is refreshing metadata. Additional held
+response controls cover these completion orders and draft retention through
+reactivation. These seven additional controls fail before the ownership guards
+and pass afterward; they use the same sealed in-memory transports.
