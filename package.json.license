@@ -23,3 +23,5 @@ GrokOff modification (2026-10-09): adopt complete isolated BrowserPanel access-c
 GrokOff modification (2026-10-09): maintain the isolated MemorySection Delete/Tidy up ownership interaction regressions in test:core.
 
 GrokOff modification (2026-10-10): maintain real ChatView report-reader continuity and complete message-row render regressions in test:core.
+
+GrokOff modification (2026-10-10): maintain inert subprocess/filesystem controls for measured browser/report recipe cleanup receipts in test:core.

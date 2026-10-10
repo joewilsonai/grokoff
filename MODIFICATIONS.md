@@ -380,3 +380,19 @@ the reader. Actual React StrictMode regressions retain open state through replay
 and verify cancellation, focus return, ignored late responses and reopen. The
 [report recipe](docs/verification/browser-report.md) distinguishes these source
 DOM checks from packaged production and native desktop acceptance.
+
+
+## Browser/report cleanup receipts (2026-10-10)
+
+The fork-created [report verification recipe](scripts/verify-browser-report.ts)
+uses an import-safe [cleanup coordinator](scripts/testing/browser-report-cleanup.ts)
+to retain completed direct-child owners, guard every signal against the recorded
+process identity and measure PID/home absence. Independent cleanup and receipt
+steps preserve the original acceptance error and keep homes on uncertainty.
+The prepared native-browser closer retains its Boolean meaning; returned RPC
+cleanup is not presented as a complete transport/process inventory. Inline
+modification notices, the package sidecar and the
+[recipe notes](docs/verification/browser-report.md) identify the scope.
+Maintained [inert Node controls](scripts/testing/browser-report-cleanup.node-test.mjs)
+exercise real disposable children/directories and the recipe's actual finally
+and startup paths without native apps, servers, providers or personal data.

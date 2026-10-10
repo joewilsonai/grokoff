@@ -1,5 +1,7 @@
 # Browser research and readable reports
 
+<!-- GrokOff modification (2026-10-10): document measured recipe cleanup and its direct-owner scope. -->
+
 GrokOff can open a shared `.md` report inside the conversation. The book button
 beside a report link or attachment opens headings, tables, code and web source
 links; Download keeps a copy. The local Mac app can also [save the loaded report
@@ -92,3 +94,29 @@ held synthetic reads and controlled PDF promises to exercise actual row
 eviction, authority changes, unchanged message replacements and attachment
 grants. These checks establish source behavior; native focus, appearance and
 PDF export on a new packaged build require separate acceptance.
+
+### Measured recipe cleanup
+
+The recipe writes an initial receipt before allocating its disposable homes.
+Cleanup attempts each closer and final receipt persistence even when an earlier
+step fails. It preserves the original acceptance error. Both completed desktop
+phases and both server launches remain in its direct-child ledger; a timer or
+cleanup signal requires the recorded PID, parent, group, birth and command to
+still match. A returned waiter alone does not establish process exit.
+
+The receipt measures numeric PID absence, the prepared native-browser closer's
+Boolean result and actual home removal. Deletion also requires the original
+physical directory and private marker identity, plus no observed process command
+referencing that home. A path match can only block deletion; it cannot authorize
+a signal. Errors, unresolved exits, changed ownership or an unobserved partial
+startup retain the homes and prevent a passing cleanup result. A launcher that
+rejects before returning a fixture is recorded as unknown, without inventing its
+PID or claiming that its own internal cleanup succeeded.
+
+This is a direct-child ledger and a native-browser close result, not a complete
+transitive process or RPC transport inventory. Returning from the RPC closer is
+not a measured transport PID list. The import-safe coordinator is used by this
+recipe, and `pnpm test:core` maintains inert Node/filesystem controls for its
+failure, ownership, removal and receipt behavior. These offline checks do not
+run a native browser, Electron, server or provider, and do not replace a fresh
+native acceptance run.
