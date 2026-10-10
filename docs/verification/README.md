@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): add isolated provider refresh checks. -->
 # Verifying OpenMausBot
 
 OpenMausBot has one development control surface: `pnpm control:omb`. It is a
@@ -56,6 +57,7 @@ Use only mapped, tested commands:
 - [Peer approval denial, expiry, and cancellation](peer-approvals.md)
 - [Waiting for an occupied desktop](computer-wait.md)
 - [Chat UI, driven headlessly](chat-ui.md)
+- [Attachment upload failure and recovery](attachment-recovery.md)
 - [Welcome flow and guided tour](onboarding.md)
 - [Channels](channels.md)
 - [In-chat team coordination](room-coordination.md)
@@ -199,6 +201,15 @@ The [routines fixture](routines.md) checks confirmed proposals, manual and
 scheduled runs, central run logs, List/Calendar views, and bot-scoped routines
 using the real renderer and an isolated fake-engine server.
 
+The [maintained routines CI group](routines-ci.md) maps the selected scheduler,
+restart, results, delegation, cron and webhook regressions plus renderer checks
+that run automatically in `test:core`, with their fixture and acceptance limits.
+
+The [opt-in routine lifecycle acceptance](routines.md#automated-renderer-lifecycle)
+automates manual creation, pause/resume, an unchanged interval edit, one manual
+run, result/execution navigation and persistence after a renderer reload. It
+requires explicit installed headless-browser binaries and retains private evidence.
+
 The [interval restrictions recipe](interval-restrictions.md) checks weekday and
 time-window limits on scheduled routines in that same disposable fixture.
 
@@ -208,8 +219,16 @@ with an offline CLI and custom-domain validation without touching live accounts.
 The [engine library fixture](engines-ui.md) checks onboarding and Settings cards,
 responsive layouts, theme contrast, and status refreshes without losing drafts.
 
+The [provider refresh fixture](provider-refresh.md) checks failed, stalled and
+retried connection checks through the real Settings and store in a disposable
+Electron profile against synthetic loopback inventory.
+
+The [first-run refresh fixture](first-run-refresh.md) uses the same isolated
+runner for local setup and remote-host fallback errors, deadlines and retries.
+
 The [Claude account recipe](claude-account.md) checks sign-out, cancellation and
-retry against an offline Claude CLI confined to a disposable home.
+retry against an offline Claude CLI confined to a disposable home, plus
+pasted-code completion and discovery recovery with a synthetic provider session.
 
 The [provider recovery recipe](provider-recovery.md) verifies real Grok image
 transport and Claude authentication against loopback APIs, plus scoped thread

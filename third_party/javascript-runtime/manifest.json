@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "scope": "Seven directly observed JavaScript components; intentionally partial, not a complete SBOM or release clearance.",
+  "observedOn": "2026-10-09",
+  "components": [
+    {
+      "name": "react",
+      "version": "19.2.8",
+      "license": "MIT",
+      "source": "npm:react@19.2.8/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/react/-/react-19.2.8.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "react-LICENSE.txt",
+      "bytes": 1088,
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.8",
+      "license": "MIT",
+      "source": "npm:react-dom@19.2.8/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "react-LICENSE.txt",
+      "bytes": 1088,
+      "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "name": "ajv",
+      "version": "8.20.0",
+      "license": "MIT",
+      "source": "npm:ajv@8.20.0/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/ajv/-/ajv-8.20.0.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "ajv-LICENSE.txt",
+      "bytes": 1090,
+      "sha256": "a05350a88e318e4f5f2c2a1ff1e2e88daa4dd38e6e78b71cccae422bdc762cc3"
+    },
+    {
+      "name": "croner",
+      "version": "10.0.1",
+      "license": "MIT",
+      "source": "npm:croner@10.0.1/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/croner/-/croner-10.0.1.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "croner-LICENSE.txt",
+      "bytes": 1123,
+      "sha256": "d1c89d2de9ab5785f68c69473d5e10f1ff0e5dbacef88e2aecbd6eaf89b63003"
+    },
+    {
+      "name": "electron-updater",
+      "version": "6.8.9",
+      "license": "MIT",
+      "source": "npm:electron-updater@6.8.9/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/electron-updater/-/electron-updater-6.8.9.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "electron-updater-LICENSE.txt",
+      "bytes": 1084,
+      "sha256": "bed8d0ab3e6031817f775a641ff37313b0f5591bc8ba0ed79b978dafbd4231ce"
+    },
+    {
+      "name": "lucide-react",
+      "version": "0.539.0",
+      "license": "ISC",
+      "source": "npm:lucide-react@0.539.0/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.539.0.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "lucide-react-LICENSE.txt",
+      "bytes": 880,
+      "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+    },
+    {
+      "name": "mermaid",
+      "version": "12.1.0",
+      "license": "MIT",
+      "source": "npm:mermaid@12.1.0/LICENSE",
+      "sourceUrl": "https://registry.npmjs.org/mermaid/-/mermaid-12.1.0.tgz",
+      "sourceFile": "LICENSE",
+      "retainedFile": "mermaid-LICENSE.txt",
+      "bytes": 1089,
+      "sha256": "ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80"
+    }
+  ]
+}

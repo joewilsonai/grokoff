@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep backup fixture restarts sealed and verify process ownership before cleanup.
 // Owns two disposable fake-engine workspaces; accepts no live URL or home.
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -5,24 +6,29 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { launchVerificationServer, runControlOmb, type VerificationServer } from "./control-omb.ts";
+import { launchVerificationServer, runControlOmb, verificationServerEnvironment, type VerificationServer } from "./control-omb.ts";
 import { waitForExit } from "../server/testing/cleanup.ts";
 import { escapeAttribute } from "../src/lib/composer-attachments.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PASSWORD = "fixture-backup-password-only";
 
+interface BackupFixture extends VerificationServer { ownedChildren: Set<ChildProcess> }
+
+async function stopBackupChild(child: ChildProcess | undefined): Promise<void> {
+  if (!child?.pid) return;
+  await waitForExit(child, { signal: "SIGTERM" });
+  assert.ok(child.exitCode !== null || child.signalCode !== null, "Backup fixture process did not confirm exit; retain its temporary data.");
+}
+
 /** Same temporary home and exact port, but a new process. The launcher's
  * close() still owns cleanup; stop this replacement before calling it. */
-async function restartFixture(fixture: VerificationServer): Promise<ChildProcess> {
-  await waitForExit(fixture.child, { signal: "SIGTERM" });
+async function restartFixture(fixture: BackupFixture): Promise<ChildProcess> {
+  await stopBackupChild(fixture.child);
   const dataDir = fixture.info.dataDir;
   const config = JSON.parse(readFileSync(join(dataDir, "config.json"), "utf8"));
   assert.equal(resolve(config.instances.claude.config.cli), join(ROOT, "server", "testing", "fake-claude-cli.ts"));
-  const env: NodeJS.ProcessEnv = {};
-  for (const key of ["SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL", "TZ"]) {
-    if (process.env[key]) env[key] = process.env[key];
-  }
+  const env = verificationServerEnvironment({ FAKE_CLAUDE_MODE: "happy" }, dataDir, Number(new URL(fixture.info.url).port));
   const temp = join(dataDir, "tmp");
   const home = join(dataDir, "providers", "fixture-home");
   mkdirSync(temp, { recursive: true });
@@ -32,19 +38,20 @@ async function restartFixture(fixture: VerificationServer): Promise<ChildProcess
     LOCALAPPDATA: join(home, "AppData", "Local"), XDG_CONFIG_HOME: join(home, ".config"),
     XDG_CACHE_HOME: join(home, ".cache"), XDG_DATA_HOME: join(home, ".local", "share"),
     TEMP: temp, TMP: temp, TMPDIR: temp, HERMES_HOME: join(home, ".hermes"),
-    OMB_DATA_DIR: dataDir, OMB_PORT: new URL(fixture.info.url).port,
-    OMB_WEBHOOK_PORT: String(Number(new URL(fixture.info.url).port) + 1),
-    FAKE_CLAUDE_MODE: "happy", FAKE_CLAUDE_DUMP: fixture.fixtureDumpPath,
-    PATH: dirname(process.execPath),
+    FAKE_CLAUDE_DUMP: fixture.fixtureDumpPath,
   });
   const log = openSync(fixture.info.logPath, "a", 0o600);
   const child = spawn(process.execPath, ["--experimental-strip-types", join(ROOT, "server", "index.ts")], {
     cwd: ROOT, env, stdio: ["ignore", log, log],
   });
+  fixture.ownedChildren.add(child);
+  let spawnError: Error | undefined;
+  child.once("error", (error) => { spawnError = error; });
   closeSync(log);
   try {
     const deadline = Date.now() + 30_000;
     for (;;) {
+      if (spawnError) throw spawnError;
       if (child.exitCode !== null || child.signalCode !== null) throw new Error(`Restored fixture exited; see ${fixture.info.logPath}`);
       try {
         const response = await fetch(`${fixture.info.url}/api/health`, { signal: AbortSignal.timeout(1_000) });
@@ -55,32 +62,43 @@ async function restartFixture(fixture: VerificationServer): Promise<ChildProcess
       await new Promise((done) => setTimeout(done, 100));
     }
   } catch (error) {
-    await waitForExit(child, { signal: "SIGTERM" });
+    await stopBackupChild(child);
     throw error;
   }
 }
 
-async function launchBackupFixture(): Promise<VerificationServer> {
+async function launchBackupFixture(): Promise<BackupFixture> {
   const fixture = await launchVerificationServer({});
+  const ownedChildren = new Set([fixture.child]);
+  const owned: BackupFixture = { ...fixture, ownedChildren };
+  const close = async () => {
+    // Every replacement shares this home. Never let the original launcher's
+    // directory cleanup run while any owned replacement has unconfirmed exit.
+    const stopped = await Promise.allSettled([...ownedChildren].map(stopBackupChild));
+    const failures = stopped.filter((result) => result.status === "rejected").map((result) => result.reason);
+    if (failures.length) throw new AggregateError(failures, "Backup fixture retained its data because an owned process did not confirm exit.");
+    await fixture.close();
+    assert.equal(existsSync(fixture.info.dataDir), false, "Backup fixture temporary data was not removed.");
+  };
   try {
     // The general fixture uses DATA_DIR as HOME. Backups intentionally reject
     // auth homes among portable files, so keep this fixture's home excluded.
-    const child = await restartFixture(fixture);
-    return { ...fixture, child, info: { ...fixture.info, pid: child.pid! }, close: async () => {
-      await waitForExit(child, { signal: "SIGTERM" });
-      await fixture.close();
-    } };
-  } catch (error) { await fixture.close(); throw error; }
+    const child = await restartFixture(owned);
+    return { ...owned, child, info: { ...fixture.info, pid: child.pid! }, close };
+  } catch (error) {
+    try { await close(); }
+    catch (cleanupError) { throw new AggregateError([error, cleanupError], "Backup fixture launch and cleanup failed."); }
+    throw error;
+  }
 }
 
 export async function verifyWorkspaceBackup(report: (event: unknown) => void = () => {}) {
   const events: unknown[] = [];
   const record = (event: unknown) => { events.push(event); report(event); };
   const source = await launchBackupFixture();
-  let destination: VerificationServer | undefined;
+  let destination: BackupFixture | undefined;
   let restarted: ChildProcess | undefined;
   const evidencePath = `${source.info.logPath}.workspace-backup.json`;
-  record({ source: source.info });
   const control = async (fixture: VerificationServer, ...args: string[]) => {
     const result = await runControlOmb([...args, "--url", fixture.info.url]);
     record({ command: [...args, "--url", fixture.info.url], result });
@@ -95,7 +113,24 @@ export async function verifyWorkspaceBackup(report: (event: unknown) => void = (
     record({ method, path, status: response.status });
     return { status: response.status, body: result };
   };
+  const cleanup = async () => {
+    // Attempt both independent owners even when one cleanup fails. Each owner
+    // stops every child it created before removing its own temporary data.
+    const cleaned = await Promise.allSettled([destination?.close(), source.close()]);
+    const failures = cleaned.filter((result) => result.status === "rejected").map((result) => result.reason);
+    const processes = [...source.ownedChildren, ...(destination?.ownedChildren ?? [])].map((child) => ({
+      pid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
+    }));
+    try {
+      record({ cleanup: failures.length === 0, sourceRemoved: !existsSync(source.info.dataDir), destinationRemoved: !destination || !existsSync(destination.info.dataDir), processes });
+    } finally {
+      // A broken reporter must not suppress the retained cleanup evidence.
+      writeFileSync(evidencePath, JSON.stringify(events, null, 2), { mode: 0o600 });
+    }
+    if (failures.length) throw new AggregateError(failures, "Backup fixture cleanup failed; inspect its retained evidence and data.");
+  };
   try {
+    record({ source: source.info });
     destination = await launchBackupFixture();
     record({ destination: destination.info });
     assert.equal((await control(source, "doctor") as { ok: boolean }).ok, true);
@@ -230,11 +265,7 @@ export async function verifyWorkspaceBackup(report: (event: unknown) => void = (
     record(result);
     return result;
   } finally {
-    await waitForExit(restarted, { signal: "SIGTERM" });
-    await destination?.close();
-    await source.close();
-    record({ cleanup: true, sourceRemoved: !existsSync(source.info.dataDir), destinationRemoved: !destination || !existsSync(destination.info.dataDir) });
-    writeFileSync(evidencePath, JSON.stringify(events, null, 2), { mode: 0o600 });
+    await cleanup();
   }
 }
 

@@ -1,0 +1,13 @@
+# Export and restore your workspace
+
+Open **Settings**, enable **Advanced mode**, then select **Backups → Export full backup**. Choose and confirm a password of at least 12 characters. Download the encrypted `.ombbackup` file and keep its password separately; you need it to restore. The archive uses authenticated AES-256-GCM encryption with a password-derived key.
+
+The full backup includes this workspace's bots, group conversations, message history, profiles, memory, skills, app-managed attachments and working files, ordinary settings, and supported app preferences/drafts. It does not copy external project folders, other workspaces, remote VM disks or live device sessions. Installed dependencies, tool downloads and caches are omitted; check the preview's exclusions and warnings.
+
+Saved provider/API credentials, CLI/browser login homes, MCP sign-in tokens and account connections are excluded. On the destination, its own credentials and connection settings remain in place. A new installation needs its own provider connections. This is an explicit file/config boundary: pasted secrets in conversations, drafts or user files are **not redacted**. Treat the archive as private even though it is encrypted.
+
+To restore, select the file under **Import backup**, enter its password, and validate the preview. Import only a trusted archive: restored instructions, skills and files can influence future bot actions. Type **REPLACE** and click **Replace installation**. This replaces the destination's workspace rather than merging teams. Further workspace writes are blocked until the owning app/server restarts. On the local Mac, use **Restart and restore**, or fully quit and reopen GrokOff; closing its window alone is insufficient. A source-run server must restart before you reload the browser.
+
+After restart, check the restored history, files and provider connections before continuing. Scheduled routines and webhooks are paused, and unfinished work is not replayed automatically. The previous destination is retained under `.backups/safety-<restore-id>/data` in its data directory. Keep that safety copy until you have checked the restore. Staging and safety copies contain **unencrypted** private data, so normal disk/account protection still matters.
+
+The maintained tests cover archive encryption and rejection, credential policy, and a real two-server export → validated replacement → restart → continued conversation using disposable workspaces and a fake CLI. That proof does not establish a native Mac file-picker/restart-button workflow or a real provider reconnection. See the [reproducible backup verification recipe](verification/workspace-backups.md).

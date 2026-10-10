@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use independent product branding in npm setup errors.
 // Install an engine's command-line app from Settings, on the machine that
 // runs this server, as this process's own user, into a directory the app
 // owns. No sudo, no shell, no terminal: the package name comes from the
@@ -149,7 +150,7 @@ function runNpm(args: string[], env: NodeJS.ProcessEnv, cwd: string, timeoutMs: 
     try {
       child = spawnCli("npm", args, { env, cwd, stdio: ["pipe", "pipe", "pipe"] });
     } catch {
-      rejectRun(new Error("npm could not start on this server. Install Node.js with npm for the user running OpenMausBot, then try again."));
+      rejectRun(new Error("npm could not start on this server. Install Node.js with npm for the user running GrokOff, then try again."));
       return;
     }
     child.stdin.end();
@@ -173,8 +174,8 @@ function runNpm(args: string[], env: NodeJS.ProcessEnv, cwd: string, timeoutMs: 
       if (timedOut) return; // A failed kill is not a failed npm launch.
       clearTimeout(timer);
       rejectRun(new Error(error.code === "ENOENT"
-        ? "npm is not installed on this server. Install Node.js with npm for the user running OpenMausBot, then try again."
-        : "npm could not start on this server. Check that Node.js is installed for the user running OpenMausBot."));
+        ? "npm is not installed on this server. Install Node.js with npm for the user running GrokOff, then try again."
+        : "npm could not start on this server. Check that Node.js is installed for the user running GrokOff."));
     });
     child.once("close", (code) => {
       clearTimeout(timer);

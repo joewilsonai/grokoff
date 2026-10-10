@@ -1,4 +1,8 @@
+// GrokOff modification (2026-10-10): state the optional-read deadline and remaining hydration hold accurately.
+// GrokOff modification (2026-10-09): retain fork changes and expose a recorded interrupted tool outcome.
 // GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+// GrokOff modification (2026-10-09): bound optional routine snapshot headers/body without changing command or scheduler deadlines.
+// GrokOff modification (2026-10-09): bound only optional config/webhook snapshot reads and cancel them on unmount.
 // Server-backed store. The React app holds no transports of its own:
 // it dispatches typed commands over HTTP and folds the one SSE event
 // stream from the harness server into local state. The reducer stays
@@ -11,6 +15,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
@@ -47,8 +52,11 @@ import { roleProfilePatch, type BotRole } from "@/lib/bot-roles";
 import { t } from "@/lib/i18n";
 import { createBotPatchQueue, type BotUpdatePatch } from "./bot-patch-queue";
 import { useChatErrorClear } from "./chat-error";
+import { createInstanceRefresh, MODEL_REFRESH_TIMEOUT_MS, type InstanceRefreshOptions } from "./instance-refresh";
 import type { OnboardingStatus } from "@/lib/onboarding";
 import { openLiveEvents, publishLiveFrame, publishMissedFrames } from "@/lib/live-events";
+import { readRoutineSnapshot } from "./routine-snapshot";
+import { readConfigSnapshot, readWebhookSnapshot } from "./optional-snapshots";
 
 const MAX_ROUTINE_RUNS = 2_000;
 const ACTIVE_ROUTINE_RUN_STATUSES = new Set<RoutineRun["status"]>(["queued", "running", "waiting"]);
@@ -188,7 +196,7 @@ export interface Message {
    * narration of the same chip ("reading a file"), used by call mode. */
   /** `setup` marks an error fixed by installing something, not by retrying.
    * `summary` is the call's input on one redacted line (the shell command). */
-  tool?: { name: string; ok?: boolean; spoken?: string; setup?: boolean; claudeUpdate?: boolean; place?: PlaceRow; summary?: string; input?: string; output?: string ; itemId?: string; outputPath?: string; fullResult?: boolean };
+  tool?: { name: string; ok?: boolean; interrupted?: boolean; spoken?: string; setup?: boolean; claudeUpdate?: boolean; place?: PlaceRow; summary?: string; input?: string; output?: string ; itemId?: string; outputPath?: string; fullResult?: boolean };
   /** user messages sent into a running turn — the model saw it mid-turn */
   steered?: boolean;
   /** a user message that did not come from typing here: through the
@@ -2768,8 +2776,8 @@ function normalizeSnapshotFailure(cause: unknown): Error {
 }
 
 /** A refused SSE resume needs the chat transcript snapshot before its cursor
- * can be acknowledged. The other panels should refresh at the same boundary,
- * but a broken optional endpoint must not hold every chat frame hostage. */
+ * can be acknowledged. Chat updates wait for this boundary to settle; optional
+ * routine/config/webhook reads each have a 30-second deadline. */
 export async function loadSnapshotBoundary<Key extends string>(
   loadChat: () => Promise<void>,
   peripherals: readonly PeripheralSnapshotLoad<Key>[],
@@ -2802,10 +2810,15 @@ const StoreContext = createContext<{
   dispatch: React.Dispatch<Action>;
   /** Commit any debounced profile edits before an operation reads the bot. */
   flushBotPatches: (botId: string) => Promise<BotAnnouncement | null>;
-  /** Re-fetch engine availability — after an install, without a restart. */
-  refreshInstances: () => Promise<void>;
+  /** Re-fetch engine availability without a restart. Explicit checks report
+   * failures; existing background/install/save callers stay quiet. */
+  refreshInstances: (options?: InstanceRefreshOptions) => Promise<void>;
   /** Explicit provider/network model discovery. */
   refreshModels: (instanceId: string) => Promise<void>;
+  /** Only confirmed sign-in starts this recovery; discovery is independent of
+   * login and can outlive the conditional authentication card. */
+  refreshSignInModels: (instanceId: string) => Promise<void>;
+  signInModelDiscovery: Record<string, "checking" | "failed">;
 } | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -2817,6 +2830,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, rawDispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const instanceMutationRevision = useRef(0);
+  const [signInModelDiscovery, setSignInModelDiscovery] = useState<Record<string, "checking" | "failed">>({});
+  const signInModelFlights = useRef(new Map<string, Promise<void>>()).current;
+  const signInModelMounted = useRef(true);
+  const applyInstances = useCallback((instances: InstanceInfo[]) => {
+    rawDispatch({ type: "instances", instances });
+  }, []);
+  const instanceRefresh = useMemo(() => createInstanceRefresh(
+    (signal) => api<{ instances: InstanceInfo[] }>("/api/instances", { signal }),
+    ({ instances }) => applyInstances(instances),
+  ), [applyInstances]);
+  const refreshInstances = useCallback((options: InstanceRefreshOptions = {}) => {
+    if (options.fresh) instanceMutationRevision.current += 1;
+    return instanceRefresh.refresh(options);
+  }, [instanceRefresh]);
+  const modelRefreshes = useRef(new Set<() => void>()).current;
+  useEffect(() => {
+    signInModelMounted.current = true;
+    return () => {
+      // Pending wrappers must not publish recovery into an unmounted store.
+      signInModelMounted.current = false;
+      signInModelFlights.clear();
+      instanceRefresh.cancel();
+      for (const cancel of modelRefreshes) cancel();
+      modelRefreshes.clear();
+    };
+  }, [instanceRefresh, modelRefreshes, signInModelFlights]);
   const clearChatError = useCallback(() => {
     rawDispatch({ type: "error", message: null });
   }, []);
@@ -2965,6 +3005,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const wrapped: React.Dispatch<Action> = (action) => {
+      // A confirmed save/sign-out response is newer than any pending probe.
+      // Do not let that older check restore the previous account snapshot.
+      if (action.type === "instances") {
+        instanceMutationRevision.current += 1;
+        // A confirmed sign-out/removal ends its sign-in recovery. Quiet
+        // background snapshots do not pass this mutation boundary.
+        const connectedIds = new Set(action.instances.filter((instance) => instance.snapshot.authenticated !== false).map((instance) => instance.instanceId));
+        for (const id of signInModelFlights.keys()) if (!connectedIds.has(id)) signInModelFlights.delete(id);
+        setSignInModelDiscovery((previous) => {
+          const retained = Object.fromEntries(Object.entries(previous).filter(([id]) => connectedIds.has(id)));
+          return Object.keys(retained).length === Object.keys(previous).length ? previous : retained;
+        });
+        instanceRefresh.accept({ instances: action.instances });
+        return;
+      }
       // Pin before any await or optimistic state change, including legacy
       // callers such as keyboard shortcuts and voice controls.
       action = pinBotThreadAction(action, stateRef.current.bots);
@@ -3670,15 +3725,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
     return wrapped;
-  }, [botPatchQueue]);
+  }, [botPatchQueue, instanceRefresh, signInModelFlights]);
 
   // ── initial load + SSE fold ──────────────────────────────────────────
   useEffect(() => {
     let alive = true;
+    const routineSnapshotLifetime = new AbortController();
+    const optionalSnapshotLifetime = new AbortController();
     type PeripheralKey = "instances" | "config" | "routines" | "webhooks";
     type PeripheralPart = {
       key: PeripheralKey;
-      request: () => Promise<() => void>;
+      request: (fresh?: boolean) => Promise<() => void>;
     };
     type PeripheralRefresh = {
       attempt: number;
@@ -3698,29 +3755,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const peripheralParts: PeripheralPart[] = [
       {
         key: "instances",
-        request: async () => {
-          const { instances } = await api("/api/instances");
-          return () => rawDispatch({ type: "instances", instances });
+        request: async (fresh) => {
+          // Startup, reconnect, focus and explicit checks share this request.
+          // A quiet probe cannot supersede successful startup inventory, and
+          // a failed shared request still reaches the peripheral retry lane.
+          await refreshInstances({ reportFailure: true, fresh });
+          return () => {};
         },
       },
       {
         key: "config",
         request: async () => {
-          const config = await api("/api/config");
+          const config = await readConfigSnapshot(optionalSnapshotLifetime.signal);
           return () => rawDispatch({ type: "configStatus", config });
         },
       },
       {
         key: "routines",
         request: async () => {
-          const { routines, runs } = await api("/api/routines");
+          const { routines, runs } = await readRoutineSnapshot(routineSnapshotLifetime.signal);
           return () => rawDispatch({ type: "routinesHydrated", routines, runs });
         },
       },
       ...(window.ogb?.remoteClient?.active ? [] : [{
         key: "webhooks",
         request: async () => {
-          const { webhooks, attempts, ingress } = await api("/api/webhooks");
+          const { webhooks, attempts, ingress } = await readWebhookSnapshot(optionalSnapshotLifetime.signal);
           return () =>
             rawDispatch({ type: "webhooksHydrated", webhooks, attempts: attempts ?? [], ingress });
         },
@@ -3742,7 +3802,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void loadPeripheral(part, true).catch((nextError) => schedulePeripheralRetry(part, nextError));
       }, delay);
     };
-    const loadPeripheral = async (part: PeripheralPart, protectLiveFrames: boolean): Promise<void> => {
+    const loadPeripheral = async (part: PeripheralPart, protectLiveFrames: boolean, fresh = false): Promise<void> => {
       const refresh = refreshState(part.key);
       if (refresh.timer) {
         clearTimeout(refresh.timer);
@@ -3751,7 +3811,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const generation = ++refresh.generation;
       const version = refresh.version;
       try {
-        const apply = await part.request();
+        const apply = await part.request(fresh);
         if (!alive || refresh.generation !== generation) return;
         // A background retry must never replace a live patch that arrived
         // after its request began. Discard that stale response and try again
@@ -4015,7 +4075,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           {
             const instances = partByKey.get("instances");
             if (instances) {
-              void loadPeripheral(instances, true).catch((error) =>
+              void loadPeripheral(instances, true, true).catch((error) =>
                 schedulePeripheralRetry(instances, error),
               );
             }
@@ -4044,32 +4104,73 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       alive = false;
+      routineSnapshotLifetime.abort();
+      optionalSnapshotLifetime.abort();
       clearTimeout(hydrationFallback);
       for (const refresh of peripheralRefresh.values()) {
         if (refresh.timer) clearTimeout(refresh.timer);
       }
       stopLive();
     };
-  }, []);
+  }, [refreshInstances]);
 
-  // Re-probe the engines on demand. A CLI installed while the app is running
-  // is invisible until something asks again — the setup screens expose this
-  // as "Check again" so the user isn't told to restart when a refresh will do.
-  const refreshInstances = useCallback(async () => {
-    try {
-      const { instances } = await api("/api/instances");
-      rawDispatch({ type: "instances", instances });
-    } catch {
-      /* offline or server down — the existing list stays */
-    }
-  }, []);
-
+  // Model discovery may finish after a confirmed account/config change.
+  // Bound its HTTP request and collect fresh inventory after such overlaps.
   const refreshModels = useCallback(async (instanceId: string) => {
-    const { instances } = await api(`/api/instances/${encodeURIComponent(instanceId)}/refresh-models`, {
-      method: "POST",
+    const revision = instanceMutationRevision.current;
+    let discovered!: { instances: InstanceInfo[] };
+    const request = createInstanceRefresh(
+      (signal) => api<{ instances: InstanceInfo[] }>(`/api/instances/${encodeURIComponent(instanceId)}/refresh-models`, { method: "POST", signal }),
+      (result) => { discovered = result; },
+      MODEL_REFRESH_TIMEOUT_MS,
+      t("model.discoveryTimedOut"),
+    );
+    modelRefreshes.add(request.cancel);
+    try {
+      await request.refresh({ reportFailure: true });
+      if (!modelRefreshes.has(request.cancel)) return;
+      if (revision !== instanceMutationRevision.current) {
+        // Discovery completed after an account/config change. Its captured
+        // inventory may be stale; collect current state after completion
+        // instead of cancelling a newer save with that older response.
+        await refreshInstances({ fresh: true, reportFailure: true });
+        return;
+      }
+      dispatch({ type: "instances", instances: discovered.instances });
+    } finally {
+      modelRefreshes.delete(request.cancel);
+    }
+  }, [dispatch, refreshInstances, modelRefreshes]);
+
+  const refreshSignInModels = useCallback((instanceId: string): Promise<void> => {
+    if (!signInModelMounted.current) return Promise.resolve();
+    const existing = signInModelFlights.get(instanceId);
+    if (existing) return existing;
+    // Confirmed authentication is newer than discovery on another account.
+    // Mark that boundary immediately without publishing an intermediate GET.
+    instanceMutationRevision.current += 1;
+    setSignInModelDiscovery((previous) => ({ ...previous, [instanceId]: "checking" }));
+    const flight = Promise.resolve().then(() => {
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      return refreshModels(instanceId);
+    }).then(() => {
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      setSignInModelDiscovery((previous) => {
+        const next = { ...previous };
+        delete next[instanceId];
+        return next;
+      });
+    }, () => {
+      // Confirmed login remains true even when discovery fails. Its stable
+      // parent owns the warning and retries discovery without another login.
+      if (signInModelFlights.get(instanceId) !== flight) return;
+      setSignInModelDiscovery((previous) => ({ ...previous, [instanceId]: "failed" }));
+    }).finally(() => {
+      if (signInModelFlights.get(instanceId) === flight) signInModelFlights.delete(instanceId);
     });
-    rawDispatch({ type: "instances", instances });
-  }, []);
+    signInModelFlights.set(instanceId, flight);
+    return flight;
+  }, [refreshModels, signInModelFlights]);
 
   // Installing a CLI or signing one in happens in a terminal, outside this
   // window — so the moment the user comes back is exactly when our engine
@@ -4092,8 +4193,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [botPatchQueue],
   );
   const value = useMemo(
-    () => ({ state, dispatch, flushBotPatches, refreshInstances, refreshModels }),
-    [state, dispatch, flushBotPatches, refreshInstances, refreshModels],
+    () => ({ state, dispatch, flushBotPatches, refreshInstances, refreshModels, refreshSignInModels, signInModelDiscovery }),
+    [state, dispatch, flushBotPatches, refreshInstances, refreshModels, refreshSignInModels, signInModelDiscovery],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

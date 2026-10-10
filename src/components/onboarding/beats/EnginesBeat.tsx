@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): share bounded provider inventory checks.
 // Beat: what's installed. One list, ready engines first, each row a mark,
 // a name, a version and a status pill; an engine that needs work opens its
 // setup inline under the row, with the instructions from the driver so
@@ -13,11 +14,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, RefreshCw } from "lucide-react";
 import { EngineSetup } from "@/components/EngineSetup";
 import { engineReady } from "@/components/EngineLibrary";
+import { SignInModelRecovery } from "@/components/SignInModelRecovery";
 import { InstanceProviderMark } from "@/components/ProviderIcons";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { engineSummary, organisationSignIn } from "@/lib/onboarding";
-import { api, useStore, type InstanceInfo } from "@/state/store";
+import { useStore, type InstanceInfo } from "@/state/store";
 import { OrganisationRow } from "./OrganisationRow";
 import { PrimaryButton, staggerIndex, type BeatProps } from "./shared";
 
@@ -60,7 +62,7 @@ export function EnginesBeat({
   /** Settings → Organisation; the flow resumes here when it closes. */
   onOpenOrganisation?: () => void;
 }) {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, refreshInstances } = useStore();
   const organisation = organisationSignIn(window.ogb, { hosted });
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -73,13 +75,12 @@ export function EnginesBeat({
   // list stays a scannable summary until the user chooses an engine.
   const [open, setOpen] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (fresh = false) => {
     const request = ++latestRequest.current;
     setChecking(true);
     try {
-      const d = await api("/api/instances", { signal: AbortSignal.timeout(10_000) });
+      await refreshInstances({ reportFailure: true, fresh });
       if (request !== latestRequest.current) return;
-      dispatch({ type: "instances", instances: d.instances ?? [] });
       setLoaded(true);
       setFailed(false);
     } catch {
@@ -87,7 +88,7 @@ export function EnginesBeat({
     } finally {
       if (request === latestRequest.current) setChecking(false);
     }
-  }, [dispatch]);
+  }, [refreshInstances]);
 
   useEffect(() => {
     void refresh();
@@ -125,7 +126,7 @@ export function EnginesBeat({
         <OrganisationRow
           bridge={organisation}
           onOpenSettings={() => (onOpenOrganisation ? onOpenOrganisation() : dispatch({ type: "toggleAppSettings", open: true, section: "organization" }))}
-          onConnected={() => void refresh()}
+          onConnected={() => void refresh(true)}
         />
       )}
 
@@ -212,6 +213,7 @@ export function EnginesBeat({
                       className="mx-3.5 mb-3.5 border-0 bg-inset"
                     />
                   )}
+                  <SignInModelRecovery instance={instance} className="mx-3.5 mb-3.5" />
                 </div>
               );
             })}

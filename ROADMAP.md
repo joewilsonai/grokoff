@@ -2,13 +2,21 @@
 
 GrokOff is a Mac source alpha built on OpenMausBot's community edition. This roadmap describes intended milestones, not shipped features or promised dates. [Verification](research/verification.md) records what has actually been checked.
 
+The [October 9 integration record](research/verification-2026-10-09.md) and [later verification supplement](research/verification-morning-2026-10-09.md) report separately pinned candidates, isolated desktop checks and remaining release requirements. Its bounded fixtures do not complete the live-provider desktop milestone below.
+
 ## Browser to finished report
 
 The next milestone is one repeatable task through the real desktop interface: a bot researches in the browser and produces a finished report with traceable sources. Progress must stay visible, Allow/Deny/Stop must work, the completed artifact must open from the conversation, and the result must persist after an app restart.
 
-Pixel has already produced a sourced comparison file using search and shell tools, and the bounded subscription checks demonstrate tool reads and completed replies. These are narrow workflow successes. Browser UI navigation, saved-login continuity, and the desktop artifact experience still need acceptance before claiming this milestone is complete.
+The current source adds an in-app Markdown report reader and cancellation of in-flight browser work. Bounded live Claude and Codex tasks have each read controlled pages through the native browser, saved a sourced report and returned a working conversation file link. See the [dated evidence and limits](research/browser-report-2026-10-08.md) and [repeatable desktop recipe](docs/verification/browser-report.md).
+
+Full packaged-app acceptance with a live provider, browser UI navigation and saved-login continuity remain before calling the whole milestone complete. The controlled-source and deterministic desktop checks establish narrower behavior.
 
 Memory continuity follows this milestone: verify explicit preference capture, useful recall, and restart behavior without silently importing another application's state.
+
+## Current implementation sequence
+
+The [October 9 product plan](docs/plans/2026-10-09-product-plan.md) turns the research into bounded work: publish the combined review source, make report loading recoverable, add local PDF export and finish the welcome example wording. Each unit requires a reviewed PR and actual acceptance evidence before it is described as complete. The [combined draft](https://github.com/joewilsonai/grokoff/pull/32) is available for source review; main and binary release remain separate.
 
 ## Make the alpha usable
 

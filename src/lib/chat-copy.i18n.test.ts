@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): align the inherited Portuguese cost-caption expectation with existing plan/model wording and retain all five locale checks.
 // The chat column writes several of its lines in pure helpers rather than in
 // JSX. Each of them holds its English in a module-scope table or a switch, so
 // each is a place where a label can be resolved once at import time and then
@@ -65,7 +66,7 @@ describe("usage chip", () => {
     // reports no cost.
     expect(usageChip(usage)).toBe("$0.02");
     expect(usageChip({ ...usage, costUsd: null })).toContain("entrada");
-    expect(costCaption("subscription")).toBe("equivalente — está na sua assinatura, não é cobrado");
+    expect(costCaption("subscription")).toBe("valor equivalente de custo — as cobranças reais dependem do seu plano e do modelo");
     expect(costCaption(undefined)).toBe("conforme informado pelo provedor");
   });
 });

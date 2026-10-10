@@ -8,12 +8,16 @@ This inventory describes source changes; it does not claim that every inherited 
 
 | Modified imported file | Change notice |
 | --- | --- |
+| [.gitattributes](.gitattributes) | inline change notice (Mac CUA pinned source/license bytes) |
 | [.gitignore](.gitignore) | inline change notice |
+| [apps/docs/package.json](apps/docs/package.json) | [apps/docs/package.json.license](apps/docs/package.json.license) |
 | [AGENTS.md](AGENTS.md) | inline change notice |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | inline change notice |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | inline change notice |
 | [LICENSING.md](LICENSING.md) | inline change notice |
+| [NOTICE](NOTICE) | explicit GrokOff change notice |
 | [README.md](README.md) | inline change notice |
+| [docs/verification/workspace-backups.md](docs/verification/workspace-backups.md) | inline change notice (maintained disposable backup recipe) |
 | [SECURITY.md](SECURITY.md) | inline change notice |
 | [build/icon-1024.png](build/icon-1024.png) | [build/icon-1024.png.license](build/icon-1024.png.license) |
 | [build/icon.icns](build/icon.icns) | [build/icon.icns.license](build/icon.icns.license) |
@@ -33,7 +37,12 @@ This inventory describes source changes; it does not claim that every inherited 
 | [companion/src/state.ts](companion/src/state.ts) | inline change notice |
 | [deploy/.env.example](deploy/.env.example) | inline change notice |
 | [deploy/podman/.env.example](deploy/podman/.env.example) | inline change notice |
+| [docs/verification/bot-continuity.md](docs/verification/bot-continuity.md) | inline change notice |
 | [docs/ci.md](docs/ci.md) | inline change notice |
+| [docs/verification/claude-account.md](docs/verification/claude-account.md) | inline change notice |
+| [docs/verification/README.md](docs/verification/README.md) | inline change notice |
+| [docs/verification/memory-layer.md](docs/verification/memory-layer.md) | inline change notice (first-edit/source restart and current editor read ownership; Save/Undo/Delete/Tidy up mutation metadata recipe and limits) |
+| [docs/verification/onboarding.md](docs/verification/onboarding.md) | inline change notice (local first-run evidence and inherited-history limits) |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
 | [electron/cloud-account.mjs](electron/cloud-account.mjs) | inline change notice |
@@ -46,6 +55,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [electron/cua.mjs](electron/cua.mjs) | inline change notice |
 | [electron/main.mjs](electron/main.mjs) | inline change notice |
 | [electron/menu.mjs](electron/menu.mjs) | inline change notice |
+| [electron/preload.cjs](electron/preload.cjs) | inline change notice |
 | [electron/organization-entry.mjs](electron/organization-entry.mjs) | inline change notice |
 | [electron/organization-entry.node-test.mjs](electron/organization-entry.node-test.mjs) | inline change notice |
 | [electron/package-link.mjs](electron/package-link.mjs) | inline change notice |
@@ -54,27 +64,43 @@ This inventory describes source changes; it does not claim that every inherited 
 | [electron/resources/speech-helper-Info.plist](electron/resources/speech-helper-Info.plist) | inline change notice |
 | [electron/save-file.mjs](electron/save-file.mjs) | inline change notice |
 | [electron/save-file.node-test.mjs](electron/save-file.node-test.mjs) | inline change notice |
+| [electron/secure-credential-state.test.mjs](electron/secure-credential-state.test.mjs) | inline change notice |
+| [electron/secure-credentials.test.mjs](electron/secure-credentials.test.mjs) | inline change notice |
 | [electron/speech.mjs](electron/speech.mjs) | inline change notice |
 | [electron/startup-screen.mjs](electron/startup-screen.mjs) | inline change notice |
 | [electron/updater.mjs](electron/updater.mjs) | inline change notice |
 | [electron/updater.test.mjs](electron/updater.test.mjs) | inline change notice |
 | [electron/vendor/electron-updater.cjs](electron/vendor/electron-updater.cjs) | inline change notice |
+| [electron/workspace-credentials.test.mjs](electron/workspace-credentials.test.mjs) | inline change notice |
 | [index.html](index.html) | inline change notice |
 | [package.json](package.json) | [package.json.license](package.json.license) |
 | [pnpm-lock.yaml](pnpm-lock.yaml) | [pnpm-lock.yaml.license](pnpm-lock.yaml.license) |
 | [pnpm-workspace.yaml](pnpm-workspace.yaml) | inline change notice |
 | [public/app-icon.svg](public/app-icon.svg) | inline change notice |
 | [scripts/ci-workflow.test.ts](scripts/ci-workflow.test.ts) | inline change notice (independent fork CI) |
+| [scripts/bundle-updater.mjs](scripts/bundle-updater.mjs) | inline change notice (vendored updater security rebuild) |
+| [scripts/after-pack.mjs](scripts/after-pack.mjs) | inline change notice (Mac CUA and Electron notice gates) |
+| [scripts/mcp-server.ts](scripts/mcp-server.ts) | inline change notice |
 | [scripts/git-hooks/pre-push](scripts/git-hooks/pre-push) | inline change notice |
+| [scripts/smoke-packaged-server.mjs](scripts/smoke-packaged-server.mjs) | inline change notice (sealed packaged-smoke CLI discovery) |
 | [scripts/patch-organization-updater.mjs](scripts/patch-organization-updater.mjs) | inline change notice |
+| [scripts/prepare-cua.mjs](scripts/prepare-cua.mjs) | inline change notice (Mac CUA notice staging) |
 | [scripts/verify-engines-ui.ts](scripts/verify-engines-ui.ts) | inline change notice |
+| [scripts/testing/control-omb-ui.ts](scripts/testing/control-omb-ui.ts) | inline change notice (private namespace and retained-HOME teardown) |
+| [scripts/testing/threads-preview.tsx](scripts/testing/threads-preview.tsx) | inline change notice (explicit server-controlled fixture onboarding) |
+| [scripts/verify-onboarding-ui.ts](scripts/verify-onboarding-ui.ts) | inline change notice (local-only first-run recipe) |
 | [scripts/verify-startup-tray.mjs](scripts/verify-startup-tray.mjs) | inline change notice |
+| [scripts/verify-workspace-backup.ts](scripts/verify-workspace-backup.ts) | inline change notice (sealed restart and owned cleanup) |
 | [server/brand.ts](server/brand.ts) | inline change notice |
 | [server/browser-engine.test.ts](server/browser-engine.test.ts) | inline change notice |
 | [server/browser-engine.ts](server/browser-engine.ts) | inline change notice |
+| [server/browser-lifecycle-cleanup.test.ts](server/browser-lifecycle-cleanup.test.ts) | inline change notice (synthetic cleanup coverage and product wording) |
+| [server/browser-lifecycle-cleanup.ts](server/browser-lifecycle-cleanup.ts) | inline change notice (product error wording) |
 | [server/browser-live.ts](server/browser-live.ts) | inline change notice |
 | [server/browser-runtime.test.ts](server/browser-runtime.test.ts) | inline change notice |
 | [server/browser-runtime.ts](server/browser-runtime.ts) | inline change notice |
+| [server/engine-install.test.ts](server/engine-install.test.ts) | inline change notice (isolated npm coverage and product wording) |
+| [server/engine-install.ts](server/engine-install.ts) | inline change notice (product error wording) |
 | [server/claude-account-api.test.ts](server/claude-account-api.test.ts) | inline change notice |
 | [server/cli.test.ts](server/cli.test.ts) | inline change notice |
 | [server/cli.ts](server/cli.ts) | inline change notice |
@@ -97,10 +123,14 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/drivers/codex.ts](server/drivers/codex.ts) | inline change notice |
 | [server/index.test.ts](server/index.test.ts) | inline change notice |
 | [server/index.ts](server/index.ts) | inline change notice |
+| [server/independent-threads-api.test.ts](server/independent-threads-api.test.ts) | inline change notice |
 | [server/local-computer.test.ts](server/local-computer.test.ts) | inline change notice |
 | [server/local-computer.ts](server/local-computer.ts) | inline change notice |
+| [server/memory-store.ts](server/memory-store.ts) | inline change notice |
+| [server/mcp-server.test.ts](server/mcp-server.test.ts) | inline change notice |
 | [server/request-auth.test.ts](server/request-auth.test.ts) | inline change notice |
 | [server/request-auth.ts](server/request-auth.ts) | inline change notice |
+| [server/room-recovery.e2e.test.ts](server/room-recovery.e2e.test.ts) | inline change notice (hermetic restart and replacement-PID check) |
 | [server/service-unit.test.ts](server/service-unit.test.ts) | inline change notice |
 | [server/service-unit.ts](server/service-unit.ts) | inline change notice |
 | [server/startup-model-catalog.test.ts](server/startup-model-catalog.test.ts) | inline change notice |
@@ -108,25 +138,38 @@ This inventory describes source changes; it does not claim that every inherited 
 | [server/testing/fake-claude-cli.ts](server/testing/fake-claude-cli.ts) | inline change notice |
 | [server/testing/fake-codex-app-server.ts](server/testing/fake-codex-app-server.ts) | inline change notice |
 | [server/testing/setup.ts](server/testing/setup.ts) | inline change notice |
+| [server/workspace-backup-workflow.test.ts](server/workspace-backup-workflow.test.ts) | inline change notice (maintained restore and cleanup acceptance) |
 | [server/turn-continuation.test.ts](server/turn-continuation.test.ts) | inline change notice |
 | [server/turn-continuation.ts](server/turn-continuation.ts) | inline change notice |
 | [shared/pairing-link.test.ts](shared/pairing-link.test.ts) | inline change notice |
 | [shared/pairing-link.ts](shared/pairing-link.ts) | inline change notice |
 | [shared/wire.ts](shared/wire.ts) | inline change notice |
 | [src/App.tsx](src/App.tsx) | inline change notice |
+| [src/components/bot-settings/MemorySection.tsx](src/components/bot-settings/MemorySection.tsx) | inline change notice (current memory-read/Save/Undo ownership, draft/hash preservation, fresh overlapping mutation metadata, current-editor Delete/Tidy up completion, prompt source-tagged refused-Save retention and successful Tidy refresh after Settings reopens) |
 | [src/components/AboutDialog.tsx](src/components/AboutDialog.tsx) | inline change notice |
+| [src/components/ApiKeys.tsx](src/components/ApiKeys.tsx) | inline change notice (owned API-key probes) |
 | [src/components/Avatar.tsx](src/components/Avatar.tsx) | inline change notice |
 | [src/components/AvatarImageGenerator.tsx](src/components/AvatarImageGenerator.tsx) | inline change notice |
 | [src/components/CanvasComputers.tsx](src/components/CanvasComputers.tsx) | inline change notice |
+| [src/components/AttachmentPreview.tsx](src/components/AttachmentPreview.tsx) | inline change notice |
 | [src/components/ChatMarkdown.renderers.test.ts](src/components/ChatMarkdown.renderers.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.test.ts](src/components/ChatMarkdown.test.ts) | inline change notice |
 | [src/components/ChatMarkdown.tsx](src/components/ChatMarkdown.tsx) | inline change notice |
+| [src/components/ClaudeAccountSettings.tsx](src/components/ClaudeAccountSettings.tsx) | inline change notice |
+| [src/components/ClaudeSignIn.tsx](src/components/ClaudeSignIn.tsx) | inline change notice |
+| [src/components/ClaudeUpdatePrompt.tsx](src/components/ClaudeUpdatePrompt.tsx) | inline change notice |
 | [src/components/CloudAccountSettings.test.ts](src/components/CloudAccountSettings.test.ts) | inline change notice |
 | [src/components/CloudAccountSettings.tsx](src/components/CloudAccountSettings.tsx) | inline change notice |
 | [src/components/CompanionSection.test.ts](src/components/CompanionSection.test.ts) | inline change notice |
+| [src/components/CodexAccountSettings.test.ts](src/components/CodexAccountSettings.test.ts) | inline change notice |
+| [src/components/CodexAccountSettings.tsx](src/components/CodexAccountSettings.tsx) | inline change notice |
 | [src/components/ConnectedWorkspacesSettings.tsx](src/components/ConnectedWorkspacesSettings.tsx) | inline change notice |
+| [src/components/GrokSignIn.interaction.test.ts](src/components/GrokSignIn.interaction.test.ts) | inline change notice |
+| [src/components/ChatGptPlanSignIn.interaction.test.ts](src/components/ChatGptPlanSignIn.interaction.test.ts) | inline change notice |
+| [src/components/DeviceSignIn.tsx](src/components/DeviceSignIn.tsx) | inline change notice |
 | [src/components/EngineLibrary.test.ts](src/components/EngineLibrary.test.ts) | inline change notice |
 | [src/components/EngineLibrary.tsx](src/components/EngineLibrary.tsx) | inline change notice |
+| [src/components/EngineSetup.grok.test.ts](src/components/EngineSetup.grok.test.ts) | inline change notice |
 | [src/components/EngineSetup.test.ts](src/components/EngineSetup.test.ts) | inline change notice |
 | [src/components/EngineSetup.tsx](src/components/EngineSetup.tsx) | inline change notice |
 | [src/components/EnginesSettings.test.ts](src/components/EnginesSettings.test.ts) | inline change notice |
@@ -134,7 +177,10 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/FullAccessWarning.tsx](src/components/FullAccessWarning.tsx) | inline change notice |
 | [src/components/LocalVmWorkspace.tsx](src/components/LocalVmWorkspace.tsx) | inline change notice |
 | [src/components/ModelPicker.simple.test.ts](src/components/ModelPicker.simple.test.ts) | inline change notice |
+| [src/components/ModelPicker.interaction.test.ts](src/components/ModelPicker.interaction.test.ts) | inline change notice |
 | [src/components/ModelPicker.test.ts](src/components/ModelPicker.test.ts) | inline change notice |
+| [src/components/BrowserPanel.tsx](src/components/BrowserPanel.tsx) | inline change notice; bounded access checks and explicit failure retry |
+| [docs/verification/browser-live.md](docs/verification/browser-live.md) | inline change notice; sealed access-check interaction recipe |
 | [src/components/ModelPicker.tsx](src/components/ModelPicker.tsx) | inline change notice |
 | [src/components/NoEngines.tsx](src/components/NoEngines.tsx) | inline change notice |
 | [src/components/PhoneAppDialog.tsx](src/components/PhoneAppDialog.tsx) | inline change notice |
@@ -159,12 +205,17 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/components/SimpleModelPane.tsx](src/components/SimpleModelPane.tsx) | inline change notice |
 | [src/components/ThreadRefs.test.ts](src/components/ThreadRefs.test.ts) | inline change notice |
 | [src/components/WebhooksPanel.tsx](src/components/WebhooksPanel.tsx) | inline change notice |
+| [src/components/onboarding/FirstConversationTour.test.ts](src/components/onboarding/FirstConversationTour.test.ts) | inline change notice (disposable first-run globals and Settings pause) |
+| [src/components/onboarding/FirstConversationTour.tsx](src/components/onboarding/FirstConversationTour.tsx) | inline change notice (pause approval tips in Settings) |
+| [src/components/onboarding/GuidedTour.tsx](src/components/onboarding/GuidedTour.tsx) | inline change notice (pause Settings overlays and pending panel effects) |
 | [src/components/onboarding/PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) | inline change notice |
 | [src/components/onboarding/SharedWorkspaceHint.tsx](src/components/onboarding/SharedWorkspaceHint.tsx) | inline change notice |
 | [src/components/onboarding/Spotlight.tsx](src/components/onboarding/Spotlight.tsx) | inline change notice |
 | [src/components/onboarding/WelcomeFlow.tsx](src/components/onboarding/WelcomeFlow.tsx) | inline change notice |
+| [src/components/onboarding/WelcomeGate.tsx](src/components/onboarding/WelcomeGate.tsx) | inline change notice (server-governed local welcome completion) |
 | [src/components/onboarding/WelcomeGate.test.ts](src/components/onboarding/WelcomeGate.test.ts) | inline change notice |
 | [src/components/onboarding/beats/EnginesBeat.test.ts](src/components/onboarding/beats/EnginesBeat.test.ts) | inline change notice |
+| [src/components/onboarding/beats/EnginesBeat.tsx](src/components/onboarding/beats/EnginesBeat.tsx) | inline change notice |
 | [src/components/onboarding/beats/HelloBeat.test.ts](src/components/onboarding/beats/HelloBeat.test.ts) | inline change notice |
 | [src/components/onboarding/beats/HelloBeat.tsx](src/components/onboarding/beats/HelloBeat.tsx) | inline change notice |
 | [src/components/onboarding/beats/MeetYourBotBeat.tsx](src/components/onboarding/beats/MeetYourBotBeat.tsx) | inline change notice |
@@ -179,9 +230,12 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/analytics.test.ts](src/lib/analytics.test.ts) | inline change notice |
 | [src/lib/analytics.ts](src/lib/analytics.ts) | inline change notice |
 | [src/lib/app-links.ts](src/lib/app-links.ts) | inline change notice |
+| [src/lib/verify-steps.ts](src/lib/verify-steps.ts) | inline change notice |
+| [src/lib/verify-steps.test.ts](src/lib/verify-steps.test.ts) | inline change notice |
 | [src/lib/brand.ts](src/lib/brand.ts) | inline change notice |
 | [src/lib/call-capability.ts](src/lib/call-capability.ts) | inline change notice |
 | [src/lib/cloud-plan.ts](src/lib/cloud-plan.ts) | inline change notice |
+| [src/lib/chat-copy.i18n.test.ts](src/lib/chat-copy.i18n.test.ts) | inline change notice; existing Portuguese cost-caption expectation corrected to current catalog wording |
 | [src/lib/computer-control.ts](src/lib/computer-control.ts) | inline change notice |
 | [src/lib/local-computer.ts](src/lib/local-computer.ts) | inline change notice |
 | [src/lib/model-friendly.test.ts](src/lib/model-friendly.test.ts) | inline change notice |
@@ -195,22 +249,162 @@ This inventory describes source changes; it does not claim that every inherited 
 | [src/lib/thread-refs.test.ts](src/lib/thread-refs.test.ts) | inline change notice |
 | [src/lib/thread-refs.ts](src/lib/thread-refs.ts) | inline change notice |
 | [src/lib/usage.test.ts](src/lib/usage.test.ts) | inline change notice |
-| [src/locales/de.json](src/locales/de.json) | [src/locales/de.json.license](src/locales/de.json.license) |
-| [src/locales/en.json](src/locales/en.json) | [src/locales/en.json.license](src/locales/en.json.license) |
-| [src/locales/es.json](src/locales/es.json) | [src/locales/es.json.license](src/locales/es.json.license) |
-| [src/locales/fr.json](src/locales/fr.json) | [src/locales/fr.json.license](src/locales/fr.json.license) |
-| [src/locales/hi.json](src/locales/hi.json) | [src/locales/hi.json.license](src/locales/hi.json.license) |
-| [src/locales/ja.json](src/locales/ja.json) | [src/locales/ja.json.license](src/locales/ja.json.license) |
-| [src/locales/pt-br.json](src/locales/pt-br.json) | [src/locales/pt-br.json.license](src/locales/pt-br.json.license) |
-| [src/locales/source-hashes.json](src/locales/source-hashes.json) | [src/locales/source-hashes.json.license](src/locales/source-hashes.json.license) |
-| [src/locales/uk.json](src/locales/uk.json) | [src/locales/uk.json.license](src/locales/uk.json.license) |
-| [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license) |
-| [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license) |
+| [src/locales/de.json](src/locales/de.json) | [src/locales/de.json.license](src/locales/de.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/en.json](src/locales/en.json) | [src/locales/en.json.license](src/locales/en.json.license); independent bot wording in two Triggers labels |
+| [src/locales/es.json](src/locales/es.json) | [src/locales/es.json.license](src/locales/es.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/fr.json](src/locales/fr.json) | [src/locales/fr.json.license](src/locales/fr.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/hi.json](src/locales/hi.json) | [src/locales/hi.json.license](src/locales/hi.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/ja.json](src/locales/ja.json) | [src/locales/ja.json.license](src/locales/ja.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/pt-br.json](src/locales/pt-br.json) | [src/locales/pt-br.json.license](src/locales/pt-br.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/source-hashes.json](src/locales/source-hashes.json) | [src/locales/source-hashes.json.license](src/locales/source-hashes.json.license); only the two revised Traditional Chinese Triggers source records; remove only the 18 corresponding untranslated onboarding source records |
+| [src/locales/uk.json](src/locales/uk.json) | [src/locales/uk.json.license](src/locales/uk.json.license); explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/zh-tw.json](src/locales/zh-tw.json) | [src/locales/zh-tw.json.license](src/locales/zh-tw.json.license); two revised Traditional Chinese Triggers labels; explicit English fallback for two untranslated onboarding reel entries |
+| [src/locales/zh.json](src/locales/zh.json) | [src/locales/zh.json.license](src/locales/zh.json.license); explicit English fallback for two untranslated onboarding reel entries |
 | [src/pair/PairPage.tsx](src/pair/PairPage.tsx) | inline change notice |
-| [src/state/store.tsx](src/state/store.tsx) | inline change notice |
+| [src/styles.css](src/styles.css) | inline change notice |
+| [src/components/VerifyCard.tsx](src/components/VerifyCard.tsx) | inline change notice |
+| [src/components/ToolActivity.tsx](src/components/ToolActivity.tsx) | inline change notice |
+| [src/components/RunLog.tsx](src/components/RunLog.tsx) | inline change notice |
+| [src/lib/taskTimeline.ts](src/lib/taskTimeline.ts) | inline change notice |
+| [src/state/live-frames.test.ts](src/state/live-frames.test.ts) | inline change notice (valid optional webhook snapshot fixture envelope) |
+| [src/state/store.tsx](src/state/store.tsx) | inline change notice; bounded optional routine snapshot read; bounded optional config/webhook snapshots |
 | [src/testing/mentions.tsx](src/testing/mentions.tsx) | inline change notice |
 | [src/types/ogb.d.ts](src/types/ogb.d.ts) | inline change notice |
 
+| [src/components/ApiKeys.test.ts](src/components/ApiKeys.test.ts) | inline change notice |
+| [src/components/CallView.journeys.test.ts](src/components/CallView.journeys.test.ts) | inline change notice |
+| [src/components/ChatView.rows.test.ts](src/components/ChatView.rows.test.ts) | inline change notice |
+| [src/components/ChatView.tsx](src/components/ChatView.tsx) | inline change notice; keep the report reader outside windowed message rows |
+| [src/components/ComputerPanel.lazy.test.ts](src/components/ComputerPanel.lazy.test.ts) | inline change notice |
+| [src/components/ComputerPanel.live.test.ts](src/components/ComputerPanel.live.test.ts) | inline change notice |
+| [src/components/live-panels.test.ts](src/components/live-panels.test.ts) | inline change notice |
+| [src/components/LiveCallBar.render.test.ts](src/components/LiveCallBar.render.test.ts) | inline change notice |
+| [src/components/Sidebar.rows.test.ts](src/components/Sidebar.rows.test.ts) | inline change notice |
+
 ## New publication-support files
 
+<!-- GrokOff modification (2026-10-09): bounded observed JavaScript notice gate. -->
+The imported `scripts/after-pack.mjs` now also checks seven directly observed
+JavaScript notice records and carries an inline change notice. `package.json`
+prepends installed-input validation to Mac preparation and adopts the offline
+notice rejection tests in its maintained Node gate. New
+`scripts/javascript-runtime-notices.mjs`, its disposable fixture tests and
+`third_party/javascript-runtime/` records preserve the original npm license
+bytes; this remains an intentionally partial inventory.
+
 [.gitleaks.toml](.gitleaks.toml), [publication hygiene](docs/publication-hygiene.md), and [the deployment-template guide](deploy/README.md) were created for this fork. They document source-publication checks and the limits of retained templates; they are not imported upstream modifications or hosted-service deployment support.
+
+<!-- GrokOff modification (2026-10-09): attachment recovery and fixture notice inventory. -->
+
+| Additional modified imported file | Change notice |
+| --- | --- |
+| [src/lib/composer-attachments.ts](src/lib/composer-attachments.ts) | inline change notice (bounded upload transport and response reads) |
+| [src/components/Composer.tsx](src/components/Composer.tsx) | inline change notice (failed pasted image names and stale warnings) |
+| [src/components/ComposerAttachments.tsx](src/components/ComposerAttachments.tsx) | inline change notice (stale warnings on a fresh drop) |
+| [server/attachments.test.ts](server/attachments.test.ts) | inline change notice (owned fixture cleanup) |
+
+[Data export](docs/data-export.md) was written for GrokOff to document the inherited full-workspace backup path and its verified limits. The archive and policy tests are adopted unchanged into the maintained core suite; the workflow fixture adds sealed restarts and confirmed owned-process cleanup.
+
+## Native interface copy
+
+The 2026-10-09 native branding follow-up changes visible window titles,
+startup lease error messages and the diagnostics report header/default filename.
+Protocol, data, lease and session identifiers remain compatible. These imported
+files and corresponding existing tests carry inline GrokOff change notices:
+
+| Modified imported file | Change notice |
+| --- | --- |
+| [electron/environments.cjs](electron/environments.cjs) | inline change notice |
+| [electron/environments.node-test.mjs](electron/environments.node-test.mjs) | inline change notice |
+| [electron/data-dir-lease.mjs](electron/data-dir-lease.mjs) | inline change notice |
+| [electron/data-dir-lease.node-test.mjs](electron/data-dir-lease.node-test.mjs) | inline change notice |
+| [electron/diagnostics.mjs](electron/diagnostics.mjs) | inline change notice |
+| [electron/diagnostics.test.mjs](electron/diagnostics.test.mjs) | inline change notice |
+
+### GrokOff retained Mac CUA source script (2026-10-09)
+
+The delivered MPL-2.0 runtime build transformation now accepts an explicit
+`--source-root` for the pinned UBRN development package instead of looking for
+an absent adjacent Cua TypeScript project. Its RustBuffer transformations and
+Cargo build behavior remain unchanged. The source record and README retain
+the pins and document prerequisites; this is not a completed native rebuild
+or full SBOM claim. Disposable source controls use a stand-in Cargo against
+the actual pinned archive and make no native compilation or provider call.
+
+## First-run sample labels — 2026-10-09
+
+The illustrated onboarding scene in [Hands.tsx](src/components/onboarding/reel/scenes/Hands.tsx) uses “Assistant” and “Message Assistant” for its two visible example-bot labels. The illustrative phone header in [PhonePreview.tsx](src/components/onboarding/PhonePreview.tsx) also uses “Assistant”. The synthetic member name in [Channels.tsx](src/components/onboarding/reel/scenes/Channels.tsx) is also “Assistant”; it currently serves as a React key rather than displayed text. Internal avatar/type names, real bot names, provider terminology, scene behavior, and upstream attribution are retained. Existing scene, onboarding, and branding checks cover source behavior; this change does not claim a new native-app walkthrough.
+## Interrupted tool receipts (2026-10-09)
+
+`server/index.ts` settles only unfinished provider tool receipts of an explicitly
+interrupted or cancelled turn. The provider completion reason and `ok` are
+retained; unknown exits and historical unfinished receipts are not inferred to
+be cancelled. The optional `tool.interrupted` wire field preserves an unknown
+execution outcome: it does not fabricate success, failure, output or rollback.
+Provider completion checks the stored receipt's turn ownership before replacing
+its outcome or removing its pending item entry. Tool details and the run log show
+Interrupted with guidance to check what happened before repeating the action.
+Completed and failed receipts retain their recorded outcomes; old records remain
+readable without the new field.
+
+The maintained core adopts owned HTTP/fake-CLI Stop and server-restart coverage,
+real ACP cancellation and unknown-exit controls, real disposable Store ownership
+controls, actual React disclosure/run-log
+interaction, and the existing complete tool-detail/run-log/timeline test files.
+The recipe is [interrupted tools](docs/verification/interrupted-tools.md). No real
+browser action, provider account, user workspace or native app is exercised.
+
+Interrupted command-run cards and bounded MCP transcript/wait projections retain
+the same optional interruption marker. Run cards remove the live spinner and
+verified badge for unknown interrupted outcomes; skill drafts preserve these as
+notes to check, exclude them from the passing recipe and never replay them.
+Existing MCP redaction, ownership checks and transcript bounds are retained.
+
+
+## Custom CLI draft ownership (2026-10-09)
+
+The inherited [EnginesSettings](src/components/EnginesSettings.tsx) now keeps
+manual and detected-path edits when asynchronous CLI discovery completes, and
+cancels lookup requests when the picker unmounts. Its inline modification notice
+identifies this change. The fork-created
+[provider interaction fixture](src/components/EngineRefresh.interaction.test.ts)
+and [verification notes](docs/verification/provider-refresh.md) cover delayed
+responses, untouched initialization, failure, close/reopen and StrictMode.
+
+
+## Report reader development lifecycle (2026-10-09)
+
+The fork-created report reader no longer treats its effect-cleanup modal close
+as a user dismissal. Explicit Close and the native cancel event still dismiss
+the reader. Actual React StrictMode regressions retain open state through replay
+and verify cancellation, focus return, ignored late responses and reopen. The
+[report recipe](docs/verification/browser-report.md) distinguishes these source
+DOM checks from packaged production and native desktop acceptance.
+
+
+## Browser/report cleanup receipts (2026-10-10)
+
+The fork-created [report verification recipe](scripts/verify-browser-report.ts)
+uses an import-safe [cleanup coordinator](scripts/testing/browser-report-cleanup.ts)
+to retain completed direct-child owners, guard every signal against the recorded
+process identity and measure PID/home absence. Independent cleanup and receipt
+steps preserve the original acceptance error and keep homes on uncertainty.
+The prepared native-browser closer retains its Boolean meaning; returned RPC
+cleanup is not presented as a complete transport/process inventory. Inline
+modification notices, the package sidecar and the
+[recipe notes](docs/verification/browser-report.md) identify the scope.
+Maintained [inert Node controls](scripts/testing/browser-report-cleanup.node-test.mjs)
+exercise real disposable children/directories and the recipe's actual finally
+and startup paths without native apps, servers, providers or personal data.
+
+
+## Room report reader continuity (2026-10-10)
+
+The inherited [room view](src/components/GroupView.tsx) uses the existing report
+reader host above its windowed transcript, keyed by room and selected thread.
+The current loaded room transcript retains file authority while an older row
+leaves the window. The existing maintained
+[continuity fixture](src/components/ChatView.report-continuity.interaction.test.ts)
+adds real room row-eviction cases for pending reads and PDF jobs. The inline
+change notice and [recipe notes](docs/verification/browser-report.md) describe
+this source behavior and its separate native acceptance limits.

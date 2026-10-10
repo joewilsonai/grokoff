@@ -1,3 +1,5 @@
+// GrokOff modification (2026-10-09): seal fixture CLI discovery to prevent
+// ambient provider installations from starting during packaged smoke checks.
 // Prove the built server actually STARTS with no node_modules in reach.
 //
 // 0.1.24 shipped a server that died on every launch with
@@ -76,7 +78,10 @@ try {
 }
 
 const fixtureEnv = {
-  ...(process.env.PATH ? { PATH: process.env.PATH } : {}),
+  // Every Node child uses process.execPath; even Node's own install directory
+  // may contain real provider CLIs (for example a shared Homebrew bin).
+  PATH: "",
+  OMB_TEST_SEALED_PATH: "1",
   ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
   HOME: home,
   USERPROFILE: home,

@@ -1,10 +1,11 @@
-// GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+// GrokOff modification (2026-10-09): record stopped tool receipts and guard provider completion ownership; retain independent fork changes.
 // OpenMausBot server — the harness host. Clients hold no transports
 // (upstream rule): the React app dispatches typed commands over HTTP and
 // folds one SSE event stream; every provider process runs here.
 // First, before any module that could start a process: a Cloud home's
 // secrets off the launcher's pipe (cloud-secrets-boot.ts).
 import { BOOT_CLOUD_SECRETS } from "./cloud-secrets-boot.ts";
+import { completeToolMessage, interruptToolMessages } from "./tool-messages.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, rmSync, mkdirSync } from "node:fs";
@@ -2332,6 +2333,7 @@ function endForeignTurns(threadId: string, generation?: string): void {
 }
 
 function revokeInternalCapabilityGeneration(threadId: string, generation: string): void {
+  browserRuntime.stopTurn(`${threadId}:${generation}`);
   endForeignTurns(threadId, generation);
   if (guestDrivenTurns.get(threadId) === generation) guestDrivenTurns.delete(threadId);
   for (const [token, capability] of internalCapabilities) {
@@ -2355,7 +2357,10 @@ function revokeEarlierTurnCapabilities(threadId: string): void {
   // introduced. This force variant is used only by explicit stop/delete and
   // before a brand-new generation is published, never by a stale async catch.
   for (const [token, capability] of internalCapabilities) {
-    if (capability.threadId === threadId) internalCapabilities.delete(token);
+    if (capability.threadId === threadId) {
+      browserRuntime.stopTurn(`${threadId}:${capability.generation}`);
+      internalCapabilities.delete(token);
+    }
   }
 }
 
@@ -2368,6 +2373,9 @@ function revokeInternalCapabilitiesForThread(threadId: string): void {
 
 function revokeAllInternalCapabilities(): void {
   computerSelectionTurns.clear();
+  for (const capability of internalCapabilities.values()) {
+    browserRuntime.stopTurn(`${capability.threadId}:${capability.generation}`);
+  }
   internalCapabilities.clear();
   sessionCredentials.clear();
   // foreignTurns stays: a turn that is not provably the owner's can still
@@ -7668,19 +7676,9 @@ bus.subscribe((event: RuntimeEvent) => {
           });
         }
       } else if (event.itemType === "tool" && event.itemId) {
-        const itemKey = `${event.threadId}:${event.itemId}`;
-        const messageId = toolMessageByItem.get(itemKey);
-        let toolName = "tool";
-        if (messageId) {
-          // the whole tool object is replaced, so carry `spoken` across —
-          // dropping it here would silently un-narrate every completed tool
-          const existing = store.messagesFor(event.threadId).find((m) => m.id === messageId)?.tool;
-          toolName = existing?.name ?? "tool";
-          store.patchMessage(event.threadId, messageId, {
-            tool: { ...existing, name: toolName, ok: event.ok, output: event.output },
-          });
-          toolMessageByItem.delete(itemKey);
-        }
+        const toolName = completeToolMessage(store, toolMessageByItem, event.threadId, event.itemId,
+          event.turnId, event.ok, event.output);
+        if (toolName === null) break;
         // the bot just acted ON ITS SCREEN — refresh the preview now. Only
         // computer tools can change the screen, and each capture competes
         // with the agent for the boat's command endpoint, so a bot grinding
@@ -7956,6 +7954,9 @@ bus.subscribe((event: RuntimeEvent) => {
       }
       break;
     case "turn.completed": {
+      if (event.stopReason === "interrupted" || event.stopReason === "cancelled") {
+        interruptToolMessages(store, toolMessageByItem, event.threadId, completedTurnId);
+      }
       settleWaitingOnPersonChips(event.threadId);
       // A peer-started turn settles as coordination, not as news. What keeps
       // that classification from outliving its turn is the rewrite at
@@ -16821,7 +16822,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
           if (body.method === "tools/call" && !claimTurnResource(internalCapability, `browser:${browser.session}`)) {
             throw Object.assign(new Error("another thread is using this browser — pause browser work until that thread finishes"), { status: 409 });
           }
-        });
+        }, `${internalCapability.threadId}:${internalCapability.generation}`);
         requireActiveInternalCapability();
         return json(res, 200, { result });
       }

@@ -1,9 +1,10 @@
-// GrokOff modification (2026-10-08): local-edition identity, UI availability, or matching verification.
+// GrokOff modification (2026-10-08, updated 2026-10-09): preserve local startup coverage using real disabled analytics.
 import { createElement, isValidElement, type EffectCallback, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EMPTY_ONBOARDING, LOCAL_VIEWER, WELCOME_VERSION, type WelcomeViewer } from "@/lib/onboarding";
 import { setLocale } from "@/lib/i18n";
+import { analyticsEnabled, emailGateDone } from "@/lib/analytics";
 
 const fixture = vi.hoisted(() => ({ values: [] as unknown[], index: 0, effects: [] as EffectCallback[] }));
 vi.mock("react", async (original) => ({
@@ -21,7 +22,6 @@ vi.mock("react", async (original) => ({
 }));
 const store = vi.hoisted(() => ({ state: {} as Record<string, unknown>, dispatch: vi.fn(), api: vi.fn() }));
 vi.mock("@/state/store", () => ({ api: store.api, useStore: () => ({ state: store.state, dispatch: store.dispatch }) }));
-vi.mock("@/lib/analytics", () => ({ emailGateDone: () => false }));
 // The gate's job is choosing; the flow itself has its own recipe.
 vi.mock("./WelcomeFlow", () => ({ WelcomeFlow: () => null }));
 vi.mock("@/components/Avatar", () => ({ MausAvatar: () => null }));
@@ -78,6 +78,13 @@ afterEach(() => {
 });
 
 describe("who gets the welcome flow", () => {
+  it("opens a fresh local welcome even though the disabled email gate is satisfied", () => {
+    vi.stubGlobal("window", LOCAL_PAGE);
+    expect(analyticsEnabled()).toBe(false);
+    expect(emailGateDone()).toBe(true);
+    expect(gate(LOCAL_VIEWER).tree?.type).toBe(WelcomeFlow);
+  });
+
   it("opens the desktop flow for the desktop app's own window, exactly as before", () => {
     vi.stubGlobal("window", LOCAL_PAGE);
     const { tree } = gate(LOCAL_VIEWER);

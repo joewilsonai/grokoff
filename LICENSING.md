@@ -16,6 +16,22 @@ Third-party code, data, icons, fonts, and optional runtime binaries keep their o
 
 For example, smol-toml is BSD-3-Clause, models.dev and OpenCode adaptations are MIT, and noVNC is MPL-2.0 with its own accompanying notices. Browser and desktop runtime licensing is documented separately under `third_party/` and in their prepared distributions.
 
+<!-- GrokOff modification (2026-10-09): retain Electron runtime distribution notices. -->
+The Mac package also copies Electron's MIT license and its generated Chromium
+notices without changing their bytes. A pre-signing gate rejects missing or
+mismatched runtime notices. See [`third_party/electron/`](third_party/electron/).
+This check covers those notice files; the complete native component inventory
+and binary release acceptance remain separate work.
+
+<!-- GrokOff modification (2026-10-09): retain original notices for seven observed JavaScript components. -->
+The Mac package also retains the original MIT license texts for the observed
+React/React DOM, Ajv, Croner, electron-updater and Mermaid versions, and Lucide
+React's ISC text including its Feather attribution, with exact installed-input
+and copied-file checks. See
+[`third_party/javascript-runtime/`](third_party/javascript-runtime/). This is
+an explicitly partial JavaScript inventory; other bundled and transitive
+components still require review.
+
 ## Names and artwork
 
 GrokOff is independent of xAI, OpenMausBot, Cursor, and their maintainers. Its GO entry mark is original artwork created for this fork. Upstream names retained in attribution, historical documentation, or compatibility code do not imply affiliation.

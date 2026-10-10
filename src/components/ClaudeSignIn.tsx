@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): preserve confirmed sign-in and retry discovery.
 import { useEffect, useState } from "react";
 import { ExternalLink, Loader2, LogIn } from "lucide-react";
 import { api } from "@/state/store";
@@ -28,18 +29,21 @@ function endedFlow(phase: "expired" | "failed"): DeviceSignInStatus {
 /** Settings → Engines → Claude on a hosted server: open Anthropic's sign-in
  * page, paste the code it shows, done. The server drives the unmodified CLI. */
 export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
-  const { refreshInstances, refreshModels } = useStore();
+  const { state, refreshSignInModels, signInModelDiscovery } = useStore();
   const [auth, setAuth] = useState<DeviceSignInStatus | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"start" | "finish" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const base = `/api/instances/${encodeURIComponent(instanceId)}/auth`;
   const link = claudeSignInLink(auth?.authorizationUrl);
+  const recovery = signInModelDiscovery[instanceId];
+  // Settings can close while discovery is pending/failed and inventory still
+  // says setup is needed. That shared recovery already proves login; a newly
+  // mounted form must not ask to sign in again. Confirmed sign-out clears it.
+  const connected = recovery === "checking" || recovery === "failed" ||
+    (auth?.phase === "succeeded" && state.instances.find((instance) => instance.instanceId === instanceId)?.snapshot.authenticated !== false);
 
-  const refresh = async () => {
-    await refreshInstances();
-    await refreshModels(instanceId);
-  };
+  const refresh = () => refreshSignInModels(instanceId);
 
   // Expire the link locally when the server says it does, and poll the
   // outcome while a code is being checked.
@@ -78,10 +82,11 @@ export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
     setError(null);
     try {
       await api(`${base}/complete`, { method: "POST", body: JSON.stringify({ flowId: auth.flowId, code: code.trim() }) });
-      const { auth: next }: { auth: DeviceSignInStatus } = await api(`${base}/status?flowId=${encodeURIComponent(auth.flowId)}`);
-      setAuth(next);
+      // Successful completion verifies sign-in and removes the owner flow.
+      // Querying that deleted flow would turn success into an HTTP 404 failure.
+      setAuth({ phase: "succeeded", flowId: null, authorizationUrl: null, expiresAt: null });
       setCode("");
-      if (next.phase === "succeeded") await refresh();
+      await refresh();
     } catch (cause) {
       if (deviceFlowUnavailable(cause)) {
         // the server already knows the outcome; ask it rather than guess
@@ -116,10 +121,9 @@ export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
     }
   };
 
-  const outcome = auth && auth.phase !== "waiting"
-    ? auth.phase === "succeeded"
-      ? t("engineSetup.claude.connected")
-      : auth.phase === "cancelled"
+  const outcome = connected ? t("engineSetup.claude.connectedAccount")
+    : auth && auth.phase !== "waiting"
+      ? auth.phase === "cancelled"
         ? t("engineSetup.device.cancelled")
         : auth.phase === "expired"
           ? t("engineSetup.device.expired")
@@ -129,9 +133,9 @@ export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
   return (
     <div className="mt-3 space-y-2" data-claude-sign-in>
       {outcome ? (
-        <p role="status" className={auth?.phase === "succeeded" ? "text-[12px] text-success" : "text-[12px] text-ink-secondary"}>{outcome}</p>
+        <p role="status" className={connected ? "text-[12px] text-success" : "text-[12px] text-ink-secondary"}>{outcome}</p>
       ) : null}
-      {auth?.phase === "waiting" ? (
+      {auth?.phase === "waiting" && !connected ? (
         link ? (
           <div className="space-y-2 rounded-lg border border-hairline/50 bg-app p-3">
             <a href={link} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-[12.5px] font-semibold text-white hover:brightness-110">
@@ -168,7 +172,7 @@ export function ClaudeSignIn({ instanceId }: { instanceId: string }) {
         ) : (
           <p role="alert" className="text-[12px] text-danger">{t("engineSetup.claude.invalidChallenge")}</p>
         )
-      ) : auth?.phase !== "succeeded" ? (
+      ) : !connected ? (
         <button
           type="button"
           disabled={busy !== null}

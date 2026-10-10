@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): the conversation owns report readers across virtualized row changes.
 import { Component, createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import { useAdvancedMode } from "@/lib/interface-mode";
 import { useCopyFeedback } from "@/lib/copy-text";
@@ -65,6 +66,7 @@ import { peerLine, type PeerLine } from "@/lib/peer-message";
 import { showWorkingDots } from "@/lib/turn-tail";
 import { liveActivityLabel } from "@/lib/live-activity";
 import { ChatMarkdown } from "./ChatMarkdown";
+import { ReportReaderHost } from "./ReportFilePreview";
 import { VoiceNoteBubble, type VoiceNoteAttachment } from "./VoiceNoteBubble";
 import { RawMarkdownView, RawToggleAction } from "./RawMarkdownToggle";
 import { ThreadChip } from "./ThreadChip";
@@ -1296,6 +1298,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
   const canOpenResults = resultsThreadId && [...state.bots, ...state.groups].some((owner) => owner.threadId === resultsThreadId || owner.tasks?.some((task) => task.threadId === resultsThreadId));
 
   return (
+    <ReportReaderHost ownerId={bot.id} threadId={bot.threadId} messages={messages}>
     <main className="relative flex h-full min-w-0 flex-1 flex-col bg-app">
       {/* A take-turns call covers the thread while the bot is on the line */}
       <CallOverlay bot={bot} />
@@ -1640,6 +1643,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
       </GlassScrollFrame>
 
     </main>
+    </ReportReaderHost>
   );
 }
 

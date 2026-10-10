@@ -104,11 +104,19 @@ export function EngineSections({ instances, renderEngine }: {
 export function RefreshEngines() {
   const { refreshInstances } = useStore();
   const [busy, setBusy] = useState(false);
-  return <button type="button" disabled={busy} onClick={async () => {
-    setBusy(true);
-    try { await refreshInstances(); } finally { setBusy(false); }
-  }} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-medium text-ink-secondary hover:bg-control hover:text-ink focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50">
-    <RefreshCw size={13} aria-hidden="true" className={cn(busy && "animate-spin")} />
-    {busy ? t("common.checking") : t("engines.library.refresh")}
-  </button>;
+  const [error, setError] = useState(false);
+  return <div className="flex min-w-0 flex-col items-end gap-2">
+    <button type="button" disabled={busy} onClick={async () => {
+      if (busy) return;
+      setBusy(true);
+      setError(false);
+      try { await refreshInstances({ reportFailure: true }); }
+      catch { setError(true); }
+      finally { setBusy(false); }
+    }} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-medium text-ink-secondary hover:bg-control hover:text-ink focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50">
+      <RefreshCw size={13} aria-hidden="true" className={cn(busy && "animate-spin")} />
+      {busy ? t("common.checking") : t("engines.library.refresh")}
+    </button>
+    {error && <p role="alert" className="max-w-xs text-[12px] text-danger">{t("engines.library.refreshFailed")}</p>}
+  </div>;
 }

@@ -4,5 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Applies to: zh-tw.json
 GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+GrokOff modification (2026-10-09): revise the two Traditional Chinese Triggers labels to name the bot consistently with the English source.
+GrokOff modification (2026-10-09): remove only the two English-valued onboarding reel entries for honest English fallback and future translation discovery.
 Original source: https://github.com/milind-soni/OpenMausBot/tree/3e9e42b3a05e0b7c4edbaedba2e667b851296e27
 Retain the repository LICENSE, NOTICE, and applicable third-party attribution.

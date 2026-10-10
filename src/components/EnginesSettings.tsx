@@ -1,4 +1,4 @@
-// GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+// GrokOff modification (2026-10-09): preserve edited CLI drafts across discovery and cancel closed picker requests.
 // Engines settings — per-instance CLI path override. One "Set CLI…" button
 // per engine reveals a picker: a "detected" dropdown of every binary the
 // server found on PATH, plus a manual path input. Saving first probes the
@@ -18,6 +18,7 @@ import { AddClaudeAccount, ClaudeAccountSettings } from "./ClaudeAccountSettings
 import { AddProviderAccount, CodexAccountSettings } from "./CodexAccountSettings";
 import { DEVICE_SIGN_IN_COPY, deviceSignInProvider } from "./DeviceSignIn";
 import { AntigravityFreeSpace } from "./AntigravityFreeSpace";
+import { SignInModelRecovery } from "./SignInModelRecovery";
 
 interface ProbeResult {
   ok: boolean;
@@ -46,28 +47,35 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const draftEditedRef = useRef(false);
 
   // The describe() snapshot can be stale (CLI installed since last refresh);
   // re-fetch candidates once when the picker mounts so the dropdown is current.
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    api(`/api/cli-candidates?name=${encodeURIComponent(cliDefault ?? "")}`)
+    let active = true;
+    const controller = new AbortController();
+    api(`/api/cli-candidates?name=${encodeURIComponent(cliDefault ?? "")}`, { signal: controller.signal })
       .then(({ candidates: found }: { candidates: string[] }) => {
+        if (!active) return;
         setCandidates(found);
-        if (!instance.cli) return;
+        // Discovery can update options, but only an untouched draft can
+        // still be initialized from the saved override. Empty edits count.
+        if (draftEditedRef.current || !instance.cli) return;
         // preselect a detected override in the dropdown; a non-detected one
         // (wrapper string, moved binary) rides the manual input instead
         if (found.includes(instance.cli)) setSelected(instance.cli);
         else setManual(instance.cli);
       })
-      .catch(() => setCandidates((prev) => prev ?? []));
+      .catch(() => { if (active) setCandidates((prev) => prev ?? []); });
+    return () => { active = false; controller.abort(); };
   }, [cliDefault, instance.cli]);
 
   const value = manual.trim() || selected;
   const dirty = value !== (instance.cli ?? "");
   const busy = probing || saving;
+  // A chosen path stays visible even if the refreshed discovery omits it.
+  // Saving still probes that exact path before it can become an override.
+  const choices = selected && !candidates?.includes(selected) ? [selected, ...(candidates ?? [])] : candidates;
 
   // Editing the path invalidates a previous probe result.
   useEffect(() => {
@@ -85,8 +93,8 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
       body: JSON.stringify({ cli: committed }),
     })
       // onSaved (refreshInstances) failing must NOT read as "not saved" —
-      // the PATCH already returned 200. Close regardless; the global banner
-      // from refreshInstances already reports the refresh failure.
+      // the PATCH already returned 200. Close regardless; Check again can
+      // retry the inventory without misreporting a successful save.
       .then(() => Promise.resolve(onSaved()).catch(() => {}))
       .then(onClose)
       .catch((e) => setError(e.message))
@@ -112,11 +120,12 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
 
   return (
     <div className="mt-2.5 flex flex-col gap-2">
-      {candidates !== null && candidates.length > 0 && (
+      {choices !== null && choices.length > 0 && (
         <div className="relative">
           <select
             value={manual.trim() ? "" : selected}
             onChange={(e) => {
+              draftEditedRef.current = true;
               setSelected(e.target.value);
               setManual("");
             }}
@@ -125,7 +134,7 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
             className="w-full appearance-none rounded-lg border border-hairline/40 bg-inset px-3 py-2 pr-8 font-mono text-[12px] text-ink focus:outline-none disabled:opacity-50"
           >
             <option value="">{t("engines.selectBinary")}</option>
-            {candidates.map((p) => (
+            {choices.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -135,7 +144,7 @@ function CustomPicker({ instance, cliDefault, onClose, onSaved }: {
       <input
         type="text"
         value={manual}
-        onChange={(e) => setManual(e.target.value)}
+        onChange={(e) => { draftEditedRef.current = true; setManual(e.target.value); }}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
@@ -232,7 +241,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     })
       // The reset already succeeded once PATCH returns 200. A follow-up list
       // refresh failure should not tell the user the reset itself failed.
-      .then(() => Promise.resolve(refreshInstances()).catch(() => {}))
+      .then(() => Promise.resolve(refreshInstances({ fresh: true })).catch(() => {}))
       .catch((e) => setError(e.message))
       .finally(() => setSwitching(false));
   };
@@ -248,7 +257,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     })
       .then(async ({ version }: { version: string }) => {
         setUpdatedVersion(version);
-        await Promise.resolve(refreshInstances()).catch(() => {});
+        await Promise.resolve(refreshInstances({ fresh: true })).catch(() => {});
       })
       .catch((e) => setError(e.message))
       .finally(() => setUpdating(false));
@@ -267,6 +276,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
     <EngineCard instance={instance}>
       {policyNote}
       {!engineReady(instance) && <EngineSetup instance={instance} intent={instance.access === "custom" ? "inject" : "cloud"} unframed />}
+      <SignInModelRecovery instance={instance} className="mt-3" />
       {engineReady(instance) && <ApiKeyEngineManage instance={instance} className="mt-3" />}
       {instance.snapshot.update && <EngineUpdateNotice update={instance.snapshot.update} instance={instance} className="mt-3" />}
       {instance.snapshot.warning && <EngineWarningNotice warning={instance.snapshot.warning} className="mt-3" />}
@@ -354,7 +364,7 @@ function EngineRow({ instance }: { instance: InstanceInfo }) {
               instance={instance}
               cliDefault={instance.cliDefault}
               onClose={() => setOpen(false)}
-              onSaved={refreshInstances}
+              onSaved={() => refreshInstances({ fresh: true })}
             />
           </div>
         )}

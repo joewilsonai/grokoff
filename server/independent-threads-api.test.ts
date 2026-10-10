@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): keep the inert computer lease fixture in GrokOff's namespace.
 // Real harness + its isolated fake-engine launcher. Gates are per model so
 // two tasks on one bot stay in flight until this test completes or stops each.
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -483,12 +484,13 @@ describe("independent bot tasks through the isolated control surface", () => {
   it.skipIf(process.platform !== "darwin")("claims the shared computer only on first use and keeps a sibling stop from releasing it", async () => {
     // The fake provider only receives this inert descriptor; no UI driver is
     // launched and the descriptor lives inside the fixture's disposable home.
-    const descriptorDir = join(session.info.dataDir, "Library", "Application Support", "OpenMausBot");
-    mkdirSync(descriptorDir, { recursive: true });
+    const descriptorDir = join(session.info.dataDir, "Library", "Application Support", "GrokOff");
+    mkdirSync(descriptorDir, { recursive: true, mode: 0o700 });
     writeFileSync(join(descriptorDir, "cua-connection.json"), JSON.stringify({
       mode: "embedded", socketPath: join(session.info.dataDir, "never-used.sock"),
-      mcpCommand: join(session.info.dataDir, "never-launched-computer"), mcpArgs: ["mcp"], mcpEnv: {},
-    }));
+      mcpCommand: join(session.info.dataDir, "never-launched-computer"), mcpArgs: ["mcp"],
+      mcpEnv: { CUA_DRIVER_HOST_BUNDLE_ID: "app.grokoff.desktop" },
+    }), { mode: 0o600 });
     const created = await tool("create_bot", { name: "Computer lease fixture", instance_id: "claude", model: models[0] });
     const botId = created.bot.id;
     const taskA = created.bot.activeTaskId;

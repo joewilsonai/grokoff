@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use the fork name in native interface copy and preserve compatibility identifiers.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createRequire } from "node:module";
@@ -144,7 +145,7 @@ test("native workspace choices use saved IDs and connect opens settings without 
 
 test("native window identity distinguishes hosted HTML, companion data, and the local workspace", () => {
   const state = { environments: [{ id: "old", name: "Old team", origin: "https://old.example" }], activeId: "old" };
-  assert.equal(env.workspaceWindowTitle(state), "OpenMausBot — Hosted: Old team (old.example)");
-  assert.equal(env.workspaceWindowTitle(state, { serverName: "Office", endpoint: "https://c-office.openmausbot.com" }), "OpenMausBot — Connected to: Office (c-office.openmausbot.com)");
-  assert.equal(env.workspaceWindowTitle(env.withActive(state, "local")), "OpenMausBot");
+  assert.equal(env.workspaceWindowTitle(state), "GrokOff — Hosted: Old team (old.example)");
+  assert.equal(env.workspaceWindowTitle(state, { serverName: "Office", endpoint: "https://c-office.openmausbot.com" }), "GrokOff — Connected to: Office (c-office.openmausbot.com)");
+  assert.equal(env.workspaceWindowTitle(env.withActive(state, "local")), "GrokOff");
 });

@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): use independent product branding in browser erasure errors.
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -112,7 +113,7 @@ function unavailableJournalError(error: Error): Error & { status: number } {
 export function requireBrowserCleanupAcknowledged(ok: boolean, target: string): void {
   if (ok) return;
   const error = Object.assign(new Error(
-    `${target} was removed, but OpenMausBot could not confirm its local browser data was erased. `
+    `${target} was removed, but GrokOff could not confirm its local browser data was erased. `
     + "Restart the desktop app before reusing it; cleanup will retry automatically.",
   ), { status: 503 });
   throw error;

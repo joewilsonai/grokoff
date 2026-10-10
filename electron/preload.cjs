@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): Mac-local, cancellable report PDF bridge.
 // Renderer bridge. contextIsolation stays on; the renderer only ever sees
 // this narrow surface (window.ogb), never Node or ipcRenderer itself.
 const { contextBridge, ipcRenderer, webUtils } = require("electron");
@@ -263,6 +264,13 @@ const bridge = {
   /** Writes the redacted diagnostics report to a user-chosen file; resolves
    * the path, or null when the save dialog was cancelled. */
   exportDiagnostics: () => ipcRenderer.invoke("desktop:export-diagnostics"),
+  /** The report reader sends only its loaded, inert article snapshot. Main
+   * chooses a separate print surface and asks for the destination itself. */
+  exportReportPdf: process.platform === "darwin" && !desktopRemoteClient ? (request) =>
+    ipcRenderer.invoke("desktop:export-report-pdf", request).catch((error) => {
+      throw new Error(String(error?.message ?? error).replace(/^Error invoking remote method '[^']*':\s*(?:Error:\s*)?/, ""));
+    }) : undefined,
+  cancelReportPdf: process.platform === "darwin" && !desktopRemoteClient ? (id) => ipcRenderer.invoke("desktop:cancel-report-pdf", id) : undefined,
   /** Ask where to save a bot-created file (inside ~/.openmausbot), copy it
    * there and reveal it. Returns the chosen path, or null if the user
    * cancelled the dialog. The chat bubble shows the

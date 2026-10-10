@@ -3,6 +3,7 @@
 // grok.com account (a one-time code entered at the provider's page), and the
 // ChatGPT plan (a browser page, no code). The same card on the desktop, a
 // self-hosted server and My Cloud.
+// GrokOff modification (2026-10-09): preserve confirmed sign-in during model discovery recovery.
 import { useEffect, useState } from "react";
 import { Check, Copy, ExternalLink, Loader2, LogIn, X } from "lucide-react";
 import { api, ApiError, useStore } from "@/state/store";
@@ -86,7 +87,7 @@ export function DeviceSignInProgress({ auth, browserPkce = false, provider = "co
   const copyLabel = t(codeCopy === "failed" ? "common.copyFailed" : "engineSetup.device.copyCode");
 
   if (auth.phase !== "waiting") {
-    const label = auth.phase === "succeeded" ? t(copy.connected)
+    const label = auth.phase === "succeeded" ? t(copy.connectedAccount)
       : auth.phase === "cancelled" ? t(browserPkce ? "engineSetup.chatgpt.cancelled" : "engineSetup.device.cancelled")
       : auth.phase === "expired" ? t(browserPkce ? "engineSetup.chatgpt.expired" : "engineSetup.device.expired")
       : auth.message || t(browserPkce ? "engineSetup.chatgpt.failed" : copy.failed);
@@ -130,21 +131,32 @@ export function DeviceSignInProgress({ auth, browserPkce = false, provider = "co
 }
 
 export function DeviceSignIn({ instanceId, browserPkce = false, provider = "codex" }: { instanceId: string; browserPkce?: boolean; provider?: DeviceSignInProvider }) {
-  const { refreshInstances, refreshModels } = useStore();
+  const { state, refreshSignInModels, signInModelDiscovery } = useStore();
   const [auth, setAuth] = useState<DeviceSignInStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const base = `/api/instances/${encodeURIComponent(instanceId)}/auth`;
   const copy = DEVICE_SIGN_IN_COPY[provider];
   const failed = t(browserPkce ? "engineSetup.chatgpt.failed" : copy.failed);
+  const recovery = signInModelDiscovery[instanceId];
+  const connected = recovery === "checking" || recovery === "failed" || (
+    auth?.phase === "succeeded" && state.instances.find((instance) => instance.instanceId === instanceId)?.snapshot.authenticated !== false
+  );
+  // Settings can close before discovery publishes inventory. Its shared state
+  // retains confirmation without offering another login when the card remounts.
+  const visibleAuth: DeviceSignInStatus | null = connected
+    ? { phase: "succeeded", flowId: null, authorizationUrl: null, expiresAt: null }
+    : auth?.phase === "succeeded" ? null : auth;
 
   const refresh = async () => {
-    await refreshInstances();
-    await refreshModels(instanceId);
+    // Discovery publishes current inventory and owns its stable retry state.
+    // A separate GET could remove this card before discovery finishes, while
+    // its failure must never turn a confirmed login back into another login.
+    await refreshSignInModels(instanceId);
   };
 
   useEffect(() => {
-    if (busy || auth?.phase !== "waiting" || !auth.flowId) return;
+    if (busy || connected || auth?.phase !== "waiting" || !auth.flowId) return;
     const controller = new AbortController();
     const remaining = auth.expiresAt ? Date.parse(auth.expiresAt) - Date.now() : Number.NaN;
     // Also expire the UI if the connection hangs or the server was restarted.
@@ -159,8 +171,7 @@ export function DeviceSignIn({ instanceId, browserPkce = false, provider = "code
           setAuth(next);
           setError(null);
           if (next.phase === "succeeded") {
-            await refreshInstances();
-            await refreshModels(instanceId);
+            await refreshSignInModels(instanceId);
           }
         })
         .catch((cause: unknown) => {
@@ -180,7 +191,7 @@ export function DeviceSignIn({ instanceId, browserPkce = false, provider = "code
       if (expiryTimer !== null) window.clearTimeout(expiryTimer);
       controller.abort();
     };
-  }, [auth, base, browserPkce, busy, failed, instanceId, refreshInstances, refreshModels]);
+  }, [auth, base, browserPkce, busy, connected, failed, instanceId, refreshSignInModels]);
 
   const start = async () => {
     setBusy(true);
@@ -213,17 +224,17 @@ export function DeviceSignIn({ instanceId, browserPkce = false, provider = "code
 
   // A cancelled, expired or failed sign-in has one next step: a new code.
   const startLabel = busy ? t(browserPkce ? "engineSetup.chatgpt.starting" : "engineSetup.device.starting")
-    : auth || error ? t("engineSetup.device.tryAgain")
+    : visibleAuth || error ? t("engineSetup.device.tryAgain")
     : t(browserPkce ? "engineSetup.chatgpt.start" : copy.start);
 
   return (
     <div className="mt-3 space-y-2" data-device-sign-in={provider} data-chatgpt-plan-sign-in={browserPkce || undefined}>
-      {auth && <DeviceSignInProgress auth={auth} browserPkce={browserPkce} provider={provider} />}
-      {auth?.phase === "waiting" ? (
+      {visibleAuth && <DeviceSignInProgress auth={visibleAuth} browserPkce={browserPkce} provider={provider} />}
+      {visibleAuth?.phase === "waiting" ? (
         <button type="button" disabled={busy} onClick={() => void cancel()} className="w-full rounded-lg bg-control px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-50">
           {busy ? t("engineSetup.device.cancelling") : t("engineSetup.device.cancel")}
         </button>
-      ) : auth?.phase !== "succeeded" && (
+      ) : !connected && (
         <button type="button" disabled={busy} onClick={() => void start()} className={browserPkce ? chatgptButton : "flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-[12.5px] font-semibold text-white hover:brightness-110 disabled:opacity-50"}>
           {busy ? <Loader2 size={14} className="animate-spin" /> : browserPkce ? <CodexMark size={16} className="fill-current" /> : <LogIn size={14} />}
           {startLabel}

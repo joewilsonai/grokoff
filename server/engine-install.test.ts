@@ -1,4 +1,5 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+// GrokOff modification (2026-10-09): maintain sealed engine-install fixtures and independent product error wording.
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,6 +49,9 @@ function writeFakeNpm(dir: string): void {
     writeFileSync(join(dir, "npm.cmd"), '@echo off\r\nnode "%~dp0\\npm.js" %*\r\n');
     return;
   }
+  // /usr/bin/env must resolve only this fixture's exact running Node; a
+  // developer's Homebrew install must not make an otherwise broken test pass.
+  symlinkSync(process.execPath, join(dir, "node"));
   writeFileSync(join(dir, "npm"), FAKE_NPM, { mode: 0o755 });
   chmodSync(join(dir, "npm"), 0o755);
 }
@@ -63,6 +67,8 @@ function useFakeNpm() {
     mkdirSync(ctx.binDir);
     writeFakeNpm(ctx.binDir);
     originalPath = process.env.PATH;
+    vi.stubEnv("OMB_TEST_SEALED_PATH", "1");
+    vi.stubEnv("OMB_EXTRA_PATH", "");
     process.env.PATH = ctx.binDir;
     process.env.FAKE_NPM_LOG = join(ctx.scratch, "calls.jsonl");
     delete process.env.FAKE_NPM_MODE;
@@ -70,6 +76,7 @@ function useFakeNpm() {
   });
   afterEach(async () => {
     process.env.PATH = originalPath;
+    vi.unstubAllEnvs();
     delete process.env.FAKE_NPM_LOG;
     delete process.env.FAKE_NPM_MODE;
     resetPathCacheForTests();
@@ -184,6 +191,8 @@ describe.skipIf(process.platform === "win32")("installing with npm", () => {
     // cannot empty, so absence is injected at both call sites.
     expect(serverInstallFor({ command: { linux: "npm install -g fake-engine" } }, false)).toBeNull();
     mkdirSync(join(ctx.scratch, "empty"));
-    await expect(installNpmEngine("fake-engine", { baseDir: ctx.base, path: join(ctx.scratch, "empty") })).rejects.toThrow("npm is not installed");
+    await expect(installNpmEngine("fake-engine", { baseDir: ctx.base, path: join(ctx.scratch, "empty") })).rejects.toThrow(
+      "npm is not installed on this server. Install Node.js with npm for the user running GrokOff, then try again.",
+    );
   });
 });

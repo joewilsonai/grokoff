@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-08): add message-scoped Markdown report previews.
 // Same-origin attachment previews plus the reusable image viewer used by
 // Markdown. Transcript paths are resolved through attachmentImageUrl; model
 // text never gets to turn an arbitrary local path into a browser request.
@@ -34,6 +35,7 @@ import {
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { TableFileButton } from "./TableFilePreview";
+import { ReportFileButton } from "./ReportFilePreview";
 
 export interface PreviewImage {
   src: string;
@@ -942,6 +944,7 @@ export function AttachedFileChip({ file, message, linked = false, className }: {
           )}
         </button>
         <TableFileButton path={file.path} name={file.name} message={message} />
+        <ReportFileButton path={file.path} name={file.name} message={message} />
       </div>
       {save.state !== "idle" && (
         <div

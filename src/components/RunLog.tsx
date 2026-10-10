@@ -1,5 +1,6 @@
+// GrokOff modification (2026-10-09): show stopped tool receipts without a running spinner.
 import { useState } from "react";
-import { Check, CheckCircle2, Circle, Copy, Loader2, XCircle } from "lucide-react";
+import { Check, CheckCircle2, Circle, Copy, Loader2, PauseCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { copyText } from "@/lib/copy-text";
@@ -8,6 +9,7 @@ import { formatTime } from "@/state/store";
 
 const STATUS = {
   running: "inspector.run.running",
+  interrupted: "inspector.run.interrupted",
   complete: "inspector.run.complete",
   failed: "inspector.run.failed",
   observed: "inspector.run.observed",
@@ -42,7 +44,7 @@ export function RunLog({ events }: { events: TimelineEvent[] }) {
       {recent.length === 0 ? <p className="px-4 py-6 text-[13px] text-ink-secondary">{t("inspector.run.empty")}</p> : (
         <ol aria-label={t("inspector.run.title")} className="px-4 pb-4">
           {recent.map((event) => {
-            const Icon = event.state === "failed" ? XCircle : event.state === "complete" ? CheckCircle2 : event.state === "running" ? Loader2 : Circle;
+            const Icon = event.state === "failed" ? XCircle : event.state === "complete" ? CheckCircle2 : event.state === "running" ? Loader2 : event.state === "interrupted" ? PauseCircle : Circle;
             const label = event.kind === "task" ? t("inspector.run.userInput")
               : event.kind === "screen" ? t("inspector.run.screen")
                 : event.kind === "result" ? t("inspector.run.response") : event.label;
@@ -54,6 +56,7 @@ export function RunLog({ events }: { events: TimelineEvent[] }) {
               </div>
               {event.command && <pre className="mt-2 whitespace-pre-wrap break-all rounded-lg bg-inset p-2 font-mono text-[11.5px] leading-relaxed text-ink">{event.command}</pre>}
               {event.kind === "tool" && <p className={cn("mt-1 pl-[22px] text-[11px]", event.state === "failed" ? "text-danger" : "text-ink-secondary")}>{t(STATUS[event.state])}</p>}
+              {event.state === "interrupted" && <p className="mt-1 pl-[22px] text-[11px] text-ink-secondary">{t("toolDetail.interruptedHint")}</p>}
             </li>;
           })}
         </ol>

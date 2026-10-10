@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): bounded, observable connection checks.
 import { useState } from "react";
 import { Check, Loader2, Plus, RefreshCw } from "lucide-react";
 import { api, useStore, type InstanceInfo } from "@/state/store";
@@ -64,8 +65,8 @@ export function CodexAccountSettings({ instance }: { instance: InstanceInfo }) {
     if (busy) return;
     setBusy("check");
     setError(null);
-    try { await refreshInstances(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+    try { await refreshInstances({ reportFailure: true }); }
+    catch { setError(t("engines.library.refreshFailed")); }
     finally { setBusy(null); }
   };
 

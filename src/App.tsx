@@ -26,6 +26,7 @@ import { ProIntroduction } from "@/components/ProIntroduction";
 import { DesktopCapabilitiesProvider, useDesktopCapabilities } from "@/components/DesktopCapabilities";
 import { WindowCaptionButtons } from "@/components/WindowCaptionButtons";
 import { NoEngines } from "@/components/NoEngines";
+import { SignInModelRecoveries } from "@/components/SignInModelRecovery";
 import { CloudEngineSignIn } from "@/components/CloudEngineSignIn";
 import { CloudSetup } from "@/components/CloudSetup";
 import { engineReady } from "@/components/EngineLibrary";
@@ -280,6 +281,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
     <div className="flex h-full flex-col">
       {/* fixed-position popup, bottom-left — outside the layout flow */}
       <UpdateBanner />
+      <SignInModelRecoveries />
       {HOSTED_SERVICES_AVAILABLE && <ProIntroduction quiet={paletteOpen || drawerOpen || Boolean(localVmWorkspaceBotId)} />}
       <div className="relative flex min-h-0 flex-1">
       {!calendarFocus && <button

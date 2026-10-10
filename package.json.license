@@ -4,5 +4,24 @@ SPDX-License-Identifier: Apache-2.0
 
 Applies to: package.json
 GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
+GrokOff modification (2026-10-09): run the packaged-smoke provider-isolation regression before the normal smoke command.
+GrokOff modification (2026-10-09): adopt complete isolated engine-install and browser-cleanup regressions into test:core.
+GrokOff modification (2026-10-09): retain fork changes and add maintained offline interrupted-tool receipt, verification-card and MCP projection regression coverage.
+GrokOff modification (2026-10-09): adopt complete report PDF renderer and security/lifecycle tests in the maintained core command.
+GrokOff modification (2026-10-09): maintain the complete inherited chat helper locale regression file in test:core.
 Original source: https://github.com/milind-soni/OpenMausBot/tree/3e9e42b3a05e0b7c4edbaedba2e667b851296e27
 Retain the repository LICENSE, NOTICE, and applicable third-party attribution.
+
+GrokOff modification (2026-10-09): maintain actual StoreProvider routine snapshot deadline/recovery regressions in test:core.
+
+GrokOff modification (2026-10-09): maintain actual StoreProvider optional config/webhook snapshot deadline and recovery tests in test:core.
+
+GrokOff modification (2026-10-09): maintain the complete isolated MemorySection read-ownership interaction regressions in test:core.
+
+GrokOff modification (2026-10-09): adopt complete isolated BrowserPanel access-check recovery regressions into test:core.
+
+GrokOff modification (2026-10-09): maintain the isolated MemorySection Delete/Tidy up ownership interaction regressions in test:core.
+
+GrokOff modification (2026-10-10): maintain real ChatView report-reader continuity and complete message-row render regressions in test:core.
+
+GrokOff modification (2026-10-10): maintain inert subprocess/filesystem controls for measured browser/report recipe cleanup receipts in test:core.

@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// GrokOff modification (2026-10-09): retain live-frame regressions and supply the valid optional webhook snapshot envelope.
 // The app opens one live stream. A computer's live screen and raw runtime
 // events reach the panel that reads them straight from that stream; the app
 // store neither keeps them nor re-renders for them. The one thing a screen
@@ -32,7 +33,7 @@ const answers: Record<string, unknown> = {
   "/api/instances": { instances: [] },
   "/api/config": {},
   "/api/routines": { routines: [], runs: [] },
-  "/api/webhooks": { webhooks: [], attempts: [] },
+  "/api/webhooks": { webhooks: [], attempts: [], ingress: { available: false, baseUrl: "" } },
 };
 
 const { StoreProvider, useStore } = await import("./store");

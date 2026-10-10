@@ -3,6 +3,8 @@
 October 8, 2026. Evidence distinguishes source checks, simulated integration,
 observed UI and a public release. This is a locally built prototype.
 
+This first-build record is historical. See the [October 9 integration verification](verification-2026-10-09.md) for the later unsigned candidate and its separate evidence boundaries.
+
 ## Artifact and provenance
 
 - App: `release-grokoff/mac-arm64/GrokOff.app`
@@ -105,3 +107,19 @@ This is a dated maintainer verification summary. Raw receipts, review transcript
 account-specific metadata and screenshots remain in a private local archive and
 are not distributed in the source repository. Historical local results do not
 replace reproducible contributor checks or establish current provider availability.
+
+## Routine regression adoption — October 9, 2026
+
+The selected [routine and webhook CI group](../docs/verification/routines-ci.md)
+passed on Node 24.21.0: 171 tests across nine existing files. It covers schedule
+and admission rules, saved run receipts, queued/due restart recovery, fresh
+execution/results threads, delegation cancellation, scripted cron tools,
+webhook retry identities and historical result navigation. These files are
+now included in the maintained `test:core` command.
+
+Mutations ran only against disposable homes/files and exact loopback harness
+listeners with the repository's fake Claude engine. Renderer checks used static
+React markup and synthetic state. Raw logs and receipts remain private. This
+adoption adds reproducible regression coverage; it does not establish live
+provider schedules, external webhook delivery, execution across Mac sleep,
+native calendar acceptance or a binary release.

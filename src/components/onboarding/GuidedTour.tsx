@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-09): pause tours and pending panel effects while Settings is open.
 // Runs the guided tour on the live interface. One spotlight at a time,
 // pointing at a real control, with Next on every step; the tour presses the
 // controls itself (the Tools menu, its items, the Computer button), so it
@@ -51,6 +52,9 @@ export function GuidedTour() {
   const { state, dispatch } = useStore();
   const record = state.config?.onboarding;
   const step = currentStep(record);
+  const settingsOpen = state.appSettingsOpen || state.settingsOpen;
+  const settingsOpenRef = useRef(settingsOpen);
+  settingsOpenRef.current = settingsOpen;
   const saving = useRef(false);
   const pending = useRef<Promise<unknown>>(Promise.resolve());
   const latestRecord = useRef(record);
@@ -130,7 +134,7 @@ export function GuidedTour() {
       void save(false, step.id).then(() => {
         // Only move the interface after progress was saved. A queued skip
         // owns cleanup and must not have its panels reopened by this request.
-        if (!closed.current && !(fromAnchor && step.onExit && ANCHOR_EFFECTS.has(step.onExit))) run(step.onExit);
+        if (!closed.current && !settingsOpenRef.current && !(fromAnchor && step.onExit && ANCHOR_EFFECTS.has(step.onExit))) run(step.onExit);
       }).catch(() => setFailed(true)).finally(() => { saving.current = false; });
     },
     [step, run, save],
@@ -148,14 +152,16 @@ export function GuidedTour() {
     dispatch({ type: "toggleTour", open: false });
   }, [state.computerOpen, state.pluginsOpen, run, save, dispatch]);
 
-  const active = !dismissed && Boolean(record?.completedAt) && !state.welcomeOpen && step !== null;
+  const active = !dismissed && !settingsOpen && Boolean(record?.completedAt) && !state.welcomeOpen && step !== null;
 
   // entering a step runs its effect once per step
   useEffect(() => {
+    // Settings closes tour-owned panels; rebuild the current one on resume.
+    if (settingsOpen) { entered.current = null; return; }
     if (!active || !step || entered.current === step.id) return;
     entered.current = step.id;
     run(step.onEnter);
-  }, [active, step, run]);
+  }, [active, step, run, settingsOpen]);
 
   // a step whose control is not on screen points at its fallback, or skips
   // itself, after the layout has a moment to settle (a menu closing, a

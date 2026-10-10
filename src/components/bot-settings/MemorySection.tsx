@@ -1,3 +1,8 @@
+// GrokOff modification (2026-10-10): successful Tidy refreshes its bot's current reopened view without replacing newer drafts.
+// GrokOff modification (2026-10-10): show refused Saves immediately, keep failed drafts by source path and guard Reload of current disk content.
+// GrokOff modification (2026-10-10): verify overlapping Save receipts against disk after Delete/Tidy settle; refresh tidied files independently of metadata failures.
+// GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
+// GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -11,7 +16,7 @@
 // The dialog keeps this mounted while hidden so an unsaved draft survives
 // a visit to another section.
 import { FileText, FolderOpen, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import {
@@ -61,11 +66,28 @@ interface Editing {
   readOnly: boolean;
 }
 
+interface SavedDraft {
+  path: string;
+  text: string;
+  error?: string;
+}
+
 interface Conflict {
   path: string;
   /** What is on disk now — the bot's version. */
   current: string;
   currentHash: string;
+}
+
+interface SectionError {
+  message: string;
+  /** Only successful newer metadata can clear this class of failure. */
+  metadata?: number;
+}
+
+interface PendingMemoryMutation {
+  path?: string;
+  settled: Promise<void>;
 }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -102,8 +124,13 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const [journal, setJournal] = useState<MemoryJournalRow[] | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [conflict, setConflict] = useState<Conflict | null>(null);
-  const [savedDraft, setSavedDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [savedDrafts, setSavedDrafts] = useState<SavedDraft[]>([]);
+  // One kept revision per file: a later refusal must not discard another file's words.
+  const keepDraft = (draft: SavedDraft) => setSavedDrafts(current => [
+    ...current.filter(kept => kept.path !== draft.path), draft,
+  ]);
+  const [error, setSectionError] = useState<SectionError | null>(null);
+  const setError = (message: string | null) => setSectionError(message === null ? null : { message });
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [reverting, setReverting] = useState<string | null>(null);
@@ -116,64 +143,227 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const [reviewing, setReviewing] = useState(false);
   const { dispatch } = useStore();
 
-  const refresh = async (openPath?: string) => {
-    const [nextOverview, nextJournal, nextUpkeep] = await Promise.all([
-      fetchMemoryOverview(bot.id),
-      fetchMemoryJournal(bot.id),
-      fetchUpkeepStatus(bot.id).catch(() => null),
-    ]);
+  // Settings keeps this section mounted while hidden. A successful response
+  // needs the same lifetime/intent guard as a failure: a later selection,
+  // edit or completed mutation owns the editor even if an older read finishes.
+  const readGeneration = useRef(0);
+  // Pending navigation and the loaded document have separate ownership:
+  // typing can cancel navigation while keeping the current draft and hash.
+  const selectionGeneration = useRef(0);
+  const documentGeneration = useRef(0);
+  // A reopened editor can still have loaded before housekeeping changed disk.
+  // Save waits for overlapping file mutations, then verifies its actual bytes.
+  const mutationRevisions = useRef(new Map<string | undefined, number>());
+  const mutationRevisionFor = (path: string) => (mutationRevisions.current.get(path) ?? 0) + (mutationRevisions.current.get(undefined) ?? 0);
+  const pendingMutations = useRef(new Set<PendingMemoryMutation>());
+  const mutationsFor = (path: string) => [...pendingMutations.current].filter(mutation => mutation.path === undefined || mutation.path === path);
+  const beginMutation = (path?: string) => {
+    let settle!: () => void;
+    const mutation = { path, settled: new Promise<void>(resolve => { settle = resolve; }) };
+    pendingMutations.current.add(mutation);
+    mutationRevisions.current.set(path, (mutationRevisions.current.get(path) ?? 0) + 1);
+    return () => {
+      if (!pendingMutations.current.delete(mutation)) return;
+      mutationRevisions.current.set(path, (mutationRevisions.current.get(path) ?? 0) + 1);
+      settle();
+    };
+  };
+  const pendingRead = useRef<number | null>(null);
+  // The path a pending navigation is loading, valid only while that read is
+  // still the pending one. Delete and Tidy hand the editor to that newest choice.
+  const pendingSelection = useRef<{ generation: number; path: string } | null>(null);
+  const pendingPath = () => (pendingSelection.current && pendingRead.current === pendingSelection.current.generation ? pendingSelection.current.path : undefined);
+  const draftRevision = useRef(0);
+  const currentEditing = useRef(editing);
+  currentEditing.current = editing;
+  const currentBotId = useRef(bot.id);
+  currentBotId.current = bot.id;
+  // Typing/selection replace document intent, but metadata stays current
+  // until another refresh, deactivation or completed mutation supersedes it.
+  const metadataGeneration = useRef(0);
+  // Mutations in one active view may supersede each other's metadata reads.
+  // A later activation still owns its own hydration and must not be cancelled.
+  const activationGeneration = useRef(0);
+  const activeReads = useRef(active);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const invalidateEditorReads = () => { readGeneration.current += 1; pendingRead.current = null; };
+  const invalidateReads = () => {
+    invalidateEditorReads();
+    metadataGeneration.current += 1;
+  };
+  const ownsRead = (generation: number) => activeReads.current && readGeneration.current === generation;
+  const ownsMetadata = (generation: number) => activeReads.current && metadataGeneration.current === generation;
+  const ownsMutationView = (activation: number) => mounted.current && activeReads.current && activationGeneration.current === activation;
+  const refreshMutationMetadata = async (generation: number) => {
+    // A mutation response carries its earlier snapshot. Re-read both metadata
+    // surfaces after success so overlapping writes keep their journal controls.
+    const [nextOverview, nextJournal] = await Promise.all([fetchMemoryOverview(bot.id), fetchMemoryJournal(bot.id)]);
+    if (!ownsMetadata(generation)) return;
     setOverview(nextOverview);
     setLendingReview(nextOverview.lendingReview ?? null);
     setJournal(nextJournal);
-    setUpkeep(nextUpkeep);
+    setSectionError(current => current?.metadata !== undefined && current.metadata < generation ? null : current);
+  };
+
+  const refresh = async (openPath?: string) => {
+    if (!activeReads.current) return;
+    if (openPath) selectionGeneration.current += 1;
+    const generation = openPath ? ++readGeneration.current : readGeneration.current;
     if (openPath) {
-      const doc = await fetchMemoryDoc(bot.id, openPath);
-      setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
+      pendingRead.current = generation;
+      pendingSelection.current = { generation, path: openPath };
+    }
+    const metadata = ++metadataGeneration.current;
+    let metadataLoaded = false;
+    try {
+      const [nextOverview, nextJournal, nextUpkeep] = await Promise.all([
+        fetchMemoryOverview(bot.id),
+        fetchMemoryJournal(bot.id),
+        fetchUpkeepStatus(bot.id).catch(() => null),
+      ]);
+      if (!ownsMetadata(metadata)) return;
+      metadataLoaded = true;
+      setOverview(nextOverview);
+      setLendingReview(nextOverview.lendingReview ?? null);
+      setJournal(nextJournal);
+      setUpkeep(nextUpkeep);
+      if (openPath && ownsRead(generation)) {
+        const doc = await fetchMemoryDoc(bot.id, openPath);
+        if (!ownsRead(generation)) return;
+        pendingRead.current = null;
+        documentGeneration.current += 1;
+        setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: openPath.startsWith("memory/log/") });
+      }
+    } catch (e) {
+      if (metadataLoaded ? ownsRead(generation) : ownsMetadata(metadata)) {
+        if (pendingRead.current === generation) pendingRead.current = null;
+        if (metadataLoaded) setError(errorText(e));
+        else setSectionError({ message: errorText(e), metadata });
+      }
     }
   };
 
   useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    setError(null);
-    // a dirty draft survives a re-activation; everything else re-reads
-    const keepDraft = editing?.dirty === true;
-    refresh(keepDraft ? undefined : (editing?.path ?? MEMORY_INDEX)).catch((e: unknown) => {
-      if (!cancelled) setError(errorText(e));
-    });
+    activeReads.current = active;
+    if (active) {
+      setError(null);
+      // a dirty draft survives a re-activation; everything else re-reads
+      const keepDraft = editing?.dirty === true;
+      void refresh(keepDraft ? undefined : (editing?.path ?? MEMORY_INDEX));
+    }
     return () => {
-      cancelled = true;
+      activeReads.current = false;
+      activationGeneration.current += 1;
+      invalidateReads();
     };
   }, [active, bot.id]);
 
-  const open = async (path: string) => {
+  const open = async (path: string): Promise<number | undefined> => {
+    if (!activeReads.current) return;
+    selectionGeneration.current += 1;
+    const generation = ++readGeneration.current;
+    pendingRead.current = generation;
+    pendingSelection.current = { generation, path };
     setError(null);
     setConflict(null);
     try {
       const doc = await fetchMemoryDoc(bot.id, path);
+      if (!ownsRead(generation)) return;
+      pendingRead.current = null;
+      documentGeneration.current += 1;
       setEditing({ path: doc.path, text: doc.text, hash: doc.hash, dirty: false, readOnly: path.startsWith("memory/log/") });
+      return generation;
     } catch (e) {
-      setError(errorText(e));
+      if (ownsRead(generation)) {
+        pendingRead.current = null;
+        setError(errorText(e));
+      }
     }
   };
 
   const save = async (expectedHash: string | undefined) => {
     if (!editing) return;
+    const submitted = editing;
+    const selection = selectionGeneration.current;
+    const revision = draftRevision.current;
+    const document = documentGeneration.current;
+    const activation = activationGeneration.current;
+    const mutation = mutationRevisionFor(submitted.path);
+    const overlapping = mutationsFor(submitted.path);
+    const ownsSave = () => mounted.current
+      && documentGeneration.current === document
+      && currentEditing.current?.path === submitted.path
+      && currentEditing.current.hash === submitted.hash;
+    const ownsSaveControls = () => ownsSave()
+      && (pendingRead.current === null || selectionGeneration.current === selection);
+    let journalGeneration: number | undefined;
+    let saveAcknowledged = false;
     setSaving(true);
     setError(null);
     try {
-      const result = await saveMemoryDoc(bot.id, editing.path, editing.text, expectedHash);
+      const result = await saveMemoryDoc(bot.id, submitted.path, submitted.text, expectedHash);
       if (!result.ok) {
-        setConflict({ path: editing.path, current: result.current, currentHash: result.currentHash });
+        // A refusal wrote nothing. Report it now, even while housekeeping is
+        // pending, and preserve the submitted words before navigation can hide them.
+        if (mounted.current) {
+          keepDraft({ path: submitted.path, text: submitted.text, error: "Save refused: the file changed before this edit could be saved." });
+          if (ownsSaveControls()) {
+            invalidateEditorReads();
+            setConflict({ path: submitted.path, current: result.current, currentHash: result.currentHash });
+          }
+        }
         return;
       }
-      setConflict(null);
-      setSavedDraft(null);
-      setEditing({ ...editing, text: result.doc.text, hash: result.doc.hash, dirty: false });
-      setOverview(result.overview);
-      setJournal(await fetchMemoryJournal(bot.id));
+      saveAcknowledged = true;
+      let receiptCurrent = true;
+      let disk: Awaited<ReturnType<typeof fetchMemoryDoc>> | undefined;
+      if (ownsSave() && (overlapping.length > 0 || mutationRevisionFor(submitted.path) !== mutation)) {
+        // Either response can arrive first. Only the mutation API completion
+        // ends this barrier; metadata loading does not hold a valid Save up.
+        await Promise.all([...overlapping, ...mutationsFor(submitted.path)].map(pending => pending.settled));
+        if (ownsSave()) {
+          const verification = mutationRevisionFor(submitted.path);
+          receiptCurrent = mutationsFor(submitted.path).length === 0;
+          if (receiptCurrent) {
+            disk = await fetchMemoryDoc(bot.id, submitted.path);
+            receiptCurrent = mutationRevisionFor(submitted.path) === verification
+              && mutationsFor(submitted.path).length === 0
+              && disk.path === submitted.path
+              && disk.hash === result.doc.hash && disk.text === result.doc.text && disk.exists === result.doc.exists;
+          }
+        }
+      }
+      const reconciledMutation = mutationRevisionFor(submitted.path);
+      // The write happened even if the person navigated away. Only its
+      // still-current editor may be reconciled; later reads must keep running.
+      if (receiptCurrent && ownsSave()) {
+        if (ownsSaveControls()) {
+          invalidateEditorReads();
+          setConflict(null);
+          setSavedDrafts(current => current.filter(draft => draft.path !== submitted.path));
+        }
+        setEditing(current => {
+          if (mutationRevisionFor(submitted.path) !== reconciledMutation || documentGeneration.current !== document || !current || current.path !== submitted.path || current.hash !== submitted.hash) return current;
+          return draftRevision.current !== revision
+            ? { ...current, hash: result.doc.hash }
+            : { ...current, text: result.doc.text, hash: result.doc.hash, dirty: false };
+        });
+      }
+      if (ownsMutationView(activation)) {
+        journalGeneration = ++metadataGeneration.current;
+        await refreshMutationMetadata(journalGeneration);
+      }
     } catch (e) {
-      setError(errorText(e));
+      if (journalGeneration === undefined) {
+        if (mounted.current) {
+          keepDraft({ path: submitted.path, text: submitted.text, error: `${saveAcknowledged ? "Save was acknowledged, but checking the current file failed" : "Save failed"}: ${errorText(e)}` });
+          if (ownsSaveControls()) setError(errorText(e));
+        }
+      } else if (ownsMetadata(journalGeneration)) setSectionError({ message: errorText(e), metadata: journalGeneration });
     } finally {
       setSaving(false);
     }
@@ -181,24 +371,45 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
 
   /** Reload keeps the person's words: the draft moves under the editor
    * as read-only text so nothing typed is lost, and the editor shows the
-   * bot's version. */
+   * current disk version through the same guarded read as file navigation. */
   const reloadFromConflict = () => {
-    if (!conflict || !editing) return;
-    setSavedDraft(editing.text);
-    setEditing({ ...editing, text: conflict.current, hash: conflict.currentHash, dirty: false });
-    setConflict(null);
+    if (!conflict || !editing || conflict.path !== editing.path) return;
+    keepDraft({ path: editing.path, text: editing.text });
+    // The refusal's snapshot may predate a completed Tidy/Delete or bot write.
+    // open() rejects this read if newer typing, selection or housekeeping owns it.
+    void open(editing.path);
   };
 
   const remove = async (file: MemoryFileInfo) => {
     if (!window.confirm(`Delete ${file.name}? The journal below can bring it back.`)) return;
+    const activation = activationGeneration.current;
+    // Confirming Delete discards a draft that was already unsaved. Typing
+    // after that click is newer than the request and stays in the editor.
+    const revision = draftRevision.current;
+    let metadata: number | undefined;
+    const finishMutation = beginMutation(file.path);
     setError(null);
     try {
-      const { overview: next } = await deleteMemoryDoc(bot.id, file.path);
-      setOverview(next);
-      setJournal(await fetchMemoryJournal(bot.id));
-      if (editing?.path === file.path) setEditing(null);
+      await deleteMemoryDoc(bot.id, file.path);
+      finishMutation();
+      if (!ownsMutationView(activation)) return;
+      // Act on the editor as it is now, never the one captured at the click:
+      // a file opened since stays open, and only a read of the deleted file
+      // is cancelled.
+      if (pendingPath() === file.path) invalidateEditorReads();
+      if (mounted.current) {
+        setEditing(current => (current?.path === file.path && (!current.dirty || draftRevision.current === revision) ? null : current));
+      }
+      if (ownsMutationView(activation)) {
+        metadata = ++metadataGeneration.current;
+        await refreshMutationMetadata(metadata);
+      }
     } catch (e) {
-      setError(errorText(e));
+      if (metadata === undefined) {
+        if (ownsMutationView(activation)) setError(errorText(e));
+      } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
+    } finally {
+      finishMutation();
     }
   };
 
@@ -209,25 +420,53 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       return;
     }
     setNewTopic("");
-    await open(`memory/${name}`);
-    setEditing((current) => (current ? { ...current, dirty: true, text: current.text || topicTemplate(name) } : current));
+    const path = `memory/${name}`;
+    const generation = await open(path);
+    if (generation === undefined || !ownsRead(generation)) return;
+    invalidateEditorReads();
+    setEditing((current) => (current?.path === path ? { ...current, dirty: true, text: current.text || topicTemplate(name) } : current));
   };
 
   const revert = async (row: MemoryJournalRow) => {
+    const submitted = currentEditing.current;
+    const selection = selectionGeneration.current;
+    let document = documentGeneration.current;
+    const activation = activationGeneration.current;
+    const ownsUndoEditor = () => mounted.current && activeReads.current
+      && documentGeneration.current === document
+      && selectionGeneration.current === selection;
+    let journalGeneration: number | undefined;
     setReverting(row.id);
     setError(null);
     try {
       const result = await revertMemoryChange(bot.id, row.id);
-      setOverview(result.overview);
-      setJournal(await fetchMemoryJournal(bot.id));
-      if (editing?.path === row.path && !editing.dirty) {
-        setEditing({ ...editing, text: result.text, hash: result.hash });
+      const editorCurrent = ownsUndoEditor() && currentEditing.current?.hash === submitted?.hash;
+      // Undo ends older Save ownership for its loaded revision, including a
+      // dirty draft. A later reread or saved hash keeps its own Save receipts.
+      if (mounted.current && documentGeneration.current === document
+        && currentEditing.current?.path === row.path
+        && currentEditing.current.hash === submitted?.hash) documentGeneration.current += 1;
+      if (editorCurrent) {
+        document = documentGeneration.current;
+        invalidateEditorReads();
+        // Reconcile before the journal read: later typing, navigation and
+        // already loaded/saved revisions must keep their own editor state.
+        setEditing(current => {
+          if (!ownsUndoEditor() || !current || current.path !== row.path || current.hash !== submitted?.hash || current.dirty) return current;
+          return { ...current, text: result.text, hash: result.hash };
+        });
       }
-      setNotice(`Put ${row.path} back the way it was.`);
+      if (ownsMutationView(activation)) {
+        journalGeneration = ++metadataGeneration.current;
+        await refreshMutationMetadata(journalGeneration);
+      }
+      if (ownsUndoEditor()) setNotice(`Put ${row.path} back the way it was.`);
     } catch (e) {
-      setError(errorText(e));
+      if (journalGeneration === undefined) {
+        if (ownsUndoEditor()) setError(errorText(e));
+      } else if (ownsMetadata(journalGeneration)) setSectionError({ message: errorText(e), metadata: journalGeneration });
     } finally {
-      setReverting(null);
+      if (mounted.current) setReverting(null);
     }
   };
 
@@ -248,20 +487,43 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   };
 
   const tidyNow = async () => {
+    let activation = activationGeneration.current;
+    let metadata: number | undefined;
+    const finishMutation = beginMutation();
     setTidying(true);
     setError(null);
     setNotice(null);
     try {
-      const { report, overview: next } = await tidyMemoryNow(bot.id);
-      setOverview(next);
-      setJournal(await fetchMemoryJournal(bot.id));
-      setUpkeep(await fetchUpkeepStatus(bot.id));
-      if (editing && !editing.dirty) await open(editing.path);
-      setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
+      const { report } = await tidyMemoryNow(bot.id);
+      finishMutation();
+      // A successful Tidy also changes disk beneath its bot's reopened view.
+      // Never adopt another bot; failed replies keep their click-time owner.
+      if (currentBotId.current !== bot.id) return;
+      activation = activationGeneration.current;
+      if (!ownsMutationView(activation)) return;
+      // The disk mutation already succeeded. Supersede pre-Tidy reads now,
+      // independently of journal/upkeep refresh success. Later selections
+      // still own their reads, and a dirty current draft is left alone.
+      const current = currentEditing.current;
+      const reread = pendingPath() ?? (current && !current.dirty ? current.path : undefined);
+      const rereading = reread !== undefined ? open(reread) : Promise.resolve(undefined);
+      if (ownsMutationView(activation)) {
+        metadata = ++metadataGeneration.current;
+        const [, nextUpkeep] = await Promise.all([refreshMutationMetadata(metadata), fetchUpkeepStatus(bot.id)]);
+        if (ownsMetadata(metadata)) setUpkeep(nextUpkeep);
+      }
+      await rereading;
+      // Settings may have been reopened while metadata was loading. Its
+      // hydration and editor belong to the new activation.
+      if (!ownsMutationView(activation)) return;
+      if (ownsMutationView(activation)) setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
     } catch (e) {
-      setError(errorText(e));
+      if (metadata === undefined) {
+        if (ownsMutationView(activation)) setError(errorText(e));
+      } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     } finally {
-      setTidying(false);
+      finishMutation();
+      if (mounted.current) setTidying(false);
     }
   };
 
@@ -359,7 +621,12 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
                 : "Write the note here."
             }
             aria-label={editing.path === MEMORY_INDEX ? "Bot memory" : `Memory file ${editing.path}`}
-            onChange={(e) => setEditing({ ...editing, text: e.target.value, dirty: true })}
+            onChange={(e) => {
+              invalidateEditorReads();
+              draftRevision.current += 1;
+              const text = e.target.value;
+              setEditing(current => current ? { ...current, text, dirty: true } : current);
+            }}
           />
           {editing.readOnly ? (
             <p className="mt-2 text-[12px] text-ink-secondary">Daily logs are the bot's own record of what it did; they are not loaded into conversations and are read-only here.</p>
@@ -375,19 +642,21 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
               )}
             </div>
           )}
-          {savedDraft !== null && (
-            <div className="mt-3">
-              <div className="mb-1 text-[12px] text-ink-secondary">Your unsaved draft, kept so nothing is lost:</div>
-              <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap rounded-lg border border-hairline/40 bg-inset p-3 font-mono text-[12px] leading-relaxed text-ink">
-                {savedDraft}
-              </pre>
-              <button type="button" className={cn(quietButtonCls, "mt-1")} onClick={() => setSavedDraft(null)}>
-                Dismiss draft
-              </button>
-            </div>
-          )}
         </div>
       )}
+
+      {savedDrafts.map(draft => (
+        <div key={draft.path} className="rounded-xl bg-card p-4">
+          <div className="mb-1 text-[12px] text-ink-secondary">Your unsaved draft from <code>{draft.path}</code>, kept so nothing is lost:</div>
+          {draft.error && <p role="alert" className="mb-2 text-[12.5px] text-danger">{draft.error}</p>}
+          <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap rounded-lg border border-hairline/40 bg-inset p-3 font-mono text-[12px] leading-relaxed text-ink">
+            {draft.text}
+          </pre>
+          <button type="button" aria-label={`Dismiss draft for ${draft.path}`} className={cn(quietButtonCls, "mt-1")} onClick={() => setSavedDrafts(current => current.filter(kept => kept.path !== draft.path))}>
+            Dismiss draft
+          </button>
+        </div>
+      ))}
 
       {overview && (
         <div className="rounded-xl bg-card p-4">
@@ -440,7 +709,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       </div>
 
       {notice && <div className="text-[12.5px] text-ink-secondary">{notice}</div>}
-      {error && <div className="text-[12.5px] text-danger">{error}</div>}
+      {error && <div className="text-[12.5px] text-danger">{error.message}</div>}
     </div>
   );
 }
