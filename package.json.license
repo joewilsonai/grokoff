@@ -19,3 +19,5 @@ GrokOff modification (2026-10-09): maintain actual StoreProvider optional config
 GrokOff modification (2026-10-09): maintain the complete isolated MemorySection read-ownership interaction regressions in test:core.
 
 GrokOff modification (2026-10-09): adopt complete isolated BrowserPanel access-check recovery regressions into test:core.
+
+GrokOff modification (2026-10-09): maintain the isolated MemorySection Delete/Tidy up ownership interaction regressions in test:core.

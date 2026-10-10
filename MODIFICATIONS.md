@@ -41,7 +41,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [docs/ci.md](docs/ci.md) | inline change notice |
 | [docs/verification/claude-account.md](docs/verification/claude-account.md) | inline change notice |
 | [docs/verification/README.md](docs/verification/README.md) | inline change notice |
-| [docs/verification/memory-layer.md](docs/verification/memory-layer.md) | inline change notice (first-edit/source restart and current editor read ownership; Save/Undo mutation metadata recipe and limits) |
+| [docs/verification/memory-layer.md](docs/verification/memory-layer.md) | inline change notice (first-edit/source restart and current editor read ownership; Save/Undo/Delete/Tidy up mutation metadata recipe and limits) |
 | [docs/verification/onboarding.md](docs/verification/onboarding.md) | inline change notice (local first-run evidence and inherited-history limits) |
 | [electron-builder.yml](electron-builder.yml) | inline change notice |
 | [electron/build-speech-helper.mjs](electron/build-speech-helper.mjs) | inline change notice |
@@ -145,7 +145,7 @@ This inventory describes source changes; it does not claim that every inherited 
 | [shared/pairing-link.ts](shared/pairing-link.ts) | inline change notice |
 | [shared/wire.ts](shared/wire.ts) | inline change notice |
 | [src/App.tsx](src/App.tsx) | inline change notice |
-| [src/components/bot-settings/MemorySection.tsx](src/components/bot-settings/MemorySection.tsx) | inline change notice (current memory-read/Save/Undo ownership, draft/hash preservation and fresh overlapping mutation metadata) |
+| [src/components/bot-settings/MemorySection.tsx](src/components/bot-settings/MemorySection.tsx) | inline change notice (current memory-read/Save/Undo ownership, draft/hash preservation, fresh overlapping mutation metadata and current-editor Delete/Tidy up completion) |
 | [src/components/AboutDialog.tsx](src/components/AboutDialog.tsx) | inline change notice |
 | [src/components/ApiKeys.tsx](src/components/ApiKeys.tsx) | inline change notice (owned API-key probes) |
 | [src/components/Avatar.tsx](src/components/Avatar.tsx) | inline change notice |

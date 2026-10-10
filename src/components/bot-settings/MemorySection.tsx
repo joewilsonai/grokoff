@@ -1,4 +1,5 @@
 // GrokOff modification (2026-10-09): scope memory reads/Save/Undo receipts and refresh completed mutations from current metadata; preserve newer drafts, hashes and mutation contracts.
+// GrokOff modification (2026-10-09): Delete and Tidy up act on the editor as it is when they finish, so newer typing, selections and metadata are kept.
 // Memory: what this bot believes, as a panel a person can read, fix, and
 // audit. Four regions: where the folder is (open it in Obsidian or the
 // file manager — it is plain markdown), a gauge that says out loud what
@@ -133,6 +134,10 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   const selectionGeneration = useRef(0);
   const documentGeneration = useRef(0);
   const pendingRead = useRef<number | null>(null);
+  // The path a pending navigation is loading, valid only while that read is
+  // still the pending one. Delete and Tidy hand the editor to that newest choice.
+  const pendingSelection = useRef<{ generation: number; path: string } | null>(null);
+  const pendingPath = () => (pendingSelection.current && pendingRead.current === pendingSelection.current.generation ? pendingSelection.current.path : undefined);
   const draftRevision = useRef(0);
   const currentEditing = useRef(editing);
   currentEditing.current = editing;
@@ -171,7 +176,10 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     if (!activeReads.current) return;
     if (openPath) selectionGeneration.current += 1;
     const generation = openPath ? ++readGeneration.current : readGeneration.current;
-    if (openPath) pendingRead.current = generation;
+    if (openPath) {
+      pendingRead.current = generation;
+      pendingSelection.current = { generation, path: openPath };
+    }
     const metadata = ++metadataGeneration.current;
     let metadataLoaded = false;
     try {
@@ -222,6 +230,7 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
     selectionGeneration.current += 1;
     const generation = ++readGeneration.current;
     pendingRead.current = generation;
+    pendingSelection.current = { generation, path };
     setError(null);
     setConflict(null);
     try {
@@ -305,15 +314,29 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
 
   const remove = async (file: MemoryFileInfo) => {
     if (!window.confirm(`Delete ${file.name}? The journal below can bring it back.`)) return;
+    const activation = activationGeneration.current;
+    // Confirming Delete discards a draft that was already unsaved. Typing
+    // after that click is newer than the request and stays in the editor.
+    const revision = draftRevision.current;
+    let metadata: number | undefined;
     setError(null);
     try {
-      const { overview: next } = await deleteMemoryDoc(bot.id, file.path);
-      invalidateReads();
-      setOverview(next);
-      setJournal(await fetchMemoryJournal(bot.id));
-      if (editing?.path === file.path) setEditing(null);
+      await deleteMemoryDoc(bot.id, file.path);
+      // Act on the editor as it is now, never the one captured at the click:
+      // a file opened since stays open, and only a read of the deleted file
+      // is cancelled.
+      if (pendingPath() === file.path) invalidateEditorReads();
+      if (mounted.current) {
+        setEditing(current => (current?.path === file.path && (!current.dirty || draftRevision.current === revision) ? null : current));
+      }
+      if (ownsMutationView(activation)) {
+        metadata = ++metadataGeneration.current;
+        await refreshMutationMetadata(metadata);
+      }
     } catch (e) {
-      setError(errorText(e));
+      if (metadata === undefined) {
+        if (mounted.current) setError(errorText(e));
+      } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     }
   };
 
@@ -391,21 +414,31 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
   };
 
   const tidyNow = async () => {
+    const activation = activationGeneration.current;
+    let metadata: number | undefined;
     setTidying(true);
     setError(null);
     setNotice(null);
     try {
-      const { report, overview: next } = await tidyMemoryNow(bot.id);
-      invalidateReads();
-      setOverview(next);
-      setJournal(await fetchMemoryJournal(bot.id));
-      setUpkeep(await fetchUpkeepStatus(bot.id));
-      if (editing && !editing.dirty) await open(editing.path);
-      setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
+      const { report } = await tidyMemoryNow(bot.id);
+      if (ownsMutationView(activation)) {
+        metadata = ++metadataGeneration.current;
+        const [, nextUpkeep] = await Promise.all([refreshMutationMetadata(metadata), fetchUpkeepStatus(bot.id)]);
+        if (ownsMetadata(metadata)) setUpkeep(nextUpkeep);
+      }
+      // Tidy rewrote files on disk. Reread what is on screen now: a selection
+      // still loading wins, then the open document when it has no unsaved
+      // typing. Text typed while Tidy ran stays, and so does a newer selection.
+      const current = currentEditing.current;
+      const reread = pendingPath() ?? (current && !current.dirty ? current.path : undefined);
+      if (reread !== undefined) await open(reread);
+      if (mounted.current) setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
     } catch (e) {
-      setError(errorText(e));
+      if (metadata === undefined) {
+        if (mounted.current) setError(errorText(e));
+      } else if (ownsMetadata(metadata)) setSectionError({ message: errorText(e), metadata });
     } finally {
-      setTidying(false);
+      if (mounted.current) setTidying(false);
     }
   };
 
