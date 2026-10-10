@@ -210,5 +210,8 @@ guards; the two positive controls pass before and after. These 28 interactions
 are joined by two controls that reopen a dirty document before starting Delete
 or Tidy up and reopen it again while their responses wait. Both fail with an
 equality-only activation guard and pass when earlier loaded activations are
-protected too. All 30 remain source-DOM checks with in-memory transports, not
-native Tidy acceptance.
+protected too. A further control holds a pre-Tidy file read while the successful
+Tidy's journal refresh fails. Tidy starts the fresh file read independently of
+metadata, so the stale response cannot replace its text or hash and the metadata
+error stays visible. This control fails before that ordering correction. All
+31 remain source-DOM checks with in-memory transports, not native Tidy acceptance.

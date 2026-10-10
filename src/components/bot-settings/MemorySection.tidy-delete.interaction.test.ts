@@ -721,3 +721,36 @@ it("keeps an earlier activation's retained draft dirty after later-activation De
   expect(editor()?.value).toBe("Retained document typed after newer Delete click");
   expect(button("Save").disabled).toBe(false);
 });
+
+// GrokOff modification (2026-10-10): committed Tidy refreshes editor ownership independently of metadata-read failure.
+
+it("rereads the pending selection after Tidy succeeds even when journal metadata fails", async () => {
+  await render();
+  const oldSelection = deferred<MemoryDoc>();
+  fixture.doc.mockReturnValueOnce(oldSelection.promise);
+  await click("a.md");
+  expect(fixture.doc).toHaveBeenLastCalledWith(bot.id, "memory/a.md");
+  const heldTidy = deferred<TidyResult>();
+  const heldJournal = deferred<MemoryJournalRow[]>();
+  fixture.tidy.mockReturnValueOnce(heldTidy.promise);
+  fixture.journal.mockReturnValueOnce(heldJournal.promise);
+  await click("Tidy up now");
+  // Tidy has changed the file. A reissue now returns its real new revision;
+  // the already-held selection still carries the pre-Tidy snapshot.
+  fixture.doc.mockImplementation(async (_id, path) => doc(path, "Fresh tidied selection after mutation", "fresh-after-tidy-hash"));
+  await act(async () => heldTidy.resolve({ report: { ...report, expired: 1 }, overview: overview() }));
+  await tick();
+  await act(async () => heldJournal.reject(new Error("Journal refresh failed after Tidy committed")));
+  await tick();
+  await act(async () => oldSelection.resolve(doc("memory/a.md", "Old read from before Tidy", "old-pre-tidy-hash")));
+  await tick();
+  expect.soft(fixture.doc.mock.calls.filter(([, path]) => path === "memory/a.md")).toHaveLength(2);
+  expect.soft(editor()?.getAttribute("aria-label")).toBe("Memory file memory/a.md");
+  expect.soft(editor()?.value).toBe("Fresh tidied selection after mutation");
+  expect.soft(container.textContent).toContain("Journal refresh failed after Tidy committed");
+  // Exercise the next real Save to prove the visible text carries the fresh
+  // revision hash, rather than only masking a late snapshot in the display.
+  await type("Edited from the tidied revision");
+  await click("Save");
+  expect(fixture.save).toHaveBeenCalledWith(bot.id, "memory/a.md", "Edited from the tidied revision", "fresh-after-tidy-hash");
+});

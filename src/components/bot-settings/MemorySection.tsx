@@ -444,20 +444,21 @@ export function MemorySection({ bot, active = true, onToggle }: { bot: Bot; acti
       if (mounted.current && currentEditing.current?.dirty
         && documentActivation.current <= activation) documentGeneration.current += 1;
       if (!ownsMutationView(activation)) return;
+      // The disk mutation already succeeded. Supersede pre-Tidy reads now,
+      // independently of journal/upkeep refresh success. Later selections
+      // still own their reads, and a dirty current draft is left alone.
+      const current = currentEditing.current;
+      const reread = pendingPath() ?? (current && !current.dirty ? current.path : undefined);
+      const rereading = reread !== undefined ? open(reread) : Promise.resolve(undefined);
       if (ownsMutationView(activation)) {
         metadata = ++metadataGeneration.current;
         const [, nextUpkeep] = await Promise.all([refreshMutationMetadata(metadata), fetchUpkeepStatus(bot.id)]);
         if (ownsMetadata(metadata)) setUpkeep(nextUpkeep);
       }
+      await rereading;
       // Settings may have been reopened while metadata was loading. Its
       // hydration and editor belong to the new activation.
       if (!ownsMutationView(activation)) return;
-      // Tidy rewrote files on disk. Reread what is on screen now: a selection
-      // still loading wins, then the open document when it has no unsaved
-      // typing. Text typed while Tidy ran stays, and so does a newer selection.
-      const current = currentEditing.current;
-      const reread = pendingPath() ?? (current && !current.dirty ? current.path : undefined);
-      if (reread !== undefined) await open(reread);
       if (ownsMutationView(activation)) setNotice(`${tidySummary(report)}.${report.note ? ` ${report.note}` : ""}`);
     } catch (e) {
       if (metadata === undefined) {
