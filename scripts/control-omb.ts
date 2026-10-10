@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node --experimental-strip-types
+// GrokOff modification (2026-10-10): clarify the verification PATH isolation condition.
 // Thin, agent-friendly CLI over the same guarded MCP operations exposed to
 // external clients. It deliberately owns no second API client or wait loop.
 import { spawn, type ChildProcess } from "node:child_process";
@@ -330,9 +331,9 @@ export interface VerificationServer {
 }
 
 /** The environment of a verification server child: a temporary home in
- * `dataDir`, the fake engine's knobs from `parentEnv`, node on PATH, and
- * nothing else from the parent shell or this machine's installed CLIs. A
- * test that restarts its own fixture server on the same data uses this too. */
+ * `dataDir`, allowlisted platform/locale values and the fake engine's knobs.
+ * PATH is Node's directory, so real provider CLIs beside Node remain discoverable.
+ * A test that restarts its own fixture server on the same data uses this too. */
 export function verificationServerEnvironment(parentEnv: NodeJS.ProcessEnv, dataDir: string, port: number): NodeJS.ProcessEnv {
   const childEnv: NodeJS.ProcessEnv = {};
   const platformKeys = new Set(["SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL", "TZ"]);
@@ -362,14 +363,13 @@ export function verificationServerEnvironment(parentEnv: NodeJS.ProcessEnv, data
     // server. Nothing else from the parent shell reaches the fixture.
     FAKE_CLAUDE_MODE: parentEnv.FAKE_CLAUDE_MODE || "happy",
     FAKE_CLAUDE_DUMP: join(dataDir, "fake-claude-dump.json"),
-    // Keep the environment hermetic while allowing POSIX to resolve the
-    // fake CLI's `#!/usr/bin/env node` shebang. Windows resolves that same
-    // fixture through spawnCli without a shell.
+    // Allow POSIX to resolve the fake CLI's `#!/usr/bin/env node` shebang.
+    // This directory must contain no real provider CLIs for provider isolation.
+    // Windows resolves the fixture through spawnCli without a shell.
     PATH: dirname(process.execPath),
-    // ...and keep engine discovery to that PATH and this home. Without it the
-    // server also scans /opt/homebrew/bin, /usr/local/bin and the login
-    // shell's PATH, so a developer's own `codex` (or any engine CLI) becomes
-    // an "available" engine that CI never has (#2035).
+    // Skip login-shell discovery and macOS/Linux machine-wide provider dirs.
+    // Install dirs under this home remain discoverable; Windows also retains
+    // its Docker Desktop bin directory. CLIs beside Node remain on PATH.
     OMB_TEST_SEALED_PATH: "1",
   });
   // The fake engine's own knobs (mode, replies, tool calls) are the one thing

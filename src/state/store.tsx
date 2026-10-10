@@ -1,3 +1,4 @@
+// GrokOff modification (2026-10-10): state the optional-read deadline and remaining hydration hold accurately.
 // GrokOff modification (2026-10-09): retain fork changes and expose a recorded interrupted tool outcome.
 // GrokOff modification (2026-10-08): changed this imported OpenMausBot community file for the independent GrokOff fork.
 // GrokOff modification (2026-10-09): bound optional routine snapshot headers/body without changing command or scheduler deadlines.
@@ -2775,8 +2776,8 @@ function normalizeSnapshotFailure(cause: unknown): Error {
 }
 
 /** A refused SSE resume needs the chat transcript snapshot before its cursor
- * can be acknowledged. The other panels should refresh at the same boundary,
- * but a broken optional endpoint must not hold every chat frame hostage. */
+ * can be acknowledged. Chat updates wait for this boundary to settle; optional
+ * routine/config/webhook reads each have a 30-second deadline. */
 export async function loadSnapshotBoundary<Key extends string>(
   loadChat: () => Promise<void>,
   peripherals: readonly PeripheralSnapshotLoad<Key>[],

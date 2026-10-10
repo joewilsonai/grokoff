@@ -1,3 +1,5 @@
+<!-- GrokOff modification (2026-10-10): qualify provider isolation when real CLIs share Node's directory. -->
+
 # Group delegation in the maintained CI suite
 
 GrokOff runs these complete existing test files through pnpm test:core.
@@ -17,10 +19,13 @@ Run the selected set from the checkout:
     pnpm exec vitest run server/room-handoffs.test.ts server/room-coordination.e2e.test.ts server/room-recovery.e2e.test.ts src/lib/room-members.test.ts src/lib/room-activity.test.ts
 
 All mutations use disposable fixtures. The shared launcher and restart
-environment keep HOME, data, temporary files and provider discovery isolated;
-only the repository's fake CLI is configured. Cleanup stops only owned
-processes. The recovery file also bounds its health requests and verifies that
-the new server owns the response before reading recovered state.
+environment isolate HOME, data and temporary files and configure the repository's
+fake CLI. Provider discovery does not inherit the host shell's PATH, but still
+searches Node's directory; real provider CLIs beside Node remain discoverable.
+Windows also searches the Docker Desktop bin directory. Cleanup stops only owned
+processes. The recovery file also bounds
+its health requests and verifies that the new server owns the response before
+reading recovered state.
 
 The scripted provider calls the actual coordination tools and records its
 dispatch/result evidence. Its replies do not establish live-model planning,

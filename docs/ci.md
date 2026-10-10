@@ -119,8 +119,10 @@ Representative group-delegation checks exercise scripted dispatch through the
 real HTTP/MCP proxy, room and team access boundaries, approvals and revocation,
 returned results, cancellation and interruption after an owned server restart.
 Roster-order and activity-visibility helpers are included. The restart fixture
-uses the shared isolated environment, seals provider discovery to the fake CLI,
-and verifies the replacement server PID. See the
+uses the shared disposable environment and verifies the replacement server PID.
+Provider discovery does not inherit the host shell's PATH, but still searches
+Node's directory; real provider CLIs beside Node remain discoverable. Windows
+also searches the Docker Desktop bin directory. See the
 [test map and evidence limits](verification/room-ci.md).
 Encrypted workspace archive, policy and restore checks use a backup workflow that
 uses two owned real servers and a fake CLI, including a replacement server
