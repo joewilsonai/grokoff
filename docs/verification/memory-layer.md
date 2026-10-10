@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): document current-editor Delete/Tidy up completion and its verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): verify bounded Save/Undo reconciliation and fresh overlapping mutation metadata without altering memory mutation or journal APIs. -->
 <!-- GrokOff modification (2026-10-09): document isolated current-editor read ownership and exact verification boundaries. -->
 <!-- GrokOff modification (2026-10-09): first-edit and source restart acceptance. -->
@@ -162,4 +163,54 @@ arrived while the later mutation was pending; a newer file-read error remains
 visible even if its text matches the old failure. These are actual component interactions
 with deferred in-memory responses, not native app, filesystem commit ordering,
 provider or concurrency load acceptance. The server mutation, expected-hash and
-journal APIs, Delete and Tidy up remain unchanged.
+journal APIs remain unchanged.
+
+## Delete and Tidy up while the editor changes
+
+`MemorySection.tidy-delete.interaction.test.ts` holds a Delete or Tidy up
+response while the person keeps working, then releases it. Both actions now
+decide from the editor as it is when they finish, not as it was at the click.
+Text typed while Tidy up runs stays in the editor, unsaved; a file opened in
+the meantime stays open and is reread, so it shows the tidied text; a
+selection that is still loading is reissued and wins over the older file. A
+clean open document is still reread after Tidy up. Delete closes the editor
+only when the deleted file is the one on screen: a different file opened since
+the click stays open with its draft, and a read of the deleted file that was
+still loading is cancelled. Confirming Delete still discards a draft that was
+already unsaved at the click; text typed after the click stays, and a later
+Save still uses the existing expected-hash check against the deleted file.
+
+Both actions refresh overview and journal through the same current-metadata
+path as Save and Undo, so a delayed Delete or Tidy up journal cannot replace
+newer metadata. Twelve actual component interactions with deferred in-memory
+responses cover this; eight of them fail on the previous component. They are
+not native app, filesystem, provider or model-call acceptance, and the Tidy up
+request and its server behavior are unchanged.
+
+A Save that overlaps Delete of its file or Tidy up waits for those mutation
+requests to settle, then reads the actual current file before reconciling its
+receipt. Only matching path, hash, text and existence can mark the submitted
+revision clean. Reopening Settings alone is not proof of freshness: the file
+may have been loaded before housekeeping committed. A valid Save made after
+housekeeping keeps its saved hash; a stale receipt leaves the draft dirty.
+A failed verification read or another mutation during verification also leaves
+the draft unsaved. Delete of a different file does not hold up this Save.
+The API completion ends the barrier, so a fresh reread and Save while journal
+metadata is still loading remain current. Failed mutation requests release the
+barrier too; the file read determines whether the Save receipt is still valid.
+
+A Delete or Tidy up response from a previous Settings activation leaves that
+view's editor, pending selection, notice and error alone. Its disk effect still
+participates in an overlapping Save's independent verification. Successful Tidy
+starts the pending selection or clean document reread before awaiting metadata,
+so a failed journal refresh cannot let a delayed pre-Tidy response replace the
+fresh text or hash. That metadata error remains visible.
+
+The 37 maintained held-response controls cover newer typing, pending selection,
+metadata completion orders, reopening before or after housekeeping starts,
+a newly activated view loading before the disk changes, both mutation/Save
+response orders, and valid later Save receipts. Additional verification controls
+cover read failure, navigation during the read and deleting a saved empty file
+whose text and hash match the missing file but whose existence differs.
+These remain source-DOM checks with sealed in-memory transports, separate from
+native app, filesystem transaction, provider or model-driven Tidy acceptance.

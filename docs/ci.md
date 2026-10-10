@@ -1,3 +1,4 @@
+<!-- GrokOff modification (2026-10-09): adopt real React memory editor Delete/Tidy up ownership regressions with the same sealed in-memory transports. -->
 <!-- GrokOff modification (2026-10-09): adopt real React memory editor read/Save/Undo ownership and overlapping mutation metadata regressions with sealed in-memory transports. -->
 <!-- GrokOff modification (2026-10-08, updated 2026-10-09): replace upstream CI/release instructions and maintain disposable workspace backup coverage. -->
 <!-- GrokOff modification (2026-10-09): document adopted existing chat helper locale regressions and their pure-helper limits. -->
@@ -187,7 +188,15 @@ for activity labels, resolved locale state and reply text, plus localized usage
 units and cost captions. It uses pure helpers and catalog values; it does not
 contact providers or establish actual plan charges or native UI behavior.
 
-The maintained suite also includes the complete memory editor interaction file.
+The maintained suite also includes the complete memory editor interaction file
+and its separate Delete/Tidy up ownership interaction file. The latter also
+checks obsolete Settings activations and pending Save responses after Delete
+or Tidy up, including later selections retained through reopening Settings and
+a valid Save from a fresh reread during Tidy up's metadata refresh.
+It also checks that a failed metadata refresh cannot let a pre-Tidy document
+response replace the freshly tidied text or hash.
+Overlapping Save receipts wait for the relevant Delete/Tidy API completion and
+are checked against actual current file identity, including after reactivation.
 It mounts the actual React component with held in-memory memory responses and
 sealed transport, and checks newer selection/typing, activation lifetime,
 current errors, New topic, held Save typing/selection and saved-hash follow-through, held Undo typing/navigation and revision ownership, overlapping Save/Undo metadata completion orders, obsolete metadata/error rejection, current metadata failure/recovery without clearing later file errors, current conflict Reload/Undo, dirty-section
